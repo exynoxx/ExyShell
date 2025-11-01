@@ -1,74 +1,164 @@
-#include <stdlib.h>
-#include <string.h>
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
-
-#include "include/core/SkCanvas.h"
-#include "include/core/SkColor.h"
+#include <iostream>
 #include "include/core/SkSurface.h"
+#include "include/core/SkCanvas.h"
 #include "include/core/SkPaint.h"
-#include "include/gpu/ganesh/GrBackendSurface.h"
 #include "include/gpu/ganesh/gl/GrGLInterface.h"
+#include "include/gpu/ganesh/GrRecordingContext.h"
 #include "include/gpu/ganesh/GrDirectContext.h"
+#include "include/gpu/ganesh/SkSurfaceGanesh.h"
 
-extern EGLDisplay egl_display;
-extern EGLSurface egl_surface;
+const int WIDTH = 800;
+const int HEIGHT = 600;
 
 int main() {
+    // Initialize EGL
+    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (display == EGL_NO_DISPLAY) {
+        std::cerr << "Failed to get EGL display\n";
+        return 1;
+    }
+
+    EGLint major, minor;
+    if (!eglInitialize(display, &major, &minor)) {
+        std::cerr << "Failed to initialize EGL\n";
+        return 1;
+    }
+
+    std::cout << "EGL version: " << major << "." << minor << "\n";
+
+    // Choose config
+    EGLint configAttribs[] = {
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_BLUE_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_RED_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_NONE
+    };
+
+    EGLConfig config;
+    EGLint numConfigs;
+    if (!eglChooseConfig(display, configAttribs, &config, 1, &numConfigs)) {
+        std::cerr << "Failed to choose EGL config\n";
+        return 1;
+    }
+
+    // Create pbuffer surface
+    EGLint surfaceAttribs[] = {
+        EGL_WIDTH, WIDTH,
+        EGL_HEIGHT, HEIGHT,
+        EGL_NONE
+    };
+
+    EGLSurface surface = eglCreatePbufferSurface(display, config, surfaceAttribs);
+    if (surface == EGL_NO_SURFACE) {
+        std::cerr << "Failed to create EGL surface\n";
+        return 1;
+    }
+
+    // Bind API and create context
+    eglBindAPI(EGL_OPENGL_ES_API);
+
+    EGLint contextAttribs[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
+    };
+
+    EGLContext context = eglCreateContext(display, config, EGL_NO_CONTEXT, contextAttribs);
+    if (context == EGL_NO_CONTEXT) {
+        std::cerr << "Failed to create EGL context\n";
+        return 1;
+    }
+
+    if (!eglMakeCurrent(display, surface, surface, context)) {
+        std::cerr << "Failed to make EGL context current\n";
+        return 1;
+    }
+
+
     
-    draw_skia_circle(egl_display, egl_surface, 400, 300);
 
-    // --- Cleanup ---
-    
-    return 0;
-}
 
-void draw_skia_circle(EGLDisplay egl_display, EGLSurface egl_surface, int width, int height) {
-    // --- 1. Build Skia GPU interface/context ---
-    sk_sp<const GrGLInterface> glInterface = GrGLMakeNativeInterface();
-    if (!glInterface) { fprintf(stderr, "Skia: no GL interface\n"); return; }
 
-    sk_sp<GrDirectContext> grCtx = GrDirectContext::MakeGL(glInterface);
-    if (!grCtx) { fprintf(stderr, "Skia: failed to make GrDirectContext\n"); return; }
 
-    // --- 2. Describe the current EGL framebuffer (FBO 0) ---
+    // Initialize Skia
+    auto interface = GrGLMakeNativeInterface();
+    if (!interface) {
+        std::cerr << "Failed to create GrGLInterface\n";
+        return 1;
+    }
+
+    auto grContext = GrDirectContext::GrDirectContext(std::move(interface));
+    if (!grContext) {
+        std::cerr << "Failed to create GrDirectContext\n";
+        return 1;
+    }
+
     GrGLFramebufferInfo fbInfo;
-    fbInfo.fFBOID = 0;            // default framebuffer
-    fbInfo.fFormat = GL_RGBA8;    // or GL_RGBA if GLES2
+    fbInfo.fFBOID = 0;
+    fbInfo.fFormat = GL_RGBA8;
 
-    GrBackendRenderTarget backendRT(
-        width, height,        // size
-        0,                    // sample count
-        8,                    // stencil bits
-        fbInfo
+    GrBackendRenderTarget backendRT(1000,
+                                    200,
+                                    /*sampelCount=*/1,
+                                    /*stencilBits=*/8,
+                                    fbInfo);
+
+    sk_sp<SkSurface> gpuSurface = SkSurface::MakeFromBackendRenderTarget(context.get(), backendRT,
+                                                                        kBottomLeft_GrSurfaceOrigin,
+                                                                        kRGBA_8888_SkColorType,
+                                                                        /*colorSpace=*/nullptr,
+                                                                        /*surfaceProps=*/nullptr);
+
+
+    // Create surface with Ganesh (modern Skia API)
+    SkImageInfo imageInfo = SkImageInfo::Make(WIDTH, HEIGHT, kRGBA_8888_SkColorType, kPremul_SkAlphaType);
+    auto surface_sk = SkSurfaces::WrapBackendRenderTarget(
+        grContext.get(),
+        GrBackendRenderTarget(WIDTH, HEIGHT, 0, 0, GrGLFramebufferInfo{0, GL_RGBA4}),
+        kBottomLeft_GrSurfaceOrigin,
+        kRGBA_8888_SkColorType,
+        nullptr,
+        nullptr
     );
 
-    SkColorType colorType = kRGBA_8888_SkColorType;
+    if (!surface_sk) {
+        std::cerr << "Failed to create Skia surface\n";
+        return 1;
+    }
 
-    // --- 3. Create Skia surface wrapping the current framebuffer ---
-    sk_sp<SkSurface> surface = SkSurface::MakeFromBackendRenderTarget(
-        grCtx.get(),
-        backendRT,
-        kBottomLeft_GrSurfaceOrigin,  // GL-style origin
-        colorType,
-        nullptr,                      // sRGB colorspace optional
-        nullptr                       // surface props
-    );
-
-    if (!surface) { fprintf(stderr, "Skia: failed to make surface\n"); return; }
-
-    // --- 4. Draw a red circle ---
-    SkCanvas* canvas = surface->getCanvas();
-    canvas->clear(SK_ColorTRANSPARENT);
+    // Draw with Skia
+    SkCanvas* canvas = surface_sk->getCanvas();
 
     SkPaint paint;
-    paint.setAntiAlias(true);
+    paint.setColor(SK_ColorWHITE);
+    canvas->drawPaint(paint);
+
+    paint.setColor(SK_ColorBLUE);
+    canvas->drawRect(SkRect::MakeXYWH(100, 100, 200, 200), paint);
+
     paint.setColor(SK_ColorRED);
+    canvas->drawCircle(400, 300, 50, paint);
 
-    canvas->drawCircle(width / 2.0f, height / 2.0f, 80.0f, paint);
+    paint.setColor(SK_ColorGREEN);
+    paint.setStrokeWidth(3);
+    paint.setStyle(SkPaint::kStroke_Style);
+    canvas->drawRect(SkRect::MakeXYWH(550, 150, 150, 250), paint);
 
-    // --- 5. Flush and show ---
-    surface->flushAndSubmit();
-    grCtx->flushAndSubmit();
-    eglSwapBuffers(egl_display, egl_surface);
+    surface_sk->flushAndSubmit();
+
+    std::cout << "Rendered successfully to " << WIDTH << "x" << HEIGHT << " surface\n";
+
+    // Cleanup
+    surface_sk.reset();
+    grContext.reset();
+    eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    eglDestroyContext(display, context);
+    eglDestroySurface(display, surface);
+    eglTerminate(display);
+
+    return 0;
 }
