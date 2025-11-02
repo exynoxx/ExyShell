@@ -9,12 +9,12 @@
 // Color structure
 typedef struct {
     float r, g, b, a;
-} g2d_color;
+} dk_color;
 
 // Vector2 structure
 typedef struct {
     float x, y;
-} g2d_vec2;
+} dk_vec2;
 
 // Context structure
 typedef struct {
@@ -24,27 +24,27 @@ typedef struct {
     GLuint vbo, vao;
     int screen_width;
     int screen_height;
-    g2d_color current_color;
-} g2d_context;
+    dk_color current_color;
+} dk_context;
 
 // Initialize the graphics library
-bool g2d_init(g2d_context *ctx, int screen_width, int screen_height);
+bool dk_init(dk_context *ctx, int screen_width, int screen_height);
 
 // Cleanup
-void g2d_cleanup(g2d_context *ctx);
+void dk_cleanup(dk_context *ctx);
 
 // Set drawing color
-void g2d_set_color(g2d_context *ctx, float r, float g, float b, float a);
+void dk_set_color(dk_context *ctx, float r, float g, float b, float a);
 
 // Drawing functions
-void g2d_draw_rect(g2d_context *ctx, float x, float y, float width, float height);
-void g2d_draw_rounded_rect(g2d_context *ctx, float x, float y, float width, float height, float radius);
+void dk_draw_rect(dk_context *ctx, float x, float y, float width, float height);
+void dk_draw_rounded_rect(dk_context *ctx, float x, float y, float width, float height, float radius);
 
 // Texture functions
-void g2d_draw_texture(g2d_context *ctx, GLuint texture_id, float x, float y, float width, float height);
+void dk_draw_texture(dk_context *ctx, GLuint texture_id, float x, float y, float width, float height);
 
 // Begin/End frame
-void g2d_begin_frame(g2d_context *ctx);
-void g2d_end_frame();
+void dk_begin_frame(dk_context *ctx);
+void dk_end_frame();
 
 #endif // GRAPHICS2D_H

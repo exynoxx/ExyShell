@@ -82,7 +82,7 @@ static void create_ortho_matrix(float *mat, float left, float right, float botto
     mat[15] = 1.0f;
 }
 
-bool g2d_init(g2d_context *ctx, int screen_width, int screen_height) {
+bool dk_init(dk_context *ctx, int screen_width, int screen_height) {
     ctx->screen_width = screen_width;
     ctx->screen_height = screen_height;
     ctx->current_color.r = 1.0f;
@@ -114,31 +114,31 @@ bool g2d_init(g2d_context *ctx, int screen_width, int screen_height) {
     return true;
 }
 
-void g2d_cleanup(g2d_context *ctx) {
+void dk_cleanup(dk_context *ctx) {
     glDeleteBuffers(1, &ctx->vbo);
     if (default_program) glDeleteProgram(default_program);
     if (rounded_rect_program) glDeleteProgram(rounded_rect_program);
     if (texture_program) glDeleteProgram(texture_program);
 }
 
-void g2d_set_color(g2d_context *ctx, float r, float g, float b, float a) {
+void dk_set_color(dk_context *ctx, float r, float g, float b, float a) {
     ctx->current_color.r = r;
     ctx->current_color.g = g;
     ctx->current_color.b = b;
     ctx->current_color.a = a;
 }
 
-void g2d_begin_frame(g2d_context *ctx) {
+void dk_begin_frame(dk_context *ctx) {
     glViewport(0, 0, ctx->screen_width, ctx->screen_height);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void g2d_end_frame() {
+void dk_end_frame() {
     glFlush();
 }
 
-void g2d_draw_rect(g2d_context *ctx, float x, float y, float width, float height) {
+void dk_draw_rect(dk_context *ctx, float x, float y, float width, float height) {
     glUseProgram(default_program);
     
     // Create projection matrix
@@ -174,7 +174,7 @@ void g2d_draw_rect(g2d_context *ctx, float x, float y, float width, float height
     glDisableVertexAttribArray(pos_loc);
 }
 
-void g2d_draw_rounded_rect(g2d_context *ctx, float x, float y, float width, float height, float radius) {
+void dk_draw_rounded_rect(dk_context *ctx, float x, float y, float width, float height, float radius) {
     glUseProgram(rounded_rect_program);
     
     // Create projection matrix
@@ -219,7 +219,7 @@ void g2d_draw_rounded_rect(g2d_context *ctx, float x, float y, float width, floa
 }
 
 
-void g2d_draw_texture(g2d_context *ctx, GLuint texture_id, float x, float y, float width, float height) {
+void dk_draw_texture(dk_context *ctx, GLuint texture_id, float x, float y, float width, float height) {
     glUseProgram(texture_program);
     
     float proj[16];

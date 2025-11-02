@@ -25,7 +25,7 @@ Image load_icon(const char *path) {
     return ret;
 }
 
-GLuint Upload(Image image){
+GLuint dk_upload(Image image){
     GLuint id;
 
     glGenTextures(1, &id);
@@ -42,6 +42,6 @@ GLuint Upload(Image image){
     return id;
 }
 
-void g2d_free_texture(GLuint id) {
+void dk_free_texture(GLuint id) {
     glDeleteTextures(1, &id);
 }

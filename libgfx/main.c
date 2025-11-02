@@ -21,29 +21,29 @@ int main() {
     EGLContext egl_context = get_egl_context();
     struct wl_display *display = get_wl_display();
 
-    g2d_context ctx;
-    g2d_init(&ctx, width, height);
+    dk_context ctx;
+    dk_init(&ctx, width, height);
 
     const char *fedora = "/usr/share/icons/hicolor/48x48/apps/fedora-logo-icon.png";
 
     Image img = load_icon(fedora);
-    GLuint icon_tex = Upload(img);
+    GLuint icon_tex = dk_upload(img);
     
     // --- Render loop ---
     while (wl_display_dispatch(display) != -1) {
-        g2d_begin_frame(&ctx);
+        dk_begin_frame(&ctx);
         
         // Draw icon at original size
-        g2d_set_color(&ctx, 1.0f, 1.0f, 1.0f, 1.0f);
-        g2d_draw_texture(&ctx, icon_tex, 100, 0, img.width, img.height);
+        dk_set_color(&ctx, 1.0f, 1.0f, 1.0f, 1.0f);
+        dk_draw_texture(&ctx, icon_tex, 100, 0, img.width, img.height);
         
         // Draw icon scaled 2x
-        g2d_draw_texture(&ctx, icon_tex, 300, 0, img.width * 2, img.height * 2);
+        dk_draw_texture(&ctx, icon_tex, 300, 0, img.width * 2, img.height * 2);
         
         // Draw icon scaled 3x
-        g2d_draw_texture(&ctx, icon_tex, 550, 0, img.width * 3, img.height * 3);
+        dk_draw_texture(&ctx, icon_tex, 550, 0, img.width * 3, img.height * 3);
         
-        g2d_end_frame();
+        dk_end_frame();
         eglSwapBuffers(egl_display, egl_surface);
     }
 

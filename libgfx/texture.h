@@ -19,7 +19,7 @@ typedef struct {
 
 
 Image load_icon(const char *path);
-GLuint Upload(Image image);
-void g2d_free_texture(GLuint id);
+GLuint dk_upload(Image image);
+void dk_free_texture(GLuint id);
 
 #endif
