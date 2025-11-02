@@ -53,7 +53,7 @@ static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
 // --- Wayland display ---
 static struct wl_display *display = NULL;
 
-int init_layer_shell(const char *layer_name, int width, int height) {
+int init_layer_shell(const char *layer_name, int width, int height, EDGE edge) {
     display = wl_display_connect(NULL);
     if (!display) { fprintf(stderr,"Failed to connect to Wayland display\n"); return -1; }
 
@@ -74,10 +74,14 @@ int init_layer_shell(const char *layer_name, int width, int height) {
                                               NULL,
                                               ZWLR_LAYER_SHELL_V1_LAYER_TOP,
                                               layer_name);
-    zwlr_layer_surface_v1_set_anchor(layer_surface,
-        ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
-        ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |
-        ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT);
+
+    enum zwlr_layer_surface_v1_anchor anchor_bits =
+        ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |  ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
+
+    if (edge == TOP) anchor_bits = anchor_bits | ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP;
+    if (edge == BOTTOM) anchor_bits = anchor_bits | ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
+
+    zwlr_layer_surface_v1_set_anchor(layer_surface, anchor_bits);
     zwlr_layer_surface_v1_set_size(layer_surface, width, height);
     zwlr_layer_surface_v1_set_exclusive_zone(layer_surface, 50);
     zwlr_layer_surface_v1_add_listener(layer_surface, &layer_surface_listener, surface);

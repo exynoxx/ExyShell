@@ -8,7 +8,11 @@
 extern "C" {
 #endif
 
-int init_layer_shell(const char *layer_name, int width, int height);
+typedef enum EDGE {
+    TOP, BOTTOM
+} EDGE;
+
+int init_layer_shell(const char *layer_name, int width, int height, EDGE edge);
 
 EGLDisplay get_egl_display(void);
 EGLSurface get_egl_surface(void);

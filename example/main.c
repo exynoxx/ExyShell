@@ -14,7 +14,7 @@ int main() {
     int width = 1920;  // typical screen width, adjust as needed
     int height = 100;
 
-    init_layer_shell("panel", width, 50);
+    init_layer_shell("panel", width, 50, BOTTOM);
     EGLDisplay egl_display = get_egl_display();
     EGLSurface egl_surface = get_egl_surface();
     EGLContext egl_context = get_egl_context();
@@ -22,7 +22,7 @@ int main() {
 
     dk_context ctx;
     dk_init(&ctx, width, height);
-    dk_set_bg_color(&ctx, 0.0f, 0.0f, 0.0f, 0.8f);
+    dk_set_bg_color(&ctx, 0.0f, 0.0f, 0.0f, 0.0f);
 
     const char *fedora = "/usr/share/icons/hicolor/32x32/apps/fedora-logo-icon.png";
 
