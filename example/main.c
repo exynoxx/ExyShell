@@ -12,9 +12,9 @@
 int main() {
 
     int width = 1920;  // typical screen width, adjust as needed
-    int height = 100;
+    int height = 50;
 
-    init_layer_shell("panel", width, 50, BOTTOM);
+    init_layer_shell("panel", width, height, BOTTOM);
     EGLDisplay egl_display = get_egl_display();
     EGLSurface egl_surface = get_egl_surface();
     EGLContext egl_context = get_egl_context();
@@ -33,15 +33,14 @@ int main() {
     while (wl_display_dispatch(display) != -1) {
         dk_begin_frame(&ctx);
         
-        dk_set_color(&ctx, 1.0f, 0.0f, 0.0f, 1.0f);
-        dk_draw_rect(&ctx, 100, 0, 50, 50);
-
-        dk_set_color(&ctx, 0.0f, 1.0f, 0.0f, 1.0f);
-        dk_draw_rect(&ctx, 125, 25, 50, 50);
+        dk_set_color(&ctx, 1.0f, 1.0f, 1.0f, 0.1f);
+        dk_draw_rect(&ctx, 0, 0, 50, height);
 
         dk_set_color(&ctx, 1.0f, 1.0f, 1.0f, 1.0f);
-        dk_draw_texture(&ctx, icon_tex, 500, 25, 32, 32);
-        
+        dk_draw_texture(&ctx, icon_tex, 10, 9, 32, 32);
+        dk_draw_texture(&ctx, icon_tex, 60, 9, 32, 32);
+        dk_draw_texture(&ctx, icon_tex, 110, 9, 32, 32);
+
         dk_end_frame();
         eglSwapBuffers(egl_display, egl_surface);
     }
