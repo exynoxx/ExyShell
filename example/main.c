@@ -5,7 +5,9 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "liblayershell.h"
+#include "../liblayershell/liblayershell.h"
+#include "../liblayershell/seat.h"
+
 #include "../src/graphics.h"
 #include "../src/texture.h"
 
@@ -24,6 +26,8 @@ int main() {
     dk_init(&ctx, width, height);
     dk_set_bg_color(&ctx, 0.0f, 0.0f, 0.0f, 0.0f);
 
+    dk_mouse_info *mouse_info = seat_mouse_info();
+
     const char *fedora = "/usr/share/icons/hicolor/32x32/apps/fedora-logo-icon.png";
 
     Image img = load_icon(fedora);
@@ -31,6 +35,9 @@ int main() {
     
     // --- Render loop ---
     while (wl_display_dispatch(display) != -1) {
+
+        printf("Mouse: %f, %f\n", mouse_info->mouse_x, mouse_info->mouse_y);
+
         dk_begin_frame(&ctx);
         
         dk_set_color(&ctx, 1.0f, 1.0f, 1.0f, 0.1f);

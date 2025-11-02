@@ -12,6 +12,7 @@ glesv2_dep         = dependency('glesv2', required: true)
 # --- Source and header files ---
 sources = [
   'liblayershell.c',
+  'seat.c',
   'wayland/wlr-layer-shell-unstable-v1-protocol.c',
   'wayland/xdg-shell-client-protocol.c'
 
@@ -19,6 +20,7 @@ sources = [
 
 headers = [
   'liblayershell.h',
+  'seat.h',
   'xdg-shell-client-protocol.h',
   'wayland/wlr-layer-shell-unstable-v1-client-protocol.h'
 ]

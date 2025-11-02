@@ -5,6 +5,11 @@
 #include <wayland-egl.h>
 #include "liblayershell.h"
 #include "wayland/wlr-layer-shell-unstable-v1-client-protocol.h"
+#include "seat.h"
+
+extern struct wl_pointer *pointer;
+extern struct wl_seat *seat;
+extern dk_mouse_info mouse_info;
 
 // --- Wayland globals ---
 static struct wl_compositor *compositor = NULL;
@@ -24,6 +29,11 @@ static void registry_global(void *data, struct wl_registry *registry,
         compositor = wl_registry_bind(registry, name, &wl_compositor_interface, 4);
     else if (strcmp(interface, "zwlr_layer_shell_v1") == 0)
         layer_shell = wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
+    else if (strcmp(interface, wl_seat_interface.name) == 0) {
+        //seat.h
+        seat = wl_registry_bind(registry, name, &wl_seat_interface, 5);
+        wl_seat_add_listener(seat, &seat_listener, &mouse_info);
+    }
 }
 static void registry_remove(void *data, struct wl_registry *registry, uint32_t name) { }
 static const struct wl_registry_listener registry_listener = {
@@ -79,7 +89,7 @@ int init_layer_shell(const char *layer_name, int width, int height, EDGE edge) {
         ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |  ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT;
 
     if (edge == TOP) anchor_bits = anchor_bits | ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP;
-    if (edge == BOTTOM) anchor_bits = anchor_bits | ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
+    if (edge == BOTTOM)anchor_bits = anchor_bits | ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM;
 
     zwlr_layer_surface_v1_set_anchor(layer_surface, anchor_bits);
     zwlr_layer_surface_v1_set_size(layer_surface, width, height);
