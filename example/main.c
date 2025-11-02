@@ -32,15 +32,14 @@ int main() {
     while (wl_display_dispatch(display) != -1) {
         dk_begin_frame(&ctx);
         
-        // Draw icon at original size
+        dk_set_color(&ctx, 1.0f, 0.0f, 0.0f, 1.0f);
+        dk_draw_rect(&ctx, 100, 0, 100, 100);
+
+        dk_set_color(&ctx, 0.0f, 1.0f, 0.0f, 1.0f);
+        dk_draw_rect(&ctx, 125, 25, 50, 50);
+
         dk_set_color(&ctx, 1.0f, 1.0f, 1.0f, 1.0f);
-        dk_draw_texture(&ctx, icon_tex, 100, 0, img.width, img.height);
-        
-        // Draw icon scaled 2x
-        dk_draw_texture(&ctx, icon_tex, 300, 0, img.width * 2, img.height * 2);
-        
-        // Draw icon scaled 3x
-        dk_draw_texture(&ctx, icon_tex, 550, 0, img.width * 3, img.height * 3);
+        dk_draw_texture(&ctx, icon_tex, 500, 25, 32, 32);
         
         dk_end_frame();
         eglSwapBuffers(egl_display, egl_surface);
