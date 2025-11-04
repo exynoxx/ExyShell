@@ -16,6 +16,7 @@ int init_layer_shell(const char *layer_name, int width, int height, EDGE edge) {
     compositor_init();
     layer_shell_init();
     seat_init();
+    toplevel_init();
 
     registry_init(display);
 
@@ -23,6 +24,10 @@ int init_layer_shell(const char *layer_name, int width, int height, EDGE edge) {
     egl_init(display, surface, width, height);
 
     return 0;
+}
+
+struct wl_display *get_wl_display(){
+    return display;
 }
 
 /* void destroy_layer_shell(void) {

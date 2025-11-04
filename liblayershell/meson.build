@@ -17,8 +17,10 @@ sources = [
   'wayland_modules/compositor.c',
   'wayland_modules/layershell.c',
   'wayland_modules/seat.c',
+  'wayland_modules/toplevel.c',
   'wayland/wlr-layer-shell-unstable-v1-protocol.c',
-  'wayland/xdg-shell-client-protocol.c'
+  'wayland/xdg-shell-client-protocol.c',
+  'wayland/wlr-foreign-toplevel-management-unstable-v1-protocol.c'
 ]
 
 # --- Build shared library ---

@@ -19,7 +19,7 @@ int main() {
     EGLDisplay egl_display = get_egl_display();
     EGLSurface egl_surface = get_egl_surface();
     EGLContext egl_context = get_egl_context();
-    struct wl_display *display = get_wl_display();
+    display = get_wl_display();
 
     dk_context ctx;
     dk_init(&ctx, width, height);
@@ -52,6 +52,6 @@ int main() {
     }
 
     // --- Cleanup ---
-    destroy_layer_shell();
+    //destroy_layer_shell();
     return 0;
 }
