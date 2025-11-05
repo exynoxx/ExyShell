@@ -16,24 +16,19 @@ int main() {
     int height = 50;
 
     init_layer_shell("panel", width, height, BOTTOM);
-    EGLDisplay egl_display = get_egl_display();
-    EGLSurface egl_surface = get_egl_surface();
-    EGLContext egl_context = get_egl_context();
     display = get_wl_display();
-
+    dk_mouse_info *mouse_info = seat_mouse_info();
+    toplevel_print_all();
 
     dk_context ctx;
     dk_init(&ctx, width, height);
     dk_set_bg_color(&ctx, 0.0f, 0.0f, 0.0f, 0.0f);
-
-    dk_mouse_info *mouse_info = seat_mouse_info();
 
     const char *fedora = "/usr/share/icons/hicolor/32x32/apps/fedora-logo-icon.png";
 
     Image img = dk_image_load(fedora);
     GLuint icon_tex = dk_texture_upload(img);
     
-    toplevel_print_all();
 
     // --- Render loop ---
     while (wl_display_dispatch(display) != -1) {
