@@ -51,6 +51,10 @@ void egl_cleanup(){
     }
 }
 
+void egl_swap_buffers(void){
+    eglSwapBuffers(egl_display, egl_surface);
+}
+
 EGLDisplay get_egl_display() { return egl_display; }
 EGLSurface get_egl_surface() { return egl_surface; }
 EGLContext get_egl_context() { return egl_context; }

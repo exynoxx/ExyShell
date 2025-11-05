@@ -8,18 +8,15 @@ namespace LayerShell {
 
     [CCode (cname = "init_layer_shell")]
     public int init(string layer_name, int width, int height, Edge edge);
-
-    [CCode (cname = "get_egl_display")]
-    public EGL.Display get_egl_display();
-
-    [CCode (cname = "get_egl_surface")]
-    public EGL.Surface get_egl_surface();
-
-    [CCode (cname = "get_egl_context")]
-    public EGL.Context get_egl_context();
+    
+    [CCode (cname = "egl_swap_buffers")]
+    public void swap_buffers();
 
     [CCode (cname = "get_wl_display")]
     public unowned Wl.Display get_wl_display();
+
+    [CCode (cname = "wl_display_dispatch")]
+    public int display_dispatch(Wl.Display display);
 
     [CCode (cname = "destroy_layer_shell")]
     public void destroy();

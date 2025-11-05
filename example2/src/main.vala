@@ -4,7 +4,7 @@ using Graphene;
 /* Graphene with EGL Demo - Core Graphics Functions
  * Compile with: valac --pkg graphene-gobject-1.0 --pkg gl --pkg egl graphene_egl_demo.vala
  */
-
+/*  
  using Graphene;
 
  public class GrapheneEGLDemo {
@@ -269,39 +269,56 @@ using Graphene;
          }
          stdout.printf("\n");
      }
- }
+ }  */
+
+/*  public static int main(string[] args) {
+    var demo = new GrapheneEGLDemo();
+    
+    stdout.printf("=== Graphene EGL Demo ===\n\n");
+    
+    // Update animation
+    demo.update(0.016f); // 16ms frame time
+    
+    // Get MVP matrix
+    var mvp = demo.get_mvp_matrix();
+    demo.print_matrix("MVP Matrix", mvp);
+    
+    // Transform a point
+    var point = Point3D() { x = 1.0f, y = 0.0f, z = 0.0f };
+    var transformed = demo.transform_point(point);
+    stdout.printf("Transformed point: (%.3f, %.3f, %.3f)\n\n", 
+                transformed.x, transformed.y, transformed.z);
+    
+    // Calculate normal
+    var p1 = Point3D() { x = 0.0f, y = 0.0f, z = 0.0f };
+    var p2 = Point3D() { x = 1.0f, y = 0.0f, z = 0.0f };
+    var p3 = Point3D() { x = 0.0f, y = 1.0f, z = 0.0f };
+    var normal = demo.calculate_normal(p1, p2, p3);
+    stdout.printf("Triangle normal: (%.3f, %.3f, %.3f)\n\n",
+                normal.get_x(), normal.get_y(), normal.get_z());
+    
+    // Visibility test
+    var test_pos = Point3D() { x = 0.0f, y = 0.0f, z = 0.0f };
+    bool visible = demo.is_visible(test_pos, 1.0f);
+    stdout.printf("Object visible: %s\n", visible ? "yes" : "no");
+    
+    return 0;
+}  */
  
  // Example usage
- public static int main(string[] args) {
-     var demo = new GrapheneEGLDemo();
-     
-     stdout.printf("=== Graphene EGL Demo ===\n\n");
-     
-     // Update animation
-     demo.update(0.016f); // 16ms frame time
-     
-     // Get MVP matrix
-     var mvp = demo.get_mvp_matrix();
-     demo.print_matrix("MVP Matrix", mvp);
-     
-     // Transform a point
-     var point = Point3D() { x = 1.0f, y = 0.0f, z = 0.0f };
-     var transformed = demo.transform_point(point);
-     stdout.printf("Transformed point: (%.3f, %.3f, %.3f)\n\n", 
-                   transformed.x, transformed.y, transformed.z);
-     
-     // Calculate normal
-     var p1 = Point3D() { x = 0.0f, y = 0.0f, z = 0.0f };
-     var p2 = Point3D() { x = 1.0f, y = 0.0f, z = 0.0f };
-     var p3 = Point3D() { x = 0.0f, y = 1.0f, z = 0.0f };
-     var normal = demo.calculate_normal(p1, p2, p3);
-     stdout.printf("Triangle normal: (%.3f, %.3f, %.3f)\n\n",
-                   normal.get_x(), normal.get_y(), normal.get_z());
-     
-     // Visibility test
-     var test_pos = Point3D() { x = 0.0f, y = 0.0f, z = 0.0f };
-     bool visible = demo.is_visible(test_pos, 1.0f);
-     stdout.printf("Object visible: %s\n", visible ? "yes" : "no");
-     
-     return 0;
- }
+public static int main(string[] args) {
+    
+    int width = 1920;
+    int height = 50;
+
+    LayerShell.init("panel", width, height, BOTTOM);
+    unowned var display = LayerShell.get_wl_display();
+
+    while (LayerShell.display_dispatch(display) != -1) {
+
+        
+        LayerShell.swap_buffers();
+    }
+
+    return 0;
+}
