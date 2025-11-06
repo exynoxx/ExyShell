@@ -35,8 +35,8 @@ bool dk_init(dk_context *ctx, int screen_width, int screen_height);
 void dk_cleanup(dk_context *ctx);
 
 // Set drawing color
-void dk_set_color(dk_context *ctx, float r, float g, float b, float a);
-void dk_set_bg_color(dk_context *ctx, float r, float g, float b, float a);
+void dk_set_color(dk_context *ctx, dk_color color);
+void dk_set_bg_color(dk_context *ctx, dk_color color);
 
 // Drawing functions
 void dk_draw_rect(dk_context *ctx, float x, float y, float width, float height);

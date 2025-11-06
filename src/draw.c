@@ -121,18 +121,18 @@ void dk_cleanup(dk_context *ctx) {
     if (texture_program) glDeleteProgram(texture_program);
 }
 
-void dk_set_color(dk_context *ctx, float r, float g, float b, float a) {
-    ctx->current_color.r = r;
-    ctx->current_color.g = g;
-    ctx->current_color.b = b;
-    ctx->current_color.a = a;
+void dk_set_color(dk_context *ctx, dk_color color) {
+    ctx->current_color.r = color.r;
+    ctx->current_color.g = color.g;
+    ctx->current_color.b = color.b;
+    ctx->current_color.a = color.a;
 }
 
-void dk_set_bg_color(dk_context *ctx, float r, float g, float b, float a) {
-    ctx->background_color.r = r;
-    ctx->background_color.g = g;
-    ctx->background_color.b = b;
-    ctx->background_color.a = a;
+void dk_set_bg_color(dk_context *ctx, dk_color color) {
+    ctx->background_color.r = color.r;
+    ctx->background_color.g = color.g;
+    ctx->background_color.b = color.b;
+    ctx->background_color.a = color.a;
 }
 
 void dk_begin_frame(dk_context *ctx) {
