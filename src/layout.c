@@ -41,8 +41,6 @@ void dk_ui_start_box(dk_ui_manager *mgr, int width, int height) {
     if (!box) return;
     
     box->type = ELEMENT_BOX;
-    
-
     box->data.style.padding_top = 0;
     box->data.style.padding_right = 0;
     box->data.style.padding_bottom = 0;
@@ -86,7 +84,7 @@ void dk_ui_box_float(dk_ui_manager *mgr, dk_float_mode float_mode){
 }
 
 void dk_ui_end_box(dk_ui_manager *mgr) {
-    if (!mgr->current_parent) return;
+    if (!mgr->current_parent || mgr->current_parent == mgr->root) return;
     mgr->current_parent = mgr->current_parent->parent;
 }
 
@@ -184,8 +182,8 @@ static void calculate_layout(dk_ui_element *elem, float parent_x, float parent_y
                         calculate_layout(child, content_x, content_y);
                         break;
                 }
+                child = child->next_sibling;
             }
-            child = child->next_sibling;
         }
     }
         

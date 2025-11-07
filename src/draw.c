@@ -227,6 +227,8 @@ void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height) {
 
 
 void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width, int height) {
+    //printf("draw_text %d %d %d %d",x,y,width,height);
+
     glUseProgram(texture_program);
     
     float proj[16];
