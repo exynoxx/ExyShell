@@ -33,13 +33,27 @@ int main() {
     int padding = (50-32)/2;
 
     dk_ui_start_box(&ui, 0, 0);
-    dk_ui_box_set_padding(&ui,padding,padding,padding,50);
-    dk_ui_box_set_gap(&ui, 50);
-    dk_ui_box_float(&ui, FLOAT_LEFT);
+        dk_ui_box_float(&ui, FLOAT_NONE);
 
-    dk_ui_texture(&ui, fedora_tex, 32, 32);
-    dk_ui_texture(&ui, fedora_tex, 32, 32);
-    dk_ui_texture(&ui, fedora_tex, 32, 32);
+        dk_ui_start_box(&ui, 0, 0);
+            dk_ui_box_float(&ui, FLOAT_LEFT);
+            dk_ui_box_set_gap(&ui, 32);
+
+            dk_ui_rect(&ui, 50, 50, (dk_color){1,1,1,0.1});
+            dk_ui_rect(&ui, 50, 50, (dk_color){1,1,1,0.1});
+            dk_ui_rect(&ui, 50, 50, (dk_color){1,1,1,0.1});
+        dk_ui_end_box(&ui);
+
+        dk_ui_start_box(&ui, 0, 0);
+            dk_ui_box_set_padding(&ui,padding,padding,padding,padding);
+            dk_ui_box_set_gap(&ui, 50);
+            dk_ui_box_float(&ui, FLOAT_LEFT);
+
+            dk_ui_texture(&ui, fedora_tex, 32, 32);
+            dk_ui_texture(&ui, fedora_tex, 32, 32);
+            dk_ui_texture(&ui, fedora_tex, 32, 32);
+        dk_ui_end_box(&ui);
+
     dk_ui_end_box(&ui);
 
     // --- Render loop ---

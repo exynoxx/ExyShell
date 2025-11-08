@@ -1,13 +1,13 @@
 #include "hover.h"
-#include <stdbool.h>
+#include <stdlib.h>
 
 static int inside(HitBox *o, int px, int py) {
     return (px >= o->x && px <= o->x + o->w &&
             py >= o->y && py <= o->y + o->h);
 }
 
-void hit_init(HitRegistry *r, HitBox *storage, int capacity) {
-    r->objs = storage;
+void hit_init(HitRegistry *r, int capacity) {
+    r->objs = malloc(sizeof(HitBox)*capacity);
     r->count = 0;
     r->capacity = capacity;
 }

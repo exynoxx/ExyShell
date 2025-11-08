@@ -196,6 +196,7 @@ static void draw_element(dk_ui_manager *mgr, dk_ui_element *elem) {
         case ELEMENT_RECT:
             dk_set_color(mgr->ctx, elem->data.color);
             dk_draw_rect(mgr->ctx, elem->x, elem->y, elem->width, elem->height);
+            dk_set_color(mgr->ctx, (dk_color){1,1,1,1});
             break;
             
         case ELEMENT_TEXTURE:
