@@ -5,10 +5,9 @@
 #include "../wayland_protocols/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
 
 struct toplevel_info {
-    struct zwlr_foreign_toplevel_handle_v1 *handle;
+    //struct zwlr_foreign_toplevel_handle_v1 *handle;
     char *app_id;
     char *title;
-    char *icon_path;
     uint32_t state;
     struct toplevel_info *next;
 };
