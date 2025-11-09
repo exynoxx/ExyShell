@@ -10,7 +10,7 @@ typedef enum {
     UP = 1,
 	DOWN = 2,
 	LEFT = 4,
-	Right = 8,
+	RIGHT = 8,
     TOP = 13,
     BOTTOM = 14
 } Anchor;
