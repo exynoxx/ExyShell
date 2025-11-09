@@ -42,7 +42,7 @@ void hit_add(dk_context *ctx, dk_ui_node *node, bool *hover) {
 
     return hit_any;
 } */
-int hit_query(dk_context *ctx, int px, int py) {
+int hitbox_query(dk_context *ctx, int px, int py) {
     int hit_any = 0;
 
     for (int i = 0; i < ctx->node_mngr.element_count; i++) {

@@ -38,39 +38,39 @@ int main() {
         //printf("Mouse: %f, %f\n", mouse_info->mouse_x, mouse_info->mouse_y);
         dk_begin_frame(ctx);
 
-        dk_ui_reset(ctx);
-        dk_ui_start_box(ctx, 0, 0);
-            dk_ui_box_float(ctx, FLOAT_NONE);
+        dk_reset(ctx);
+        dk_start_box(ctx, 0, 0);
+            dk_box_float(ctx, FLOAT_NONE);
 
-            dk_ui_start_box(ctx, 0, 0);
-                dk_ui_box_float(ctx, FLOAT_LEFT);
-                dk_ui_box_set_gap(ctx, 32);
+            dk_start_box(ctx, 0, 0);
+                dk_box_float(ctx, FLOAT_LEFT);
+                dk_box_set_gap(ctx, 32);
 
-                dk_ui_node *b1 = dk_ui_rect(ctx, 50, 50, box_normal);
-                dk_ui_node *b2 = dk_ui_rect(ctx, 50, 50, box_normal);
-                dk_ui_node *b3 = dk_ui_rect(ctx, 50, 50, box_normal);
+                dk_ui_node *b1 = dk_rect(ctx, 50, 50, box_normal);
+                dk_ui_node *b2 = dk_rect(ctx, 50, 50, box_normal);
+                dk_ui_node *b3 = dk_rect(ctx, 50, 50, box_normal);
 
-            dk_ui_end_box(ctx);
+            dk_end_box(ctx);
 
-            dk_ui_start_box(ctx, 0, 0);
-                dk_ui_box_float(ctx, FLOAT_LEFT);
-                dk_ui_box_set_padding(ctx,padding,padding,padding,padding);
-                dk_ui_box_set_gap(ctx, 50);
+            dk_start_box(ctx, 0, 0);
+                dk_box_float(ctx, FLOAT_LEFT);
+                dk_box_set_padding(ctx,padding,padding,padding,padding);
+                dk_box_set_gap(ctx, 50);
 
-                dk_ui_texture(ctx, fedora_tex, 32, 32);
-                dk_ui_texture(ctx, fedora_tex, 32, 32);
-                dk_ui_texture(ctx, fedora_tex, 32, 32);
-            dk_ui_end_box(ctx);
+                dk_texture(ctx, fedora_tex, 32, 32);
+                dk_texture(ctx, fedora_tex, 32, 32);
+                dk_texture(ctx, fedora_tex, 32, 32);
+            dk_end_box(ctx);
 
-        dk_ui_end_box(ctx);
+        dk_end_box(ctx);
         evaluate_positions(ctx->node_mngr.root, 0, 0);
-        hit_query(ctx, mouse_info->mouse_x, mouse_info->mouse_y);
+        hitbox_query(ctx, mouse_info->mouse_x, mouse_info->mouse_y);
 
         if(b1->hovered) b1->data.color.a = 1;
         if(b2->hovered) b2->data.color.a = 1;
         if(b3->hovered) b3->data.color.a = 1;
 
-        dk_ui_draw(ctx, 0, 0);
+        dk_draw(ctx, 0, 0);
         dk_end_frame();
         egl_swap_buffers();
     }
