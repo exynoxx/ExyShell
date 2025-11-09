@@ -152,7 +152,6 @@ static void toplevel_handle_closed(void *data,
     // Cleanup
     free(info->app_id);
     free(info->title);
-    free(info->icon_path);
     zwlr_foreign_toplevel_handle_v1_destroy(info->handle);
     free(info);
 }
@@ -221,7 +220,6 @@ void toplevel_cleanup(void) {
         struct toplevel_info *next = toplevels->next;
         free(toplevels->app_id);
         free(toplevels->title);
-        free(toplevels->icon_path);
         zwlr_foreign_toplevel_handle_v1_destroy(toplevels->handle);
         free(toplevels);
         toplevels = next;
@@ -245,7 +243,6 @@ void toplevel_print_all(void) {
     while (info) {
         printf("App ID: %s\n", info->app_id ? info->app_id : "unknown");
         printf("Title: %s\n", info->title ? info->title : "unknown");
-        printf("Icon: %s\n", info->icon_path ? info->icon_path : "not found");
         printf("---\n");
         info = info->next;
     }
