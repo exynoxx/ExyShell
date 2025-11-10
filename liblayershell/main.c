@@ -7,8 +7,8 @@
 #include "registry.h"
 
 int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone) {
-    display = wl_display_connect(NULL);
-    if (!display) { 
+    wl_display = wl_display_connect(NULL);
+    if (!wl_display) { 
         fprintf(stderr,"Failed to connect to Wayland display\n"); 
         return -1; 
     }
@@ -18,20 +18,20 @@ int init_layer_shell(const char *layer_name, int width, int height, Anchor ancho
     seat_init();
     toplevel_init();
 
-    registry_init(display);
+    registry_init(wl_display);
 
     struct wl_surface *surface = layer_shell_create_surface(layer_name, width, height, anchor, exclusive_zone);
-    egl_init(display, surface, width, height);
+    egl_init(wl_display, surface, width, height);
 
     return 0;
 }
 
 struct wl_display *get_wl_display(){
-    return display;
+    return wl_display;
 }
 
 int display_dispatch_blocking(){
-    return wl_display_dispatch(display);
+    return wl_display_dispatch(wl_display);
 }
 
 void destroy_layer_shell(void) {
