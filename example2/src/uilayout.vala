@@ -3,7 +3,7 @@ using LayerShell;
 using GLES2;
 
 public class UiLayout {
-    public static void Draw(DrawKit.Context ctx, MouseInfo mouse, GLuint fedora_tex){
+    public static void Draw(DrawKit.Context ctx, MouseInfo *mouse, GLuint fedora_tex){
         ctx.begin_frame();
 
         ctx.reset();
@@ -32,8 +32,9 @@ public class UiLayout {
             ctx.end_box();
 
         ctx.end_box();
+
         DrawKit.Context.evaluate_positions(ctx.node_mngr.root,0,0);
-        ctx.hitbox_query((int)mouse.mouse_x, (int)mouse.mouse_y);
+        ctx.hitbox_query((int)mouse->mouse_x, (int)mouse->mouse_y);
 
         if(b1.hovered) b1.color.a = 1;
         if(b2.hovered) b2.color.a = 1;

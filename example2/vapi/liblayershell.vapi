@@ -14,8 +14,8 @@ namespace LayerShell {
     // dk_mouse_info is a plain struct, returned as pointer
     [CCode(cname="dk_mouse_info", has_type_id=false)]
     public struct MouseInfo {
-        public double mouse_x;
-        public double mouse_y;
+        public float mouse_x;
+        public float mouse_y;
         public uint32 mouse_buttons;
     }
 
@@ -43,8 +43,8 @@ namespace LayerShell {
 
     // Functions returning pointers to structs
     [CCode(cname="toplevel_get_list")]
-    public unowned ToplevelInfo? toplevel_get_list();
+    public unowned ToplevelInfo *toplevel_get_list();
 
     [CCode(cname="seat_mouse_info")]
-    public unowned MouseInfo? seat_mouse_info();
+    public unowned MouseInfo *seat_mouse_info();
 }

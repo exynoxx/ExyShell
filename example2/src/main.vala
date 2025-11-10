@@ -9,13 +9,13 @@ public static int main(string[] args) {
     LayerShell.init("panel", width, height, BOTTOM, true);
     var mouse_info = LayerShell.seat_mouse_info();
     var ctx = new DrawKit.Context(width, height);
+    ctx.set_bg_color(DrawKit.Color(){r=0,g=0,b=0,a=0});
 
     var path = "/usr/share/icons/hicolor/32x32/apps/fedora-logo-icon.png";
     var image = DrawKit.image_load(path);
     GLuint fedora_tex = DrawKit.texture_upload(image);
 
     while (LayerShell.display_dispatch_blocking() != -1) {
-
         UiLayout.Draw(ctx, mouse_info, fedora_tex);
         LayerShell.swap_buffers();
     }
