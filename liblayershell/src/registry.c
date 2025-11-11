@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "string_ex.h"
 
 #define MAX_HANDLERS 32
 
@@ -15,6 +14,7 @@ typedef struct {
 static registry_handler handlers[MAX_HANDLERS];
 static int handler_count = 0;
 static struct wl_registry *global_registry = NULL;
+extern char *strdup(const char *s);
 
 void registry_add_handler(const char *interface_name,
                          registry_handler_fn handler,
