@@ -1,8 +1,6 @@
 using LayerShell;
 using GLES2;
 
-extern uint8* rasterize_svg_to_rgba(string filename, int target_width, int target_height);
-
 public static int main(string[] args) {
     
     int width = 1920;

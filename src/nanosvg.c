@@ -4,7 +4,7 @@
 #include <nanosvg/nanosvg.h>
 #define NANOSVGRAST_IMPLEMENTATION
 #include <nanosvg/nanosvgrast.h>  // rasterizer
-#include "texture.h"
+#include "nanosvg.h"
 
 Image *rasterize_svg_to_rgba(const char* filename, int target_width, int target_height) {
     // Parse the SVG file
