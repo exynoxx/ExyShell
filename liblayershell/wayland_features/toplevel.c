@@ -2,6 +2,7 @@
 #include "registry.h"
 #include <stdio.h>
 #include <string.h>
+#include <string_ex.h>
 
 static struct zwlr_foreign_toplevel_manager_v1 *toplevel_manager = NULL;
 static struct toplevel_info *toplevels = NULL;
@@ -13,32 +14,25 @@ static void toplevel_handle_title(void *data,
                                   struct zwlr_foreign_toplevel_handle_v1 *handle,
                                   const char *title) {
     struct toplevel_info *info = data;
-    /* free(info->title);
-    info->title = strdup(title); */
-    printf("Toplevel title: %s\n", title);
+    free(info->title);
+    info->title = strdup(title);
 
-    if(on_window_new){
-        on_window_new(info->app_id, info->title);
-    }
+    printf("Toplevel app_id: %s, title: %s\n", info->app_id, title);
 }
 
 static void toplevel_handle_app_id(void *data,
                                    struct zwlr_foreign_toplevel_handle_v1 *handle,
                                    const char *app_id) {
     struct toplevel_info *info = data;
-    printf("Toplevel app_id: %s\n", app_id);
+    printf("Toplevel app_id: %s, title: %s\n", app_id, info->title);
 
+   
+    free(info->app_id);
+    info->app_id = strdup(app_id);
+    
     if(on_window_new){
         on_window_new(app_id, info->title);
     }
-
-    /* free(info->app_id);
-    info->app_id = strdup(app_id);
-    
-    // Find icon for this app
-    free(info->icon_path);
-    info->icon_path = find_icon_for_app_id(app_id);
-     */
 }
 
 static void toplevel_handle_output_enter(void *data,
@@ -125,10 +119,6 @@ static void toplevel_manager_handle_toplevel(void *data,
     info->next = toplevels;
     toplevels = info;
 
-    if(on_window_new){
-        on_window_new(info->app_id, info->title);
-    }
-    
     zwlr_foreign_toplevel_handle_v1_add_listener(handle, &toplevel_handle_listener, info);
 }
 
