@@ -12,10 +12,16 @@ typedef struct toplevel_info {
     struct zwlr_foreign_toplevel_handle_v1 *handle;
 } toplevel_info;
 
+typedef void (*toplevel_window_new)(const char *app_id, const char *title);
+typedef void (*toplevel_window_remove)(const char *app_id, const char *title);
+
 void toplevel_init();
 void toplevel_cleanup();
 
 toplevel_info *toplevel_get_list();
 void toplevel_print_all();
+
+void register_on_window_new(toplevel_window_new cb);
+void register_on_window_rm(toplevel_window_remove cb);
 
 #endif

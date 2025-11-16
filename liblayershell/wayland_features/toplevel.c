@@ -6,80 +6,8 @@
 static struct zwlr_foreign_toplevel_manager_v1 *toplevel_manager = NULL;
 static struct toplevel_info *toplevels = NULL;
 
-/* static char *find_icon_for_app_id(const char *app_id) {
-    if (!app_id) return NULL;
-    
-    const char *desktop_paths[] = {
-        "/usr/share/applications/",
-        "/usr/local/share/applications/",
-        NULL
-    };
-    
-    char desktop_file[512];
-    char line[512];
-    char *icon_name = NULL;
-    
-    // Try to find .desktop file
-    for (int i = 0; desktop_paths[i]; i++) {
-        snprintf(desktop_file, sizeof(desktop_file), "%s%s.desktop", 
-                 desktop_paths[i], app_id);
-        
-        FILE *f = fopen(desktop_file, "r");
-        if (f) {
-            // Parse desktop file for Icon= line
-            while (fgets(line, sizeof(line), f)) {
-                if (strncmp(line, "Icon=", 5) == 0) {
-                    char *icon = line + 5;
-                    // Remove newline
-                    char *newline = strchr(icon, '\n');
-                    if (newline) *newline = '\0';
-                    icon_name = strdup(icon);
-                    break;
-                }
-            }
-            fclose(f);
-            
-            if (icon_name) break;
-        }
-    }
-    
-    if (!icon_name) {
-        return NULL;
-    }
-    
-    // If icon is absolute path, return it
-    if (icon_name[0] == '/') {
-        return icon_name;
-    }
-    
-    // Otherwise, search in icon theme directories
-    const char *icon_paths[] = {
-        "/usr/share/icons/hicolor/48x48/apps/",
-        "/usr/share/icons/hicolor/scalable/apps/",
-        "/usr/share/pixmaps/",
-        NULL
-    };
-    
-    const char *extensions[] = {".png", ".svg", ".xpm", ""};
-    
-    for (int i = 0; icon_paths[i]; i++) {
-        for (int j = 0; extensions[j][0]; j++) {
-            char full_path[512];
-            snprintf(full_path, sizeof(full_path), "%s%s%s", 
-                     icon_paths[i], icon_name, extensions[j]);
-            
-            FILE *test = fopen(full_path, "r");
-            if (test) {
-                fclose(test);
-                free(icon_name);
-                return strdup(full_path);
-            }
-        }
-    }
-    
-    free(icon_name);
-    return NULL;
-} */
+toplevel_window_new on_window_new = NULL;
+toplevel_window_remove on_window_rm = NULL;
 
 static void toplevel_handle_title(void *data,
                                   struct zwlr_foreign_toplevel_handle_v1 *handle,
@@ -88,12 +16,22 @@ static void toplevel_handle_title(void *data,
     /* free(info->title);
     info->title = strdup(title); */
     printf("Toplevel title: %s\n", title);
+
+    if(on_window_new){
+        on_window_new(info->app_id, info->title);
+    }
 }
 
 static void toplevel_handle_app_id(void *data,
                                    struct zwlr_foreign_toplevel_handle_v1 *handle,
                                    const char *app_id) {
     struct toplevel_info *info = data;
+    printf("Toplevel app_id: %s\n", app_id);
+
+    if(on_window_new){
+        on_window_new(app_id, info->title);
+    }
+
     /* free(info->app_id);
     info->app_id = strdup(app_id);
     
@@ -101,7 +39,6 @@ static void toplevel_handle_app_id(void *data,
     free(info->icon_path);
     info->icon_path = find_icon_for_app_id(app_id);
      */
-    printf("Toplevel app_id: %s, icon: %s\n", app_id, "no" /* info->icon_path ? info->icon_path : "not found" */);
 }
 
 static void toplevel_handle_output_enter(void *data,
@@ -138,6 +75,10 @@ static void toplevel_handle_closed(void *data,
     struct toplevel_info *info = data;
     
     printf("Toplevel closed: %s\n", info->app_id ? info->app_id : "unknown");
+
+    if(on_window_rm){
+        on_window_rm(info->app_id, info->title);
+    }
     
     // Remove from linked list
     struct toplevel_info **current = &toplevels;
@@ -183,6 +124,10 @@ static void toplevel_manager_handle_toplevel(void *data,
     // Add to linked list
     info->next = toplevels;
     toplevels = info;
+
+    if(on_window_new){
+        on_window_new(info->app_id, info->title);
+    }
     
     zwlr_foreign_toplevel_handle_v1_add_listener(handle, &toplevel_handle_listener, info);
 }
@@ -246,4 +191,12 @@ void toplevel_print_all(void) {
         printf("---\n");
         info = info->next;
     }
+}
+
+void register_on_window_new(toplevel_window_new cb) {
+    on_window_new = cb;
+}
+
+void register_on_window_rm(toplevel_window_remove cb) {
+    on_window_rm = cb;
 }
