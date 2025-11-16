@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <string_ex.h>
+#include <stdbool.h>
 
 // Window tracking structure
 typedef struct toplevel_window {
     struct zwlr_foreign_toplevel_handle_v1 *handle;
     char *app_id;
     char *title;
+    bool activated;
     struct wl_list link;
 } toplevel_window_t;
 
@@ -118,10 +120,6 @@ static void toplevel_handle_app_id(void *data,
 
 static void toplevel_handle_done(void *data,
                                  struct zwlr_foreign_toplevel_handle_v1 *handle) {
-    toplevel_window_t *window = data;
-    if (callback_focus && window->app_id && window->title) {
-        callback_focus(window->app_id, window->title, callback_focus_data);
-    }
 }
 
 static void toplevel_handle_closed(void *data,
@@ -133,7 +131,28 @@ static void toplevel_handle_closed(void *data,
 static void toplevel_handle_state(void *data,
                                   struct zwlr_foreign_toplevel_handle_v1 *handle,
                                   struct wl_array *state) {
-    // Could track window state here if needed
+/*  */
+    toplevel_window_t *window = data;
+    bool is_activated = false;
+    
+    uint32_t *state_ptr;
+    wl_array_for_each(state_ptr, state) {
+        if (*state_ptr == ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED) {
+            is_activated = true;
+            break;
+        }
+    }
+    
+    // Detect focus change
+    if (is_activated && !window->activated) {
+        window->activated = true;
+        if (callback_focus && window->app_id && window->title) {
+            callback_focus(window->app_id, window->title, callback_focus_data);
+        }
+    } else if (!is_activated && window->activated) {
+        window->activated = false;
+        //TODO call callback
+    }
 }
 
 static void toplevel_handle_output_enter(void *data,
