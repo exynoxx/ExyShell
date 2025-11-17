@@ -25,26 +25,27 @@ public class UiLayout {
 
                 var hitboxes = new DrawKit.UINode*[n_programs];
                 for(int i = 0; i < n_programs; i++){
-                    hitboxes[i] = ctx.rect(50, 50, Color(){r=1,g=1,b=1,a=0.1f});
+                    hitboxes[i] = ctx.rect(70, 52, Color(){r=1,g=1,b=1,a=0f});
                 }
 
             ctx.end_box();
 
             ctx.start_box(0, 0);
                 ctx.box_float(DrawKit.FloatMode.LEFT);
-                var padding = (50-32)/2;
+                var padding_side = (70-32)/2;
+                var padding_top = (52-32)/2;
 
                 foreach (var item in programs)
                 {
                     ctx.texture(item.tex, 32, 32);
-                    ctx.set_padding(padding, padding, padding);
+                    ctx.set_padding(padding_side, padding_side, padding_top);
                 }
             ctx.end_box();
                     
             ctx.start_box(0, 8);
                 float shade = 0.15f;
                 ctx.rect(0, 0, Color(){r=shade,g=shade,b=shade,a=1});
-                ctx.set_padding(0, 0, 50);
+                ctx.set_padding(0, 0, ctx.screen_height-8);
             ctx.end_box();
 
         ctx.end_box();
@@ -53,7 +54,7 @@ public class UiLayout {
         ctx.hitbox_query((int)mouse->mouse_x, (int)mouse->mouse_y);
 
         foreach (var hitbox in hitboxes){
-            if(hitbox.hovered) hitbox.color.a = 1;
+            if(hitbox.hovered) hitbox.color.a = 0.2f;
         }
 
         ctx.draw(0,0);
