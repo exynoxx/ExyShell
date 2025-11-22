@@ -43,15 +43,22 @@ public class LayerShellBar : Gtk.ApplicationWindow {
 
         // Create custom bar
 
+        string css = """
+            window {
+                background-color: transparent;
+            }
+            """;
+
+        var provider = new Gtk.CssProvider ();
+        provider.load_from_data ((uint8[]) css);
+        Gtk.StyleContext.add_provider_for_display (
+            Gdk.Display.get_default(),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
+
+
         drawing_area = new DrawingArea();
-        
-        // Add motion controller to the drawing area, not the window
-        var motion = new Gtk.EventControllerMotion();
-        motion.motion.connect((x, y) => {
-            print("Pointer at %.1f, %.1f relative to widget\n", x, y);
-        });  // Use proper signal connection
-        drawing_area.add_controller(motion);
-        
         set_child(drawing_area);
     }
 }

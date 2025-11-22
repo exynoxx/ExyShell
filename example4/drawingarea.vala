@@ -94,16 +94,16 @@ public class DrawingArea : Gtk.DrawingArea {
         int width = get_width();
         int height = get_height();
         
-        // Background
+/*          // Background
         var bg_rect = Graphene.Rect() {
             origin = { 0, 0 },
             size = { width, height }
         };
         var bg_color = RGBA();
-        bg_color.parse("#1e1e2e");
+        bg_color.parse("#000");
         bg_color.alpha = 0.5f;
         snapshot.append_color(bg_color, bg_rect);
-        
+          */
         // Draw taskbar items
         float x_offset = 0;
         for (int i = 0; i < programs.size; i++) {
