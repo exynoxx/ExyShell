@@ -1,9 +1,8 @@
 #include "toplevel.h"
-#include "registry.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string_ex.h>
+//#include "string_ex.h"
 #include <stdbool.h>
 
 // Window tracking structure
@@ -22,6 +21,7 @@ static struct wl_list windows;
 // Forward declarations
 extern void toplevel_created(toplevel_window_t *window);
 extern void toplevel_destroyed(toplevel_window_t *window);
+extern void toplevel_focused(toplevel_window_t *window);
 
 static void toplevel_handle_title(void *data, 
                                   struct zwlr_foreign_toplevel_handle_v1 *handle,
@@ -125,6 +125,7 @@ static void toplevel_handle_state(void *data,
     // Detect focus change
     if (is_activated && !window->activated) {
         window->activated = true;
+        toplevel_focused(window);
     } else if (!is_activated && window->activated) {
         window->activated = false;
         //TODO call callback
@@ -185,11 +186,6 @@ void toplevel_cleanup(void) {
     toplevel_window_t *window, *tmp;
     wl_list_for_each_safe(window, tmp, &windows, link) {
         window_destroy(window);
-    }
-    
-    if (seat) {
-        wl_seat_destroy(seat);
-        seat = NULL;
     }
     
     if (toplevel_manager) {
