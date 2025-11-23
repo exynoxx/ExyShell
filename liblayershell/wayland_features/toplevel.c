@@ -247,12 +247,12 @@ void toplevel_activate(toplevel_window_t *window, struct wl_seat *seat) {
         return;
     }
 
-    printf("zwlr_foreign_toplevel_handle_v1_activate %s\n", window->title);
+    //printf("zwlr_foreign_toplevel_handle_v1_activate %s\n", window->title);
     zwlr_foreign_toplevel_handle_v1_activate(window->handle, seat);
 }
 
 void toplevel_activate_by_id(const char* app_id, const char* title) {
-    printf("enter toplevel_activate_by_id");
+    //printf("enter toplevel_activate_by_id");
     toplevel_window_t *window = window_find(app_id, title);
     if (!window) {
         fprintf(stderr, "Window not found: %s - %s\n", app_id, title);
@@ -269,12 +269,12 @@ void toplevel_minimize(toplevel_window_t *window){
         return;
     }
 
-    printf("zwlr_foreign_toplevel_handle_v1_set_minimized %s\n", window->title);
+    //printf("zwlr_foreign_toplevel_handle_v1_set_minimized %s\n", window->title);
     zwlr_foreign_toplevel_handle_v1_set_minimized(window->handle);
 }
 
 void toplevel_minimize_by_id(const char* app_id, const char* title){
-    printf("enter toplevel_minimize_by_id");
+    //printf("enter toplevel_minimize_by_id");
     toplevel_window_t *window = window_find(app_id, title);
     if (!window) {
         fprintf(stderr, "Window not found: %s - %s\n", app_id, title);

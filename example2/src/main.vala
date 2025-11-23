@@ -23,7 +23,7 @@ public void on_window_new(string app_id, string title){
 
     var icon_path = Utils.get_icon_path_from_app_id(app_id);
 
-    print("using icon: %s,\n", icon_path);
+    //print("using icon: %s,\n", icon_path);
 
     GLuint tex;
     if(icon_path.contains(".svg")){
@@ -61,17 +61,14 @@ public static int main(string[] args) {
     LayerShell.register_on_window_focus(on_window_focus);
 
     LayerShell.register_on_mouse_down(()=>{
-        print("mouse_down\n");
         foreach(var box in entries){
             if(box.hovered && !box.clicked){
                 box.clicked = true;
-                print("clicked activate %s\n", box.title);
                 LayerShell.toplevel_activate_by_id(box.id, box.title);
             }
         }
     });
     LayerShell.register_on_mouse_up(()=>{
-        print("mouse_up\n");
         foreach(var box in entries){
             box.clicked = false;
         }
@@ -99,8 +96,6 @@ public static int main(string[] args) {
     ctx.set_bg_color(DrawKit.Color(){r=0,g=0,b=0,a=0});
 
     while (LayerShell.display_dispatch_blocking() != -1) {
-        //if(draw_count <= 0 || entries.size < 1) continue;
-
         if(!redraw) continue;
 
         UiLayout.Draw(ctx, entries, active_idx);
