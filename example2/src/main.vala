@@ -2,14 +2,21 @@ using LayerShell;
 using GLES2;
 using Gee;
 
-public class Program {
+public class Node {
     public string id;
     public string title;
     public GLuint tex;
+    public bool hovered;
+    public bool clicked;
+    public int x;
+    public int y;
 }
 
-static Gee.List<Program> entries = null;
+int box_width = 70;
+
+static Gee.List<Node> entries = null;
 static int active_idx = -1;
+static bool redraw = true;
 
 public void on_window_new(string app_id, string title){
     print("on_window_new: %s (%s)\n", title, app_id);
@@ -27,7 +34,7 @@ public void on_window_new(string app_id, string title){
         tex = DrawKit.texture_upload(image);
     }
 
-    entries.add(new Program(){id=app_id, title=title, tex=tex});
+    entries.add(new Node(){id=app_id, title=title, tex=tex, x = entries.size * box_width, y = 0});
 }
 
 public static void on_window_focus(string app_id, string title){
@@ -40,33 +47,49 @@ public static void on_window_focus(string app_id, string title){
 }
 
 public static int main(string[] args) {
-    
+
     int width = 1920;
     int height = 60;
+    int underline_height = 5;
+    int box_height = height - underline_height;
 
-    entries = new ArrayList<Program>();
+    entries = new ArrayList<Node>();
     LayerShell.register_on_window_new(on_window_new);
     LayerShell.register_on_window_rm((app_id, title) => print("rm: %s (%s)\n", title, app_id));
     LayerShell.register_on_window_focus(on_window_focus);
-    
-/*      LayerShell.register_on_mouse_enter(() => {
-        print("mouse enter\n");
-    });  */
 
-    /*      LayerShell.register_on_mouse_leave(() => {
-        print("mouse leave\n");
-    });  */
+    LayerShell.register_on_mouse_motion((x,y) => {
+        foreach(var box in entries){
+            var box_x = box.x;
+            var box_y = box.y;
+            var oldval = box.hovered;
+            if(
+                x >= box_x && x <= box_x + box_width &&
+                y >= box_y && y <= box_y + box_height) {
+                box.hovered = true;
+            } else {
+                box.hovered = false;
+            }
+            if(box.hovered != oldval) redraw = true;
+
+            box_x += box_width;
+        }
+    });
 
     LayerShell.init("panel", width, height, BOTTOM, true);
-    var mouse_info = LayerShell.seat_mouse_info();
+
     var ctx = new DrawKit.Context(width, height);
     ctx.set_bg_color(DrawKit.Color(){r=0,g=0,b=0,a=0});
 
     while (LayerShell.display_dispatch_blocking() != -1) {
         //if(draw_count <= 0 || entries.size < 1) continue;
 
-        UiLayout.Draw(ctx, mouse_info, entries, active_idx);
+        if(!redraw) continue;
+
+        UiLayout.Draw(ctx, entries, active_idx);
         LayerShell.swap_buffers();
+
+        redraw = false;
     }
 
     return 0;

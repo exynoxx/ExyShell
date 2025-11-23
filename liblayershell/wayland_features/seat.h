@@ -13,11 +13,15 @@ typedef struct {
 
 typedef void (*seat_mouse_enter)(void* user_data);
 typedef void (*seat_mouse_leave)(void* user_data);
+typedef void (*seat_mouse_motion)(double x, double y, void* user_data);
 
 void seat_init();
+struct wl_seat *get_wl_seat();
+
 dk_mouse_info *seat_mouse_info();
 void register_on_mouse_enter(seat_mouse_enter cb, void* user_data);
 void register_on_mouse_leave(seat_mouse_leave cb, void* user_data);
+void register_on_mouse_motion(seat_mouse_motion cb, void* user_data);
 
 
 #endif

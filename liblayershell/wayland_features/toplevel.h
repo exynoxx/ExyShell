@@ -13,7 +13,8 @@ void toplevel_cleanup(void);
 void register_on_window_new(toplevel_window_new cb, void* user_data);
 void register_on_window_rm(toplevel_window_rm cb, void* user_data);
 void register_on_window_focus(toplevel_window_focus cb, void* user_data);
-// Focus a window by app_id and title
-void toplevel_focus_window(const char* app_id, const char* title);
+
+void toplevel_activate_by_id(const char* app_id, const char* title);
+void toplevel_minimize_by_id(const char* app_id, const char* title);
 
 #endif

@@ -54,18 +54,25 @@ namespace LayerShell {
     [CCode(cname = "register_on_window_focus")]
     public void register_on_window_focus(ToplevelWindowFocus cb);
 
-    [CCode(cname = "toplevel_focus_window")]
-    void toplevel_focus_window(string app_id, string title);
+    [CCode(cname = "toplevel_activate_by_id")]
+    void toplevel_activate_by_id(string app_id, string title);
+
+    [CCode(cname = "toplevel_minimize_by_id")]
+    void toplevel_minimize_by_id(string app_id, string title);
 
     [CCode(cname="seat_mouse_info")]
     public unowned MouseInfo *seat_mouse_info();
 
     public delegate void SeatMouseEnter();
     public delegate void SeatMouseLeave();
+    public delegate void SeatMouseMotion(double x, double y);
 
     [CCode(cname = "register_on_mouse_enter")]
     void register_on_mouse_enter(SeatMouseEnter cb);
 
     [CCode(cname = "register_on_mouse_leave")]
     void register_on_mouse_leave(SeatMouseLeave cb);
+
+    [CCode(cname = "register_on_mouse_motion")]
+    void register_on_mouse_motion(SeatMouseMotion cb);
 }

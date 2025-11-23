@@ -1,5 +1,6 @@
 #include "toplevel.h"
 #include "registry.h"
+#include "seat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +18,6 @@ typedef struct toplevel_window {
 
 // Global state
 static struct zwlr_foreign_toplevel_manager_v1 *toplevel_manager = NULL;
-static struct wl_seat *seat = NULL;
 static struct wl_list windows;
 
 static toplevel_window_new callback_new = NULL;
@@ -72,20 +72,6 @@ static toplevel_window_t* window_create(struct zwlr_foreign_toplevel_handle_v1 *
     return window;
 }
 
-// Find window by app_id and title
-static toplevel_window_t* window_find(const char *app_id, const char *title) {
-    printf("window_find");
-    toplevel_window_t *window;
-    wl_list_for_each(window, &windows, link) {
-        if (window->app_id && window->title &&
-            strcmp(window->app_id, app_id) == 0 &&
-            strcmp(window->title, title) == 0) {
-            return window;
-        }
-    }
-    return NULL;
-}
-
 // Destroy window entry
 static void window_destroy(toplevel_window_t *window) {
     if (callback_rm && window->app_id && window->title) {
@@ -132,7 +118,7 @@ static void toplevel_handle_closed(void *data,
 static void toplevel_handle_state(void *data,
                                   struct zwlr_foreign_toplevel_handle_v1 *handle,
                                   struct wl_array *state) {
-    printf("toplevel_handle_state");
+    printf("toplevel_handle_state\n");
 
     toplevel_window_t *window = data;
     bool is_activated = false;
@@ -190,20 +176,6 @@ static const struct zwlr_foreign_toplevel_manager_v1_listener toplevel_manager_l
     .finished = toplevel_manager_handle_finished,
 };
 
-// Seat listener (needed for focus)
-static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
-                                     uint32_t capabilities) {
-    // We just need the seat reference for activation
-}
-
-static void seat_handle_name(void *data, struct wl_seat *wl_seat, const char *name) {
-}
-
-static const struct wl_seat_listener seat_listener = {
-    .capabilities = seat_handle_capabilities,
-    .name = seat_handle_name,
-};
-
 // Registry handlers
 static void toplevel_registry_handler(void *data, struct wl_registry *registry,
                                       uint32_t name, const char *interface,
@@ -213,9 +185,6 @@ static void toplevel_registry_handler(void *data, struct wl_registry *registry,
                                            &zwlr_foreign_toplevel_manager_v1_interface, 3);
         zwlr_foreign_toplevel_manager_v1_add_listener(toplevel_manager,
                                                      &toplevel_manager_listener, NULL);
-    } else if (strcmp(interface, wl_seat_interface.name) == 0) {
-        seat = wl_registry_bind(registry, name, &wl_seat_interface, 1);
-        wl_seat_add_listener(seat, &seat_listener, NULL);
     }
 }
 
@@ -231,12 +200,7 @@ void toplevel_cleanup(void) {
     wl_list_for_each_safe(window, tmp, &windows, link) {
         window_destroy(window);
     }
-    
-    if (seat) {
-        wl_seat_destroy(seat);
-        seat = NULL;
-    }
-    
+
     if (toplevel_manager) {
         zwlr_foreign_toplevel_manager_v1_destroy(toplevel_manager);
         toplevel_manager = NULL;
@@ -258,20 +222,64 @@ void register_on_window_focus(toplevel_window_focus cb, void* user_data) {
     callback_focus_data = user_data;
 }
 
-void toplevel_focus_window(const char* app_id, const char* title) {
-    printf("toplevel_focus_window");
+static toplevel_window_t* window_find(const char *app_id, const char *title) {
+    printf("window_find");
+    toplevel_window_t *window;
+    wl_list_for_each(window, &windows, link) {
+        if (window->app_id && window->title &&
+            strcmp(window->app_id, app_id) == 0 &&
+            strcmp(window->title, title) == 0) {
+            return window;
+        }
+    }
+    return NULL;
+}
+
+
+void toplevel_activate(toplevel_window_t *window, struct wl_seat *seat) {
     if (!seat) {
-        fprintf(stderr, "No seat available for window activation\n");
+        fprintf(stderr, "No seat available in toplevel_activate\n");
         return;
     }
-    
+
+    if (!window->handle) {
+        fprintf(stderr, "toplevel_activate: no window handle\n");
+        return;
+    }
+
+    printf("zwlr_foreign_toplevel_handle_v1_activate %s\n", window->title);
+    zwlr_foreign_toplevel_handle_v1_activate(window->handle, seat);
+}
+
+void toplevel_activate_by_id(const char* app_id, const char* title) {
+    printf("enter toplevel_activate_by_id");
     toplevel_window_t *window = window_find(app_id, title);
     if (!window) {
         fprintf(stderr, "Window not found: %s - %s\n", app_id, title);
         return;
     }
     
-    // This activates (focuses) the window
-    printf("Focusing window: %s - %s\n", app_id, title);
-    zwlr_foreign_toplevel_handle_v1_activate(window->handle, seat);
+    struct wl_seat *seat = get_wl_seat();
+    toplevel_activate(window, seat);
+}
+
+void toplevel_minimize(toplevel_window_t *window){
+    if (!window->handle) {
+        fprintf(stderr, "toplevel_activate: no window handle\n");
+        return;
+    }
+
+    printf("zwlr_foreign_toplevel_handle_v1_set_minimized %s\n", window->title);
+    zwlr_foreign_toplevel_handle_v1_set_minimized(window->handle);
+}
+
+void toplevel_minimize_by_id(const char* app_id, const char* title){
+    printf("enter toplevel_minimize_by_id");
+    toplevel_window_t *window = window_find(app_id, title);
+    if (!window) {
+        fprintf(stderr, "Window not found: %s - %s\n", app_id, title);
+        return;
+    }
+
+    toplevel_minimize(window);
 }

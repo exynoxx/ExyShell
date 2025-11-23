@@ -1,5 +1,6 @@
 #include "hover.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 void dk_register_on_hover(dk_ui_node *node, dk_on_hover cb, void* user_data)
 {
@@ -40,7 +41,7 @@ int dk_hover_query(dk_context *ctx, int px, int py, bool clicked) {
             if(e->hoverable->cb_on_clicked && !e->hoverable->down && clicked){
                 e->hoverable->cb_on_clicked(e, e->hoverable->on_clicked_user_data);
             }
-            e->hoverable->down = clicked;
+            e->hoverable->down = true;
 
         } else {
             e->hoverable->hovered = false;

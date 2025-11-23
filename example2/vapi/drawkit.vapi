@@ -30,7 +30,10 @@ namespace DrawKit {
         public FloatMode float_mode;
     }
 
+    [CCode (has_target = true)]
     public delegate void OnHover(UINode* node);
+
+    [CCode (has_target = true)]
     public delegate void OnClicked(UINode* node);
 
     [CCode (cname = "struct dk_ui_node", has_type_id = false)]
