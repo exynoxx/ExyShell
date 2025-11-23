@@ -18,12 +18,12 @@ static Gee.List<Node> entries = null;
 static int active_idx = -1;
 static bool redraw = true;
 
-public void on_window_new(string app_id, string title){
+private void on_window_new(string app_id, string title){
     print("on_window_new: %s (%s)\n", title, app_id);
 
     var icon_path = Utils.get_icon_path_from_app_id(app_id);
 
-    //print("using icon: %s,\n", icon_path);
+    print("using icon: %s,\n", icon_path);
 
     GLuint tex;
     if(icon_path.contains(".svg")){
@@ -38,14 +38,25 @@ public void on_window_new(string app_id, string title){
     redraw = true;
 }
 
-public static void on_window_focus(string app_id, string title){
-    for(int i = 0; i < entries.size; i++){
-        if(entries[i].id == app_id && entries[i].title == title){
-            active_idx = i;
-            redraw = true;
-            return;
-        }
+private void on_click(Node node){
+
+    if(node == entries[0]){
+        print("launching apps");
+        return;
+    } 
+
+    LayerShell.toplevel_activate_by_id(node.id, node.title);
+}
+
+private void add_launcher_item(){
+    var image = DrawKit.image_from_svg("/home/nicholas/Dokumenter/layer-shell-experiments/example2/res/app.svg",32,32);
+    if(image == null){
+        print("Launcher icon not found");
+        return;
     }
+    
+    GLuint tex = DrawKit.texture_upload(*image);
+    entries.add(new Node(){id="--", title="--", tex=tex, x = 0, y = 0, hovered = false, clicked = false});
 }
 
 public static int main(string[] args) {
@@ -56,15 +67,36 @@ public static int main(string[] args) {
     int box_height = height - underline_height;
 
     entries = new ArrayList<Node>();
+    add_launcher_item();
+    
     LayerShell.register_on_window_new(on_window_new);
-    LayerShell.register_on_window_rm((app_id, title) => print("rm: %s (%s)\n", title, app_id));
-    LayerShell.register_on_window_focus(on_window_focus);
+    LayerShell.register_on_window_rm((app_id, title) => {
+        for (var i = 0; i < entries.size ; i++){
+            var entry = entries[i];
+            if(entry.id == app_id && entry.title == title){
+                entries.remove (entry);
+                //TODO free
+                redraw = true;
+            }
+        }
+    });
+    LayerShell.register_on_window_focus((app_id, title)=>{
+        var i = 0;
+        foreach(var entry in entries){
+            if(entry.id == app_id && entry.title == title){
+                active_idx = i;
+                redraw = true;
+                return;
+            }
+            i++;
+        }
+    });
 
     LayerShell.register_on_mouse_down(()=>{
         foreach(var box in entries){
             if(box.hovered && !box.clicked){
                 box.clicked = true;
-                LayerShell.toplevel_activate_by_id(box.id, box.title);
+                on_click(box);
             }
         }
     });

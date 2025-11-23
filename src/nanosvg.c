@@ -17,6 +17,8 @@ Image *rasterize_svg_to_rgba(const char* filename, int target_width, int target_
     // Allocate pixel buffer
     uint8_t* rgba = (uint8_t*)malloc(target_width * target_height * 4);
     if (!rgba) {
+
+        fprintf(stderr, "Failed to malloc\n");
         nsvgDelete(image);
         return NULL;
     }
