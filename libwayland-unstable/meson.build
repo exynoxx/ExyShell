@@ -1,4 +1,4 @@
-project('layershell', 'c',
+project('wayland-unstable', 'c',
   version : '1.0',
   default_options : ['c_std=c11']
 )
@@ -14,18 +14,18 @@ sources = [
   'main.c',
   'egl.c',
   'registry.c',
-  'wayland_features/compositor.c',
-  'wayland_features/layershell.c',
-  'wayland_features/seat.c',
-  'wayland_features/toplevel.c',
-  'wayland_protocols/wlr-layer-shell-unstable-v1-protocol.c',
-  'wayland_protocols/xdg-shell-client-protocol.c',
-  'wayland_protocols/wlr-foreign-toplevel-management-unstable-v1-protocol.c'
+  'protocols/compositor.c',
+  'protocols/layershell.c',
+  'protocols/seat.c',
+  'protocols/toplevel.c',
+  'generated/wlr-layer-shell-unstable-v1-protocol.c',
+  'generated/xdg-shell-client-protocol.c',
+  'generated/wlr-foreign-toplevel-management-unstable-v1-protocol.c'
 ]
 
 # --- Build shared library ---
 liblayershell = shared_library(
-  'layershell',
+  'wayland-unstable',
   sources,
   dependencies: [wayland_client_dep, wayland_egl_dep, egl_dep, glesv2_dep],
   include_directories: include_directories('.'),

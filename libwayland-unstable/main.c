@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "liblayershell.h"
+#include "libwayland_unstable.h"
 #include "egl.h"
 #include "registry.h"
 

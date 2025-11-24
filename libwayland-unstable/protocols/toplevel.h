@@ -2,7 +2,7 @@
 #define TOPLEVEL_H
 
 #include <stdlib.h>
-#include "../wayland_protocols/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
+#include "../generated/wlr-foreign-toplevel-management-unstable-v1-client-protocol.h"
 
 typedef void (*toplevel_window_new)(const char* app_id, const char* title, void* user_data);
 typedef void (*toplevel_window_rm)(const char* app_id, const char* title, void* user_data);
