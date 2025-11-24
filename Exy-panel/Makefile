@@ -1,8 +1,8 @@
 ROOT_DIR       = $(CURDIR)
-DRAWKIT_SRC    = $(ROOT_DIR)/libdrawkit
-DRAWKIT_BUILD  = $(ROOT_DIR)/libdrawkit/build
-LAYERSHELL_SRC = $(ROOT_DIR)/libwayland-unstable
-LAYERSHELL_BUILD = $(ROOT_DIR)/libwayland-unstable/build
+DRAWKIT_SRC    = $(ROOT_DIR)/../libdrawkit
+DRAWKIT_BUILD  = $(ROOT_DIR)/../libdrawkit/build
+LAYERSHELL_SRC = $(ROOT_DIR)/../libwayland-unstable
+LAYERSHELL_BUILD = $(ROOT_DIR)/../libwayland-unstable/build
 
 # Vala packages
 VALA_PKGS = \
