@@ -1,5 +1,5 @@
-ROOT_DIR = /home/nicholas/Dokumenter/layer-shell-experiments
-DRAWKIT_SRC = $(ROOT_DIR)/src
+ROOT_DIR = $(CURDIR)
+DRAWKIT_SRC = $(ROOT_DIR)/libdrawkit
 LAYERSHELL_SRC = $(ROOT_DIR)/libwayland-unstable
 LAYERSHELL_BUILD = $(ROOT_DIR)/libwayland-unstable/build
 

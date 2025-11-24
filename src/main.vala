@@ -49,7 +49,7 @@ private void on_click(Node node){
 }
 
 private void add_launcher_item(){
-    var image = DrawKit.image_from_svg("/home/nicholas/Dokumenter/layer-shell-experiments/example2/res/app.svg",32,32);
+    var image = DrawKit.image_from_svg("src/res/app.svg",32,32);
     if(image == null){
         print("Launcher icon not found");
         return;
