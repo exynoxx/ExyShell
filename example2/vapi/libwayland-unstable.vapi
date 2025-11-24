@@ -1,4 +1,4 @@
-[CCode(cheader_filename="liblayershell.h")]
+[CCode(cheader_filename="libwayland_unstable.h")]
 namespace LayerShell {
 
     [CCode(cname="Anchor", cprefix="", has_type_id=false)]
