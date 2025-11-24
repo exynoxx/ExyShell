@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "string_ex.h"
 
 #define MAX_HANDLERS 32
 

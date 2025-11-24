@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <string_ex.h>
 #include <stdbool.h>
 
 // Window tracking structure

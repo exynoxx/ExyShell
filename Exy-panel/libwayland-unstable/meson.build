@@ -1,6 +1,5 @@
 project('wayland-unstable', 'c',
-  version : '1.0',
-  default_options : ['c_std=c11']
+  version : '1.0'
 )
 
 # --- Find dependencies using pkg-config ---
@@ -23,12 +22,9 @@ sources = [
   'generated/wlr-foreign-toplevel-management-unstable-v1-protocol.c'
 ]
 
-# --- Build shared library ---
-liblayershell = shared_library(
+wayland_unstable = static_library(
   'wayland-unstable',
   sources,
   dependencies: [wayland_client_dep, wayland_egl_dep, egl_dep, glesv2_dep],
-  include_directories: include_directories('.'),
-  version: '1.0',
-  soversion: '1'
+  include_directories: include_directories('.')
 )
