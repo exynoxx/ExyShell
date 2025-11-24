@@ -6,6 +6,7 @@
 
 static struct zwlr_layer_shell_v1 *layer_shell = NULL;
 static struct wl_surface *surface = NULL;
+surface_size_t surface_size;
 static struct zwlr_layer_surface_v1 *layer_surface = NULL;
 
 // --- Layer surface listener ---
@@ -16,6 +17,9 @@ static void layer_surface_config(void *data,
                                            uint32_t height) {
     zwlr_layer_surface_v1_ack_configure(surface, serial);
     wl_surface_commit((struct wl_surface*)data);
+
+    surface_size.width = width;
+    surface_size.height = height;
 }
 
 static void layer_surface_closed(void *data, struct zwlr_layer_surface_v1 *surface) {
@@ -94,3 +98,5 @@ struct wl_surface *layer_shell_create_surface(const char *layer_name, int width,
 struct wl_surface *layer_shell_get_surface(void) {
     return surface;
 }
+
+surface_size_t get_layer_shell_size(void) { return surface_size; }

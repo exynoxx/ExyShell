@@ -3,9 +3,9 @@ using WLUnstable;
 using GLES2;
 
 const int GRID_COLS = 6;
-const int ICON_SIZE = 96;
-const int ICON_PADDING = 40;
-const int TOP_MARGIN = 80;
+const int GRID_ROWS = 4;
+const int ICON_SIZE = 56;
+const int PADDING_EDGES = 100;
 
 struct AppEntry {
     string name;
@@ -19,23 +19,22 @@ struct AppEntry {
 
 class AppLauncher {
 
+    private int hovered_index = -1;
     private bool mouse_clicked = false;
     public bool redraw = true;
 
     private AppEntry[] apps;
-    private int hovered_index = -1;
     private int screen_width;
     private int screen_height;
-    private int start_x;
-    private int start_y;
+    private int padding_h;
+    private int padding_v;
 
     public AppLauncher(int width, int height) {
         screen_width = width;
         screen_height = height;
-        
-        // Calculate starting position to center the grid
-        start_x = 50;
-        start_y = TOP_MARGIN;
+
+        padding_h = (width - PADDING_EDGES*2 - GRID_COLS*ICON_SIZE) / 2;
+        padding_v = (height - PADDING_EDGES*2 - GRID_ROWS*ICON_SIZE) / 2;
         
         calculate_grid_positions();
     }
@@ -69,19 +68,20 @@ class AppLauncher {
     }
 
     private void calculate_grid_positions() {
+        
         for (int i = 0; i < apps.length; i++) {
             int row = i / GRID_COLS;
             int col = i % GRID_COLS;
             
-            apps[i].grid_x = start_x + col * (ICON_SIZE + ICON_PADDING);
-            apps[i].grid_y = start_y + row * (ICON_SIZE + ICON_PADDING);
+            apps[i].grid_x = PADDING_EDGES + padding_h + col * (ICON_SIZE + padding_h*2);
+            apps[i].grid_y = PADDING_EDGES + padding_v + row * (ICON_SIZE + padding_v*2);
         }
     }
 
     public void render() {
         ctx.begin_frame();
         
-        int visible_apps = int.min(apps.length, 48); // Limit for performance
+        int visible_apps = int.min(apps.length, GRID_COLS*GRID_ROWS);
         
         for (int i = 0; i < visible_apps; i++) {
             // Load texture on demand
@@ -117,19 +117,6 @@ class AppLauncher {
             }
         }
         
-        // Handle mouse interaction
-        var mouse_info = seat_mouse_info();
-        int mx = (int)mouse_info->mouse_x;
-        int my = (int)mouse_info->mouse_y;
-        
-        hovered_index = check_hover(mx, my);
-        
-        if (mouse_clicked && hovered_index >= 0) {
-            launch_app(hovered_index);
-        }
-        
-        mouse_clicked = false;
-        
         ctx.end_frame();
     }
 
@@ -157,16 +144,17 @@ static AppLauncher? launcher = null;
 
 public static int main(string[] args) {
 
-    layncher = new AppLauncher();
+    WLUnstable.init_layer_shell("Kickoff-overlay", 0, 0, UP | DOWN | LEFT | RIGHT, false);
+
+    var size = WLUnstable.get_layer_shell_size();
+    var ctx = new DrawKit.Context(size.width, size.height);
+    ctx.set_bg_color(DrawKit.Color(){ 0.15f, 0.15f, 0.15f, 0.95f });
+
+    layncher = new AppLauncher(size.width, size.height);
 
     WLUnstable.register_on_mouse_down(layncher.mouse_down);
     WLUnstable.register_on_mouse_up(layncher.mouse_up);
     WLUnstable.register_on_mouse_motion(layncher.mouse_move);
-
-    WLUnstable.init_layer_shell("Kickoff-overlay", 0, 0, TOP | BOTTOM | LEFT | RIGHT, false);
-
-    var ctx = new DrawKit.Context(width, height);
-    ctx.set_bg_color(DrawKit.Color(){ 0.15f, 0.15f, 0.15f, 0.95f });
     
     while (WLUnstable.display_dispatch_blocking() != -1) {
         
