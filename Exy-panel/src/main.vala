@@ -121,7 +121,7 @@ public static int main(string[] args) {
         }
     });
 
-    WLUnstable.init("panel", width, height, BOTTOM, true);
+    WLUnstable.init_layer_shell("panel", width, height, BOTTOM, true);
 
     add_launcher_item();
 

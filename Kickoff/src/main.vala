@@ -163,7 +163,7 @@ public static int main(string[] args) {
     WLUnstable.register_on_mouse_up(layncher.mouse_up);
     WLUnstable.register_on_mouse_motion(layncher.mouse_move);
 
-    WLUnstable.init("Kickoff-overlay", 0, 0, TOP | BOTTOM | LEFT | RIGHT, false);
+    WLUnstable.init_layer_shell("Kickoff-overlay", 0, 0, TOP | BOTTOM | LEFT | RIGHT, false);
 
     var ctx = new DrawKit.Context(width, height);
     ctx.set_bg_color(DrawKit.Color(){ 0.15f, 0.15f, 0.15f, 0.95f });

@@ -30,7 +30,7 @@ namespace WLUnstable {
     }
 
     [CCode(cname="init_layer_shell")]
-    public int init(string layer_name, int width, int height, Anchor anchor, bool exclusive_zone);
+    public int init_layer_shell(string layer_name, int width, int height, Anchor anchor, bool exclusive_zone);
 
     [CCode(cname="destroy_layer_shell")]
     public void destroy();
