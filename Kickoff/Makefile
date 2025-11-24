@@ -1,32 +1,30 @@
-ROOT_DIR = $(CURDIR)
-DRAWKIT_SRC = $(ROOT_DIR)/libdrawkit
-LAYERSHELL_SRC = $(ROOT_DIR)/libwayland-unstable
-LAYERSHELL_BUILD = $(ROOT_DIR)/libwayland-unstable/build
+ROOT_DIR       = $(CURDIR)
+DRAWKIT_SRC    = $(ROOT_DIR)/../libdrawkit
+DRAWKIT_BUILD  = $(ROOT_DIR)/../libdrawkit/build
+LAYERSHELL_SRC = $(ROOT_DIR)/../libwayland-unstable
+LAYERSHELL_BUILD = $(ROOT_DIR)/../libwayland-unstable/build
 
 # Vala packages
-VALA_PKGS = --pkg=glesv2 \
-            --pkg=wayland-client \
-            --pkg=glib-2.0 \
-            --pkg=gee-0.8 \
-            --pkg=egl \
-            --pkg=drawkit \
-            --pkg=libwayland-unstable
+VALA_PKGS = \
+    --pkg=libdrawkit \
+    --pkg=libwayland-unstable \
+    --pkg=glesv2 \
+    --pkg=wayland-client \
+    --pkg=glib-2.0 \
+    --pkg=gee-0.8 \
+    --pkg=egl
 
-# C compiler flags for external libraries
-CFLAGS = -X -I$(DRAWKIT_SRC) \
-         -X -I$(LAYERSHELL_SRC) \
-         -X -L$(LAYERSHELL_BUILD) \
-         -X -lwayland-unstable \
-         -X -Wl,-rpath,$(LAYERSHELL_BUILD) \
-         -X -lm \
-         -o main
-
-# DrawKit C source files to compile
-DRAWKIT_SOURCES = $(DRAWKIT_SRC)/*.c
+# Compiler and linker flags (static libraries)
+CFLAGS = \
+    -X -I$(DRAWKIT_SRC) \
+    -X $(DRAWKIT_BUILD)/libdrawkit.a \
+    -X -I$(LAYERSHELL_SRC) \
+    -X $(LAYERSHELL_BUILD)/libwayland-unstable.a \
+    -X -lwayland-egl \
+    -X -lwayland-client \
+    -X -lEGL \
+    -X -lGLESv2 \
+    -X -lm
 
 default:
-	valac --vapidir=vapi \
-	$(VALA_PKGS) \
-	$(CFLAGS) \
-	$(DRAWKIT_SOURCES) \
-	src/*.vala
+	valac --vapidir=vapi $(VALA_PKGS) $(CFLAGS) -o main src/*.vala
