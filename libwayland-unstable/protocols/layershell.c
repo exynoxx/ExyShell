@@ -99,4 +99,4 @@ struct wl_surface *layer_shell_get_surface(void) {
     return surface;
 }
 
-surface_size_t get_layer_shell_size(void) { return surface_size; }
+surface_size_t *get_layer_shell_size(void) { return &surface_size; }

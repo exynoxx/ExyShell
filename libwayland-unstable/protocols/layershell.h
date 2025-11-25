@@ -25,6 +25,6 @@ void layer_shell_cleanup();
 
 struct wl_surface *layer_shell_create_surface(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone);
 struct wl_surface *layer_shell_get_surface(void);
-surface_size_t get_layer_shell_size(void);
+surface_size_t *get_layer_shell_size();
 
 #endif // LAYER_SHELL_H

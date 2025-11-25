@@ -41,8 +41,8 @@ namespace Utils {
             return result;
         }
 
-        public static string? valueOrDefault (HashMap<string, string> lookup, string key){
-            return lookup.has_key(lookup) ? lookup[key] : null;
+        public static string? valueOrDefault (HashMap<string, string> lookup, string key, string defaul){
+            return lookup.has_key(key) ? lookup[key] : defaul;
         }
     }
 

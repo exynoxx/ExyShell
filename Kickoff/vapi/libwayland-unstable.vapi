@@ -17,8 +17,8 @@ namespace WLUnstable {
         public int height;
     }
 
-    [CCode(cname="get_layer_shell_size")]
-    public SurfaceSize get_layer_shell_size();
+    [CCode(cname="get_layer_shell_size", has_target = false)]
+    public unowned SurfaceSize get_layer_shell_size();
 
     // dk_mouse_info is a plain struct, returned as pointer
     [CCode(cname="dk_mouse_info", has_type_id=false)]

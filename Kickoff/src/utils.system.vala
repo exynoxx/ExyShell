@@ -1,4 +1,5 @@
 using GLib;
+using Gee;
 
 namespace Utils {
 
@@ -25,7 +26,7 @@ namespace Utils {
             return dirs.to_array();
         }
 
-        private static string[] get_icon_theme_dirs() {
+        public static string[] get_icon_theme_dirs() {
             var dirs = new Gee.ArrayList<string>();
             
             // User icon directory
@@ -59,23 +60,32 @@ namespace Utils {
             return "hicolor";
         }
 
-        public iterator<string> load_desktop_files() {
+        public static string[] get_desktop_files() {
+            var files = new Gee.ArrayList<string>();
             foreach (var data_dir in get_xdg_data_dirs()) {
                 string apps_dir = Path.build_filename(data_dir, "applications");
-                Dir? dir = Dir.open(apps_dir);
+                try {
+                    Dir? dir = Dir.open(apps_dir);
 
-                if (dir == null)
-                    continue; // skip non-existent dirs
+                    if (dir == null)
+                        continue; // skip non-existent dirs
 
-                string? name;
-                while ((name = dir.read_name()) != null) {
-                    if (!name.has_suffix(".desktop"))
-                        continue;
+                    //print("get_desktop_files trying %s\n", data_dir);
 
-                    string filepath = Path.build_filename(apps_dir, name);
-                    yield filepath; //TODO not possible
+                    string? name;
+                    while ((name = dir.read_name()) != null) {
+                        if (!name.has_suffix(".desktop"))
+                            continue;
+
+                        string filepath = Path.build_filename(apps_dir, name);
+                        files.add(filepath);
+                    }
+                } catch(FileError e){
+                    continue;
                 }
             }
+
+            return files.to_array();
         }
     }
 
@@ -85,9 +95,9 @@ namespace Utils {
                 string theme_dir = Path.build_filename(base_dir, theme_name);
         
                 // Check if directory exists and has index.theme
-                if (File.test(theme_dir, FileTest.IS_DIR)) {
+                if (FileUtils.test(theme_dir, FileTest.IS_DIR)) {
                     string index_file = Path.build_filename(theme_dir, "index.theme");
-                    if (File.test(index_file, FileTest.EXISTS)) {
+                    if (FileUtils.test(index_file, FileTest.EXISTS)) {
                         return theme_dir;
                     }
                 }
@@ -97,6 +107,77 @@ namespace Utils {
             return null;
         }
 
+        public static HashMap<string, string> find_icon_paths(string theme_name, int size = 48) {
+            var result = new HashMap<string, string>();
+            
+            // Find theme base directory
+            string? theme_base = find_icon_theme_base(theme_name);
+            if (theme_base == null) {
+                return result;
+            }
+            
+            // Common size directories to check
+            string[] size_variants = {
+                @"$(size)x$(size)",
+                @"$(size)x$(size)@2x",
+                "scalable"
+            };
+            
+            // Common subdirectories where icons are found
+            string[] categories = {
+                "apps",
+                "applications",
+                "actions",
+                "places",
+                "panel",
+                "mimetypes",
+                "devices",
+                "categories",
+                "emblems",
+                "status"
+            };
+            
+            // Icon file extensions
+            string[] extensions = { ".png", ".svg", ".jpg", ".jpeg" };
+            
+            foreach (var size_dir in size_variants) {
+                foreach (var category in categories) {
+                    string dir_path = Path.build_filename(theme_base, size_dir, category);
+                    
+                    if (!FileUtils.test(dir_path, FileTest.IS_DIR)) {
+                        continue;
+                    }
+                    
+                    try {
+                        var directory = Dir.open(dir_path);
+                        string? filename;
+                        
+                        while ((filename = directory.read_name()) != null) {
+                            // Check if file has a valid icon extension
+                            foreach (var ext in extensions) {
+                                if (filename.has_suffix(ext)) {
+                                    // Extract icon name without extension
+                                    string icon_name = filename.substring(0, filename.length - ext.length);
+                                    
+                                    // Only add if not already found (prefer earlier size variants)
+                                    if (!result.has_key(icon_name)) {
+                                        string full_path = Path.build_filename(dir_path, filename);
+                                        result[icon_name] = full_path;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (FileError e) {
+                        // Skip directories we can't read
+                        continue;
+                    }
+                }
+            }
+            
+            return result;
+        }
+/*  
         public static string? lookup_icon(string icon_name, string theme_name, int size = 48) {
             var dirs = get_icon_dirs();
             var contexts = { "apps", "actions", "devices", "places" };
@@ -104,25 +185,25 @@ namespace Utils {
     
             foreach (var base_dir in dirs) {
                 string theme_dir = Path.build_filename(base_dir, theme_name);
-                if (!File.test(theme_dir, FileTest.IS_DIR))
+                if (!FileUtils.test(theme_dir, FileTest.IS_DIR))
                     continue;
     
                 foreach (var context in contexts) {
                     string size_dir = Path.build_filename(theme_dir, "%dx%d".printf(size, size), context);
-                    if (File.test(size_dir, FileTest.IS_DIR)) {
+                    if (FileUtils.test(size_dir, FileTest.IS_DIR)) {
                         foreach (var ext in exts) {
                             string candidate = Path.build_filename(size_dir, icon_name + ext);
-                            if (File.test(candidate, FileTest.EXISTS))
+                            if (FileUtils.test(candidate, FileTest.EXISTS))
                                 return candidate;
                         }
                     }
     
                     // scalable icons
                     string scalable_dir = Path.build_filename(theme_dir, "scalable", context);
-                    if (File.test(scalable_dir, FileTest.IS_DIR)) {
+                    if (FileUtils.test(scalable_dir, FileTest.IS_DIR)) {
                         foreach (var ext in exts) {
                             string candidate = Path.build_filename(scalable_dir, icon_name + ext);
-                            if (File.test(candidate, FileTest.EXISTS))
+                            if (FileUtils.test(candidate, FileTest.EXISTS))
                                 return candidate;
                         }
                     }
@@ -134,17 +215,16 @@ namespace Utils {
             // last-resort fallback
             foreach (var ext in exts) {
                 string fallback = Path.build_filename("/usr/share/pixmaps", icon_name + ext);
-                if (File.test(fallback, FileTest.EXISTS))
+                if (FileUtils.test(fallback, FileTest.EXISTS))
                     return fallback;
             }
     
             return null; // icon not found
-        }
-    }
+        }  */
     }
     
     // Find icon file from icon name
-    public static string? find_icon_path(string icon_name, int size = 32) {
+   /*   public static string? find_icon_path(string icon_name, int size = 32) {
 
         var theme = get_current_icon_theme();
 
@@ -195,6 +275,6 @@ namespace Utils {
         }
         
         return null;
-    }
+    }  */
     
 }
