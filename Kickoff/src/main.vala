@@ -7,6 +7,7 @@ namespace Main {
     const int GRID_COLS = 6;
     const int GRID_ROWS = 4;
     const int ICON_SIZE = 96;
+    const int ICON_HOVER_PADDING = 8;
     const int PADDING_EDGES = 100;
     
     struct AppEntry {
@@ -17,6 +18,7 @@ namespace Main {
         bool texture_loaded;
         int grid_x;
         int grid_y;
+        bool hovered;
     }
     
     class AppLauncher {
@@ -26,6 +28,7 @@ namespace Main {
         public bool redraw = true;
     
         private AppEntry[] apps;
+        private int visible_apps;
         private int screen_width;
         private int screen_height;
         private int padding_h;
@@ -63,7 +66,20 @@ namespace Main {
                 apps += AppEntry(){name = name, icon_path = icon_path, exec = exec};
             }
 
+            visible_apps = int.min(apps.length, GRID_COLS*GRID_ROWS);
+
             calculate_grid_positions();
+        }
+
+        private void calculate_grid_positions() {
+            
+            for (int i = 0; i < visible_apps; i++) {
+                int row = i / GRID_COLS;
+                int col = i % GRID_COLS;
+                
+                apps[i].grid_x = PADDING_EDGES + padding_h * col + col * ICON_SIZE;
+                apps[i].grid_y = PADDING_EDGES + padding_v * row + row * ICON_SIZE;
+            }
         }
     
         public void mouse_down() {
@@ -74,47 +90,33 @@ namespace Main {
         }
     
         public void mouse_move(double mouse_x, double mouse_y) {
-            for (int i = 0; i < apps.length; i++) {
-                int x = apps[i].grid_x;
-                int y = apps[i].grid_y;
+            for (int i = 0; i < visible_apps; i++) {
+                int x = apps[i].grid_x-ICON_HOVER_PADDING;
+                int y = apps[i].grid_y-ICON_HOVER_PADDING;
+                int w = apps[i].grid_x + ICON_SIZE + 2*ICON_HOVER_PADDING;
+                int h = apps[i].grid_y + ICON_SIZE + 2*ICON_HOVER_PADDING;
                 
-                if (mouse_x >= x && mouse_x <= x + ICON_SIZE &&
-                    mouse_y >= y && mouse_y <= y + ICON_SIZE) {
-                    //return i;
-                }
-            }
-    
-            /*  var box_x = box.x;
-                var box_y = box.y;
-                var oldval = box.hovered;
-                box.hovered = (
-                    x >= box_x && 
-                    x <= box_x + box_width &&
-                    y >= box_y && 
-                    y <= box_y + box_height);
-    
-                if(box.hovered != oldval) redraw = true;
-                box_x += box_width;  */
-            //return -1;
-        }
-    
-        private void calculate_grid_positions() {
-            
-            for (int i = 0; i < apps.length; i++) {
-                int row = i / GRID_COLS;
-                int col = i % GRID_COLS;
-                
-                apps[i].grid_x = PADDING_EDGES + padding_h * col + col * ICON_SIZE;
-                apps[i].grid_y = PADDING_EDGES + padding_v * row + row * ICON_SIZE;
+                var before = apps[i].hovered;
+                apps[i].hovered = (mouse_x >= x && mouse_x <= w && mouse_y >= y && mouse_y <= h);
+                if(apps[i].hovered != before) redraw = true;
             }
         }
     
         public void render(DrawKit.Context ctx) {
             ctx.begin_frame();
             
-            int visible_apps = int.min(apps.length, GRID_COLS*GRID_ROWS);
-            
             for (int i = 0; i < visible_apps; i++) {
+
+                // Highlight if hovered
+                if (apps[i].hovered) {
+                    ctx.draw_rect(
+                        apps[i].grid_x - ICON_HOVER_PADDING, 
+                        apps[i].grid_y - ICON_HOVER_PADDING, 
+                        ICON_SIZE + 2*ICON_HOVER_PADDING,
+                        ICON_SIZE + 2*ICON_HOVER_PADDING, 
+                        { 1.0f, 1.0f, 1.0f, 0.3f });
+                }
+
                 // Load texture on demand
                 if (!apps[i].texture_loaded) {
                     var tex = ImageUtils.Upload_texture(apps[i].icon_path, ICON_SIZE);
@@ -124,29 +126,9 @@ namespace Main {
                 
                 // Draw icon or placeholder
                 if (apps[i].texture_id > 0) {
-                    ctx.draw_texture(apps[i].texture_id, 
-                                   apps[i].grid_x, 
-                                   apps[i].grid_y, 
-                                   ICON_SIZE, 
-                                   ICON_SIZE);
+                    ctx.draw_texture(apps[i].texture_id, apps[i].grid_x, apps[i].grid_y, ICON_SIZE, ICON_SIZE);
                 } else {
-                    // Placeholder colored rect
-                    Color placeholder_color = { 1f, 1f, 1f, 1.0f };
-                    ctx.draw_rect(apps[i].grid_x, 
-                                apps[i].grid_y, 
-                                ICON_SIZE, 
-                                ICON_SIZE, 
-                                placeholder_color);
-                }
-                
-                // Highlight if hovered
-                if (i == hovered_index) {
-                    Color highlight_color = { 1.0f, 1.0f, 1.0f, 0.3f };
-                    ctx.draw_rect(apps[i].grid_x - 4, 
-                                apps[i].grid_y - 4, 
-                                ICON_SIZE + 8, 
-                                ICON_SIZE + 8, 
-                                highlight_color);
+                    ctx.draw_rect(apps[i].grid_x, apps[i].grid_y, ICON_SIZE, ICON_SIZE, { 1f, 1f, 1f, 1.0f });
                 }
             }
             
