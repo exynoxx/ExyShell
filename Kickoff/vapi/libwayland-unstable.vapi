@@ -77,6 +77,8 @@ namespace WLUnstable {
     public delegate void SeatMouseDown();
     public delegate void SeatMouseUp();
     public delegate void SeatMouseMotion(double x, double y);
+    public delegate void SeatKeyDown(uint32 key);
+    public delegate void SeatKeyUp(uint32 key);
 
     [CCode(cname = "register_on_mouse_enter")]
     void register_on_mouse_enter(SeatMouseEnter cb);
@@ -92,4 +94,10 @@ namespace WLUnstable {
 
     [CCode(cname = "register_on_mouse_motion")]
     void register_on_mouse_motion(SeatMouseMotion cb);
+
+    [CCode(cname = "register_on_key_down")]
+    void register_on_key_down(SeatKeyDown cb);
+
+    [CCode(cname = "register_on_key_up")]
+    void register_on_key_up(SeatKeyUp cb);
 }

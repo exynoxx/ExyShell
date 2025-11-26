@@ -39,6 +39,7 @@ int display_dispatch_blocking(){
 void destroy_layer_shell(void) {
     compositor_cleanup();
     layer_shell_cleanup();
+    seat_cleanup();
     toplevel_cleanup();
     egl_cleanup();
     registry_cleanup();
