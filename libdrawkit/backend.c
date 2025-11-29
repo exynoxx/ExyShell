@@ -4,6 +4,24 @@
 #include <stdio.h>
 #include <EGL/egl.h>
 #include "backend.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H  // this defines FT_Library, FT_Face, etc.
+
+typedef struct {
+    float ax, ay; // advance.x, advance.y (pixels)
+    int bw, bh;   // bitmap width, height (pixels)
+    int bl, bt;   // bitmap left, bitmap top (bearing)
+    float tx0, ty0, tx1, ty1; // texture coords in atlas
+} Glyph;
+
+#define FIRST_CHAR 32
+#define LAST_CHAR 126
+#define NUM_CHARS (LAST_CHAR - FIRST_CHAR + 1)
+
+static Glyph glyphs[NUM_CHARS];
+static GLuint atlas_tex = 0;
+static int atlas_w = 0, atlas_h = 0;
+static int base_px_height = 48; // rasterization baseline used to build atlas
 
 static const char* default_vert_src =
     #include "shaders/default/vert.glsl"
@@ -29,10 +47,13 @@ static const char* texture_frag_src =
     #include "shaders/texture/frag.glsl"
     "";
 
+static const char* text_vert_src =
+    #include "shaders/text/vert.glsl"
+    "";
 
-static GLuint default_program = 0;
-static GLuint rounded_rect_program = 0;
-static GLuint texture_program = 0;
+static const char* text_frag_src =
+    #include "shaders/text/frag.glsl"
+    "";
 
 // Helper function to compile shader
 static GLuint compile_shader(GLenum type, const char *source) {
@@ -90,35 +111,103 @@ static void create_ortho_matrix(float *mat, float left, float right, float botto
     mat[15] = 1.0f;
 }
 
-bool dk_backend_init(dk_context *ctx) {
-    default_program = create_program(default_vert_src, default_frag_src);
-    rounded_rect_program = create_program(rounded_vert_src, rounded_frag_src);
-    texture_program = create_program(texture_vert_src, texture_frag_src);
+bool dk_backend_init(dk_context *ctx) {  
+    ctx->shader_program = create_program(default_vert_src, default_frag_src);
+    ctx->rounded_rect_program = create_program(rounded_vert_src, rounded_frag_src);
+    ctx->texture_program = create_program(texture_vert_src, texture_frag_src);
+    ctx->text_program = create_program(text_vert_src, text_frag_src);
     
-    if (!default_program || !texture_program /*  || !rounded_rect_program || !texture_program */) {
+    if (!ctx->shader_program || !ctx->rounded_rect_program  || !ctx->texture_program || !ctx->text_program) {
         fprintf(stderr, "Failed to create shader programs\n");
         return false;
     }
-    
-    ctx->shader_program = default_program;
-    ctx->rounded_rect_program = rounded_rect_program;
-    ctx->texture_program = texture_program;
-    
+
     // Create VBO
     glGenBuffers(1, &ctx->vbo);
     
     // Enable blending
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    FT_Library ft;
+    if (FT_Init_FreeType(&ft)) {
+        fprintf(stderr, "Failed to init FreeType\n");
+        return false;
+    }
+
+    FT_Face face;
+    const char *font_path = "/home/nicholas/.local/share/fonts/panels/droid_sans.ttf"; // example
+    base_px_height = 32; // rasterization baseline
+
+    if (FT_New_Face(ft, font_path, 0, &face)) {
+        fprintf(stderr, "Failed to load font: %s\n", font_path);
+        FT_Done_FreeType(ft);
+        return false;
+    }
+
+    FT_Set_Pixel_Sizes(face, 0, base_px_height);
+
+    // Compute simple atlas size: one row of ASCII glyphs
+    int atlas_w = 0, atlas_h = 0;
+    for (int c = FIRST_CHAR; c <= LAST_CHAR; c++) {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) continue;
+        atlas_w += face->glyph->bitmap.width + 1; // 1px spacing
+        if (face->glyph->bitmap.rows > atlas_h) atlas_h = face->glyph->bitmap.rows;
+    }
+
+    if (atlas_w == 0 || atlas_h == 0) {
+        fprintf(stderr, "No glyphs found\n");
+        FT_Done_Face(face);
+        FT_Done_FreeType(ft);
+        return false;
+    }
+
+    // Create atlas texture
+    glGenTextures(1, &ctx->font_atlas_tex);
+    glBindTexture(GL_TEXTURE_2D, ctx->font_atlas_tex);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, atlas_w, atlas_h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // Upload each glyph to atlas and store metrics
+    int x = 0;
+    for (int c = FIRST_CHAR; c <= LAST_CHAR; c++) {
+        if (FT_Load_Char(face, c, FT_LOAD_RENDER)) continue;
+        FT_GlyphSlot g = face->glyph;
+
+        glTexSubImage2D(GL_TEXTURE_2D, 0, x, 0, g->bitmap.width, g->bitmap.rows,
+                        GL_LUMINANCE, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+
+        Glyph *gg = &glyphs[c - FIRST_CHAR];
+        gg->ax = g->advance.x / 64.0f;
+        gg->ay = g->advance.y / 64.0f;
+        gg->bw = g->bitmap.width;
+        gg->bh = g->bitmap.rows;
+        gg->bl = g->bitmap_left;
+        gg->bt = g->bitmap_top;
+        gg->tx0 = (float)x / atlas_w;
+        gg->ty0 = 0.0f;
+        gg->tx1 = (float)(x + g->bitmap.width) / atlas_w;
+        gg->ty1 = (float)g->bitmap.rows / atlas_h;
+
+        x += g->bitmap.width + 1;
+    }
+
+    FT_Done_Face(face);
+    FT_Done_FreeType(ft);
     
     return true;
 }
 
 void dk_backend_cleanup(dk_context *ctx) {
     glDeleteBuffers(1, &ctx->vbo);
-    if (default_program) glDeleteProgram(default_program);
-    if (rounded_rect_program) glDeleteProgram(rounded_rect_program);
-    if (texture_program) glDeleteProgram(texture_program);
+    if (ctx->shader_program) glDeleteProgram(ctx->shader_program);
+    if (ctx->rounded_rect_program) glDeleteProgram(ctx->rounded_rect_program);
+    if (ctx->texture_program) glDeleteProgram(ctx->texture_program);
+    if (ctx->text_program) glDeleteProgram(ctx->text_program);
 }
 
 void dk_set_bg_color(dk_context *ctx, dk_color color) {
@@ -139,17 +228,17 @@ void dk_end_frame() {
 }
 
 void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height, dk_color color) {
-    glUseProgram(default_program);
+    glUseProgram(ctx->shader_program);
     
     // Create projection matrix
     float proj[16];
     create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
     
-    GLint proj_loc = glGetUniformLocation(default_program, "projection");
+    GLint proj_loc = glGetUniformLocation(ctx->shader_program, "projection");
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
     
     // Set color
-    GLint color_loc = glGetUniformLocation(default_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->shader_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
     
     // Create rectangle vertices
@@ -165,7 +254,7 @@ void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height, dk_color
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     
-    GLint pos_loc = glGetAttribLocation(default_program, "position");
+    GLint pos_loc = glGetAttribLocation(ctx->shader_program, "position");
     glEnableVertexAttribArray(pos_loc);
     glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
     
@@ -174,22 +263,22 @@ void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height, dk_color
 }
 
 void dk_draw_rect_rounded(dk_context *ctx, float x, float y, float width, float height, float radius, dk_color color) {
-    glUseProgram(rounded_rect_program);
+    glUseProgram(ctx->rounded_rect_program);
     
     // Create projection matrix
     float proj[16];
     create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
     
-    GLint proj_loc = glGetUniformLocation(rounded_rect_program, "projection");
+    GLint proj_loc = glGetUniformLocation(ctx->rounded_rect_program, "projection");
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
     
-    GLint color_loc = glGetUniformLocation(rounded_rect_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->rounded_rect_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
     
-    GLint rect_loc = glGetUniformLocation(rounded_rect_program, "rect");
+    GLint rect_loc = glGetUniformLocation(ctx->rounded_rect_program, "rect");
     glUniform4f(rect_loc, x, y, width, height);
     
-    GLint radius_loc = glGetUniformLocation(rounded_rect_program, "radius");
+    GLint radius_loc = glGetUniformLocation(ctx->rounded_rect_program, "radius");
     glUniform1f(radius_loc, radius);
     
     // Create simple quad that covers the entire rounded rectangle area
@@ -205,7 +294,7 @@ void dk_draw_rect_rounded(dk_context *ctx, float x, float y, float width, float 
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     
-    GLint pos_loc = glGetAttribLocation(rounded_rect_program, "position");
+    GLint pos_loc = glGetAttribLocation(ctx->rounded_rect_program, "position");
     glEnableVertexAttribArray(pos_loc);
     glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
     
@@ -217,15 +306,15 @@ void dk_draw_rect_rounded(dk_context *ctx, float x, float y, float width, float 
 void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width, int height) {
     //printf("draw_text %d %d %d %d",x,y,width,height);
 
-    glUseProgram(texture_program);
+    glUseProgram(ctx->texture_program);
     
     float proj[16];
     create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
     
-    GLint proj_loc = glGetUniformLocation(texture_program, "projection");
+    GLint proj_loc = glGetUniformLocation(ctx->texture_program, "projection");
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
     
-    GLint color_loc = glGetUniformLocation(texture_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->texture_program, "color");
     glUniform4f(color_loc, 1,1,1,1);
     
     float vertices[] = {
@@ -240,8 +329,8 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     
-    GLint pos_loc = glGetAttribLocation(texture_program, "position");
-    GLint tex_loc = glGetAttribLocation(texture_program, "texCoord");
+    GLint pos_loc = glGetAttribLocation(ctx->texture_program, "position");
+    GLint tex_loc = glGetAttribLocation(ctx->texture_program, "texCoord");
     
     glEnableVertexAttribArray(pos_loc);
     glEnableVertexAttribArray(tex_loc);
@@ -251,7 +340,7 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
     
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture_id);
-    glUniform1i(glGetUniformLocation(texture_program, "texture0"), 0);
+    glUniform1i(glGetUniformLocation(ctx->texture_program, "texture0"), 0);
     
     glDrawArrays(GL_TRIANGLES, 0, 6);
     
@@ -259,4 +348,80 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
     glDisableVertexAttribArray(tex_loc);
 }
 
+void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_size) {
+    if (!atlas_tex) return;
+    if (!text) return;
 
+    glUseProgram(ctx->text_program);
+
+    // Create orthographic projection like your texture method
+    float proj[16];
+    create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
+    GLint proj_loc = glGetUniformLocation(ctx->text_program, "projection");
+    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
+
+    // Set text color (white)
+    GLint color_loc = glGetUniformLocation(ctx->text_program, "color");
+    glUniform4f(color_loc, 1,1,1,1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
+
+    int pen_x = x;
+    int pen_y = y;
+
+    for (size_t i = 0; i < strlen(text); ++i) {
+        unsigned char c = (unsigned char)text[i];
+        if (c < FIRST_CHAR || c > LAST_CHAR) continue;
+
+        Glyph *g = &glyphs[c - FIRST_CHAR];
+
+        // scale glyph according to font_size vs atlas base size
+        float scale = font_size / (float)base_px_height;
+
+        float gw = g->bw * scale;
+        float gh = g->bh * scale;
+
+        float x0 = pen_x + g->bl * scale;
+        float y0 = pen_y - g->bt * scale;
+        float x1 = x0 + gw;
+        float y1 = y0 + gh;
+
+        float u0 = g->tx0;
+        float v0 = g->ty0;
+        float u1 = g->tx1;
+        float v1 = g->ty1;
+
+        // 6 vertices for two triangles
+        float vertices[] = {
+            x0, y0, u0, v0,
+            x1, y0, u1, v0,
+            x1, y1, u1, v1,
+            x0, y0, u0, v0,
+            x1, y1, u1, v1,
+            x0, y1, u0, v1
+        };
+
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+        GLint pos_loc = glGetAttribLocation(ctx->text_program, "position");
+        GLint tex_loc = glGetAttribLocation(ctx->text_program, "texCoord");
+
+        glEnableVertexAttribArray(pos_loc);
+        glEnableVertexAttribArray(tex_loc);
+
+        glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, atlas_tex);
+        glUniform1i(glGetUniformLocation(ctx->text_program, "texture0"), 0);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glDisableVertexAttribArray(pos_loc);
+        glDisableVertexAttribArray(tex_loc);
+
+        // advance pen
+        pen_x += g->ax * scale;
+    }
+}

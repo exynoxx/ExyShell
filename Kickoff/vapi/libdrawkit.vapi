@@ -46,6 +46,9 @@ namespace DrawKit {
         [CCode (cname = "dk_draw_texture")]
         public void draw_texture(GLuint texture_id, int x, int y, int width, int height);
 
+        [CCode (cname = "dk_draw_text")]
+        public void draw_text(GLuint texture_id, string text, int x, int y, float font_size);
+
         [CCode (cname = "dk_begin_frame")]
         public void begin_frame();
 
