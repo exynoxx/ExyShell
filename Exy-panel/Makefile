@@ -29,4 +29,4 @@ CFLAGS = \
     -X -lxkbcommon
 
 default:
-	valac --vapidir=vapi $(VALA_PKGS) $(CFLAGS) -o main src/*.vala
+	valac --vapidir=../vapi $(VALA_PKGS) $(CFLAGS) -o main src/*.vala

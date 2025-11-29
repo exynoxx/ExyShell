@@ -178,6 +178,7 @@ namespace Main {
         WLUnstable.register_on_mouse_motion((x,y)=>launcher.mouse_move(x,y)); //fix double
         WLUnstable.register_on_key_down(key=> {
             if(key == 65307){
+                WLUnstable.destroy();
                 Process.exit (0);
             }
             print("Key %d\n", (int) key);
@@ -192,6 +193,7 @@ namespace Main {
             }
         }
     
+        WLUnstable.destroy();
         return 0;
     }
 }

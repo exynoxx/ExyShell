@@ -8,6 +8,8 @@
 
 struct wl_display *wl_display = NULL;
 
+//TODO enable disable keyboar.
+
 int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone) {
     wl_display = wl_display_connect(NULL);
     if (!wl_display) { 

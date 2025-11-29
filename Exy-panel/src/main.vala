@@ -136,6 +136,7 @@ public static int main(string[] args) {
         redraw = false;
     }
 
+    WLUnstable.destroy();
     return 0;
 }
 
