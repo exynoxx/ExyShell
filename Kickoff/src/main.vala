@@ -174,6 +174,12 @@ namespace Main {
         WLUnstable.register_on_mouse_down(() => launcher.mouse_down());
         WLUnstable.register_on_mouse_up(() => launcher.mouse_up());
         WLUnstable.register_on_mouse_motion((x,y)=>launcher.mouse_move(x,y)); //fix double
+        WLUnstable.register_on_key_down(key=> {
+            if(key == 65307){
+                Process.exit (0);
+            }
+            print("Key %d\n", (int) key);
+        });
         
         while (WLUnstable.display_dispatch_blocking() != -1) {
             
