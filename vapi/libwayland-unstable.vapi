@@ -100,4 +100,7 @@ namespace WLUnstable {
 
     [CCode(cname = "register_on_key_up")]
     void register_on_key_up(SeatKeyUp cb);
+
+    [CCode(cname = "set_grab_keyboard")]
+    void grab_keyboard(bool value);
 }

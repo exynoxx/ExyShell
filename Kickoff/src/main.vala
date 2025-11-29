@@ -166,6 +166,7 @@ namespace Main {
     
     static int main(string[] args) {
     
+        WLUnstable.grab_keyboard(true);
         WLUnstable.init_layer_shell("Kickoff-overlay", 1920, 1080, UP | LEFT | RIGHT | DOWN, false);
     
         var size = WLUnstable.get_layer_shell_size();

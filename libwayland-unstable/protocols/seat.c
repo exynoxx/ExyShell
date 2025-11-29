@@ -12,6 +12,7 @@ static dk_mouse_info mouse_info = {0};
 struct xkb_context *xkb_context;
 struct xkb_keymap *xkb_keymap;
 struct xkb_state *xkb_state;
+static bool grab_keyboard = false;
 
 static seat_mouse_enter mouse_enter_cb;
 static void *mouse_enter_userdata = NULL;
@@ -184,7 +185,7 @@ static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabil
         wl_pointer_add_listener(pointer, &pointer_listener, data);
     }
 
-    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD && grab_keyboard) {
         keyboard = wl_seat_get_keyboard(seat);
         wl_keyboard_add_listener(keyboard, &keyboard_listener, data);
     }
@@ -213,6 +214,10 @@ void seat_cleanup(void){
     xkb_state_unref(xkb_state);
     xkb_keymap_unref(xkb_keymap);
     xkb_context_unref(xkb_context);
+}
+
+void set_grab_keyboard(bool value){
+    grab_keyboard = value;
 }
 
 struct wl_seat *get_wl_seat(){

@@ -30,6 +30,7 @@ void register_on_key_up(seat_key_up cb, void* user_data);
 
 void seat_init();
 void seat_cleanup();
+void set_grab_keyboard(bool value);
 struct wl_seat *get_wl_seat();
 
 dk_mouse_info *seat_mouse_info();
