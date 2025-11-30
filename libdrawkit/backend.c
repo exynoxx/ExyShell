@@ -19,7 +19,6 @@ typedef struct {
 #define NUM_CHARS (LAST_CHAR - FIRST_CHAR + 1)
 
 static Glyph glyphs[NUM_CHARS];
-static GLuint atlas_tex = 0;
 static int atlas_w = 0, atlas_h = 0;
 static int base_px_height = 48; // rasterization baseline used to build atlas
 
@@ -165,21 +164,43 @@ bool dk_backend_init(dk_context *ctx) {
     // Create atlas texture
     glGenTextures(1, &ctx->font_atlas_tex);
     glBindTexture(GL_TEXTURE_2D, ctx->font_atlas_tex);
+
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, atlas_w, atlas_h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+
+    // ----- FIX #2: modern single–channel texture -----
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_LUMINANCE,               // internal format
+        atlas_w,
+        atlas_h,
+        0,
+        GL_LUMINANCE,              // data format
+        GL_UNSIGNED_BYTE,
+        NULL
+    );
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    // Upload each glyph to atlas and store metrics
+    // upload glyphs
     int x = 0;
     for (int c = FIRST_CHAR; c <= LAST_CHAR; c++) {
         if (FT_Load_Char(face, c, FT_LOAD_RENDER)) continue;
         FT_GlyphSlot g = face->glyph;
 
-        glTexSubImage2D(GL_TEXTURE_2D, 0, x, 0, g->bitmap.width, g->bitmap.rows,
-                        GL_LUMINANCE, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+        glTexSubImage2D(
+            GL_TEXTURE_2D,
+            0,
+            x, 0,
+            g->bitmap.width,
+            g->bitmap.rows,
+            GL_LUMINANCE,              // FIX #2
+            GL_UNSIGNED_BYTE,
+            g->bitmap.buffer
+        );
 
         Glyph *gg = &glyphs[c - FIRST_CHAR];
         gg->ax = g->advance.x / 64.0f;
@@ -188,13 +209,16 @@ bool dk_backend_init(dk_context *ctx) {
         gg->bh = g->bitmap.rows;
         gg->bl = g->bitmap_left;
         gg->bt = g->bitmap_top;
+
+        // ----- FIX #3: flipped V coordinates -----
         gg->tx0 = (float)x / atlas_w;
-        gg->ty0 = 0.0f;
+        gg->ty0 = 0.0f;                  // top of glyph in bitmap
         gg->tx1 = (float)(x + g->bitmap.width) / atlas_w;
-        gg->ty1 = (float)g->bitmap.rows / atlas_h;
+        gg->ty1 = (float)g->bitmap.rows / atlas_h;  // bottom
 
         x += g->bitmap.width + 1;
     }
+
 
     FT_Done_Face(face);
     FT_Done_FreeType(ft);
@@ -349,33 +373,30 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
 }
 
 void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_size) {
-    if (!atlas_tex) return;
+    if (!ctx->font_atlas_tex) return;
     if (!text) return;
 
     glUseProgram(ctx->text_program);
 
-    // Create orthographic projection like your texture method
     float proj[16];
     create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
-    GLint proj_loc = glGetUniformLocation(ctx->text_program, "projection");
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
+    glUniformMatrix4fv(glGetUniformLocation(ctx->text_program, "u_proj"), 1, GL_FALSE, proj);
 
-    // Set text color (white)
-    GLint color_loc = glGetUniformLocation(ctx->text_program, "color");
-    glUniform4f(color_loc, 1,1,1,1);
+    glUniform4f(glGetUniformLocation(ctx->text_program, "u_color"), 1,1,1,1);
 
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
 
     int pen_x = x;
     int pen_y = y;
 
-    for (size_t i = 0; i < strlen(text); ++i) {
+    size_t len = strlen(text);
+
+    for (size_t i = 0; i < len; ++i) {
         unsigned char c = (unsigned char)text[i];
         if (c < FIRST_CHAR || c > LAST_CHAR) continue;
 
         Glyph *g = &glyphs[c - FIRST_CHAR];
 
-        // scale glyph according to font_size vs atlas base size
         float scale = font_size / (float)base_px_height;
 
         float gw = g->bw * scale;
@@ -386,12 +407,12 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
         float x1 = x0 + gw;
         float y1 = y0 + gh;
 
+        // ----- FIX #3: flip V coordinates -----
         float u0 = g->tx0;
-        float v0 = g->ty0;
+        float v0 = g->ty1;
         float u1 = g->tx1;
-        float v1 = g->ty1;
+        float v1 = g->ty0;
 
-        // 6 vertices for two triangles
         float vertices[] = {
             x0, y0, u0, v0,
             x1, y0, u1, v0,
@@ -403,25 +424,28 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
 
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
-        GLint pos_loc = glGetAttribLocation(ctx->text_program, "position");
-        GLint tex_loc = glGetAttribLocation(ctx->text_program, "texCoord");
+        GLint pos_loc = glGetAttribLocation(ctx->text_program, "a_pos");
+        GLint uv_loc  = glGetAttribLocation(ctx->text_program, "a_uv");
 
         glEnableVertexAttribArray(pos_loc);
-        glEnableVertexAttribArray(tex_loc);
+        glEnableVertexAttribArray(uv_loc);
 
-        glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-        glVertexAttribPointer(tex_loc, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0);
+        glVertexAttribPointer(uv_loc, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, atlas_tex);
-        glUniform1i(glGetUniformLocation(ctx->text_program, "texture0"), 0);
+
+        // ----- FIX #1: bind correct atlas texture -----
+        glBindTexture(GL_TEXTURE_2D, ctx->font_atlas_tex);
+
+        glUniform1i(glGetUniformLocation(ctx->text_program, "u_tex"), 0);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glDisableVertexAttribArray(pos_loc);
-        glDisableVertexAttribArray(tex_loc);
+        glDisableVertexAttribArray(uv_loc);
 
-        // advance pen
         pen_x += g->ax * scale;
     }
 }
+
