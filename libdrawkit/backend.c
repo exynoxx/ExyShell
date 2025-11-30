@@ -384,18 +384,25 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
 
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
 
-    int pen_x = x;
-    int pen_y = y;
-
+    float scale = font_size / (float)base_px_height;
     size_t len = strlen(text);
+
+    int total_w = 0;
+    for (size_t i = 0; i < len; ++i){
+        unsigned char c = (unsigned char)text[i];
+        if (c < FIRST_CHAR || c > LAST_CHAR) continue;
+        Glyph *g = &glyphs[c - FIRST_CHAR];
+        total_w += g->ax * scale;
+    }
+
+    int pen_x = x-(total_w/2);
+    int pen_y = y;
 
     for (size_t i = 0; i < len; ++i) {
         unsigned char c = (unsigned char)text[i];
         if (c < FIRST_CHAR || c > LAST_CHAR) continue;
 
         Glyph *g = &glyphs[c - FIRST_CHAR];
-
-        float scale = font_size / (float)base_px_height;
 
         float gw = g->bw * scale;
         float gh = g->bh * scale;
