@@ -10,6 +10,7 @@ const int PADDING_EDGES = 100;
 
 class AppEntry {
     private string name;
+    private string name_short;
     private string icon_path;
     private  string exec;
     private  GLuint texture_id;
@@ -18,17 +19,24 @@ class AppEntry {
     public int grid_x;
     public int grid_y;
 
+    public int width;
+    public int height;
+
     public AppEntry(string name, string icon_path, string exec){
         this.name = name;
+        this.name_short = name.char_count() > 20 ? name.substring(0, 20) + "..." : name;
         this.icon_path = icon_path;
         this.exec = exec;
+
+        width = ICON_SIZE + 2*ICON_HOVER_PADDING;
+        height = 15 + ICON_SIZE + 2*ICON_HOVER_PADDING;
     }
 
     public void mouse_move(double mouse_x, double mouse_y, bool clicked, ref bool redraw){
-        int x = grid_x-ICON_HOVER_PADDING;
-        int y = grid_y-ICON_HOVER_PADDING;
-        int w = grid_x + ICON_SIZE + 2*ICON_HOVER_PADDING;
-        int h = grid_y + ICON_SIZE + 2*ICON_HOVER_PADDING;
+        int x = grid_x;
+        int y = grid_y;
+        int w = grid_x + width;
+        int h = grid_y + height;
         
         var before = hovered;
         hovered = (mouse_x >= x && mouse_x <= w && mouse_y >= y && mouse_y <= h);
@@ -38,10 +46,10 @@ class AppEntry {
     public void render(Context ctx){
         if (hovered) {
             ctx.dk_draw_rect_rounded(
-                grid_x - ICON_HOVER_PADDING, 
-                grid_y - ICON_HOVER_PADDING, 
-                ICON_SIZE + 2*ICON_HOVER_PADDING,
-                ICON_SIZE + 2*ICON_HOVER_PADDING, 
+                grid_x, 
+                grid_y, 
+                width,
+                height, 
                 15.0f,
                 { 1.0f, 1.0f, 1.0f, 0.3f });
         }
@@ -55,10 +63,13 @@ class AppEntry {
         
         // Draw icon or placeholder
         if (texture_id > 0) {
-            ctx.draw_texture(texture_id, grid_x, grid_y, ICON_SIZE, ICON_SIZE);
+            ctx.draw_texture(texture_id, grid_x+ICON_HOVER_PADDING, grid_y+ICON_HOVER_PADDING, ICON_SIZE, ICON_SIZE);
         } else {
             ctx.draw_rect(grid_x, grid_y, ICON_SIZE, ICON_SIZE, { 1f, 1f, 1f, 1.0f });
         }
+
+        //label
+        ctx.draw_text(name_short, grid_x + width/2, grid_y + ICON_SIZE + 2*ICON_HOVER_PADDING+5, 20);
     }
 
     private void launch_app(int index) {
@@ -105,12 +116,12 @@ class AppLauncher {
         int gaps_v = GRID_ROWS + 1;
 
         //TODO KDE is 2 DPI
-        padding_h = (width - GRID_COLS*ICON_SIZE - 3*PADDING_EDGES) / gaps_h;
-        padding_v = (height - GRID_ROWS*ICON_SIZE - 3*PADDING_EDGES) / gaps_v;
+        padding_h = (width - GRID_COLS*ICON_SIZE - 2*PADDING_EDGES) / gaps_h;
+        padding_v = (height - GRID_ROWS*ICON_SIZE - 2*PADDING_EDGES) / gaps_v;
 
         var icon_theme = SystemUtils.get_current_theme();
         var icon_paths = IconUtils.find_icon_paths(icon_theme, 96);
-        print("using icon theme: %s. Num icons: %i\n", icon_theme, icon_paths.size);
+        print("using icon theme: %s. Num icons: %i. Displaying: %i\n", icon_theme, icon_paths.size, GRID_COLS*GRID_ROWS);
 
         var desktop_files = SystemUtils.get_desktop_files(GRID_COLS*GRID_ROWS);
         print("Apps %i\n", desktop_files.length);
