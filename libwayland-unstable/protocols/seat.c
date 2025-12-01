@@ -100,6 +100,10 @@ static void pointer_axis_source(void *data, struct wl_pointer *wl_pointer, uint3
 static void pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer, uint32_t axis, int32_t discrete) {
     // empty
 }
+
+static void axis_stop(void *data,struct wl_pointer *wl_pointer,uint32_t time,uint32_t axis){
+    // empty
+}
 static const struct wl_pointer_listener pointer_listener = {
     .enter = pointer_enter,
     .leave = pointer_leave,
@@ -108,7 +112,8 @@ static const struct wl_pointer_listener pointer_listener = {
     .axis = pointer_axis,
     .frame = pointer_frame,
     .axis_source = pointer_axis_source,
-    .axis_discrete = pointer_axis_discrete
+    .axis_discrete = pointer_axis_discrete,
+    .axis_stop = axis_stop
 };
 
 /* ### KEYBOARD ### */
@@ -167,7 +172,9 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
     xkb_state_update_mask(xkb_state, mods_depressed, mods_latched, mods_locked, 0, 0, group);
 }
 
-static void repeat_info(void *data, struct wl_keyboard *wl_keyboard,int32_t rate, int32_t delay){}
+static void repeat_info(void *data, struct wl_keyboard *wl_keyboard,int32_t rate, int32_t delay){
+
+}
 
 static const struct wl_keyboard_listener keyboard_listener = {
     .keymap = keyboard_keymap,
