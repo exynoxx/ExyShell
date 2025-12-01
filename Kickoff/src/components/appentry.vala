@@ -22,6 +22,8 @@ public class AppEntry {
     public int width;
     public int height;
 
+    private AnimationManager mngr;
+
     private int max(int a, int b) {
         return a > b ? a : b;
     }
@@ -32,7 +34,8 @@ public class AppEntry {
         this.icon_path = icon_path;
         this.exec = exec;
 
-        
+        mngr = new AnimationManager();
+
         width = max(ICON_SIZE, ctx.width_of(name_short, 20)) + 2*ICON_HOVER_PADDING;
         icon_offset_x = (width-ICON_SIZE) / 2;
         height = 15 + ICON_SIZE + 2*ICON_HOVER_PADDING;
@@ -48,7 +51,10 @@ public class AppEntry {
     public void mouse_up (ref bool redraw){
         clicked = false;
         redraw = true;
-        if(hovered) launch_app();
+        if(hovered) {
+            //launch_app()
+            mngr.add(new MoveTransition(this, 10,10, 0.9));
+        };
     }
 
     public void mouse_down(ref bool redraw){
@@ -71,6 +77,9 @@ public class AppEntry {
     }
 
     public void render(Context ctx){
+        
+        mngr.update();
+
         if (hovered) {
 
             const Color hovered_color = { 1.0f, 1.0f, 1.0f, 0.3f };

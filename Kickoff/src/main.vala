@@ -3,8 +3,6 @@ using WLHooks;
 using GLES2;
 
 namespace Main {
-
-    
     
     static AppLauncher? launcher = null;
     
@@ -31,11 +29,15 @@ namespace Main {
         
         while (WLHooks.display_dispatch_blocking() != -1) {
             
-            if(launcher.redraw){
+            /*  if(launcher.redraw){
                 launcher.render();
                 WLHooks.swap_buffers();
                 launcher.redraw = false;
-            }
+            }  */
+
+
+            launcher.render();
+            WLHooks.swap_buffers();
         }
     
         WLHooks.destroy();
