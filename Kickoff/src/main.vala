@@ -18,9 +18,9 @@ namespace Main {
 
         launcher = new AppLauncher(/*  size.width, size.height  */1920, 1080);
     
-        WLUnstable.register_on_mouse_down(() => launcher.mouse_down());
-        WLUnstable.register_on_mouse_up(() => launcher.mouse_up());
-        WLUnstable.register_on_mouse_motion((x,y)=>launcher.mouse_move(x,y)); //fix double
+        WLUnstable.register_on_mouse_down(launcher.mouse_down);
+        WLUnstable.register_on_mouse_up(launcher.mouse_up);
+        WLUnstable.register_on_mouse_motion(launcher.mouse_move); //fix double
         WLUnstable.register_on_key_down(key=> {
             if(key == 65307){
                 WLUnstable.destroy();

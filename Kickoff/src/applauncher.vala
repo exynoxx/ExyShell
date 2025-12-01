@@ -16,7 +16,10 @@ class AppEntry {
     private  string exec;
     private  GLuint texture_id;
     private  bool texture_loaded;
+
     private bool hovered;
+    private bool clicked;
+    
     private int icon_offset_x;
     private int padding_h;
     private int padding_v;
@@ -49,26 +52,44 @@ class AppEntry {
         grid_y = PADDING_EDGES_Y + padding_v * row + row * ICON_SIZE;
     }
 
-    public void mouse_move(double mouse_x, double mouse_y, bool clicked, ref bool redraw){
+    public void mouse_up (ref bool redraw){
+        clicked = false;
+        redraw = true;
+        if(hovered) launch_app();
+    }
+
+    public void mouse_down(ref bool redraw){
+        if(hovered) {
+            if(!clicked) redraw = true;
+            clicked = true;
+        }
+    }
+
+    public void mouse_move(double mouse_x, double mouse_y, ref bool redraw){
         int x = grid_x;
         int y = grid_y;
         int w = grid_x + width;
         int h = grid_y + height;
         
-        var before = hovered;
+        var hover_initial = hovered;
+
         hovered = (mouse_x >= x && mouse_x <= w && mouse_y >= y && mouse_y <= h);
-        if(hovered != before) redraw = true;
+        if(hovered != hover_initial) redraw = true;
     }
 
     public void render(Context ctx){
         if (hovered) {
+
+            const Color hovered_color = { 1.0f, 1.0f, 1.0f, 0.3f };
+            const Color clicked_color = { 0.2f, 0.2f, 0.2f, 0.7f };
+
             ctx.dk_draw_rect_rounded(
                 grid_x, 
                 grid_y, 
                 width,
                 height, 
                 15.0f,
-                { 1.0f, 1.0f, 1.0f, 0.3f });
+                clicked ? clicked_color : hovered_color);
         }
 
         // Load texture on demand
@@ -89,23 +110,14 @@ class AppEntry {
         ctx.draw_text(name_short, grid_x + width/2, grid_y + ICON_SIZE + 2*ICON_HOVER_PADDING+5, 20);
     }
 
-    private void launch_app(int index) {
-        /*  if (index < 0 || index >= apps.length) return;
-        
-        string exec = apps[index].exec;
-        // Remove field codes like %f, %F, %u, %U
-        exec = exec.replace("%f", "").replace("%F", "")
-                    .replace("%u", "").replace("%U", "")
-                    .replace("%i", "").replace("%c", "")
-                    .strip();
-        
-        stdout.printf("Launching: %s (%s)\n", apps[index].name, exec);
+    private void launch_app() {
+        stdout.printf("Launching: %s (%s)\n", name, exec);
         
         try {
             Process.spawn_command_line_async(exec);
         } catch (SpawnError e) {
-            stderr.printf("Failed to launch %s: %s\n", apps[index].name, e.message);
-        }  */
+            stderr.printf("Failed to launch %s: %s\n", name, e.message);
+        }
     }
 }
 
@@ -113,7 +125,6 @@ class AppLauncher {
 
     DrawKit.Context ctx;
 
-    private bool clicked = false;
     public bool redraw = true;
 
     private AppEntry[] apps;
@@ -147,7 +158,14 @@ class AppLauncher {
         foreach (var desktop in desktop_files){
             var entries = ConfigUtils.parse(desktop, "Desktop Entry");
             var icon = entries["Icon"];
-            var exec = entries["Exec"];
+            var exec = entries["Exec"]
+                .replace("%f", "")
+                .replace("%F", "")
+                .replace("%u", "")
+                .replace("%U", "")
+                .replace("%i", "")
+                .replace("%c", "")
+                .strip();
             var name = entries["Name"];
 
             //TODO rm has key later
@@ -161,15 +179,17 @@ class AppLauncher {
     }
 
     public void mouse_down() {
-        clicked = true;
+        foreach (var app in apps)
+            app.mouse_down(ref redraw);
     }
     public void mouse_up() {
-        clicked = false;
+        foreach (var app in apps)
+            app.mouse_up(ref redraw);
     }
 
     public void mouse_move(double mouse_x, double mouse_y) {
         foreach (var app in apps)
-            app.mouse_move(mouse_x, mouse_y, clicked, ref redraw);
+            app.mouse_move(mouse_x, mouse_y, ref redraw);
     }
 
     public void render() {
