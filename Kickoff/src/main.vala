@@ -31,11 +31,13 @@ namespace Main {
                 WLHooks.destroy();
                 Process.exit (0);
             }
+            launcher.key_down(key);
+
             print("Key %d\n", (int) key);
         });
         
         while (WLHooks.display_dispatch_blocking() != -1) {
-            if(redraw || animations.has_active()){
+            if(redraw || animations.has_active){
                 animations.update();
                 launcher.render();
                 WLHooks.swap_buffers();

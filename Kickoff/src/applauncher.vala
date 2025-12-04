@@ -71,6 +71,24 @@ public class AppLauncher {
     public void mouse_up() {
         foreach (var app in apps)
             app.mouse_up();
+        
+        
+    }
+
+    public void key_down(uint64 key){
+        if(key == 65361){
+            //arrow l
+            foreach (var app in apps){
+                Main.animations.add(new MoveTransition(app, app.grid_x-screen_width, app.grid_y, 1.5));
+            }
+        }
+
+        if(key == 65363){
+            //arrow r
+            foreach (var app in apps){
+                Main.animations.add(new MoveTransition(app, app.grid_x+screen_width, app.grid_y, 1.5));
+            }
+        }
     }
 
     public void mouse_move(double mouse_x, double mouse_y) {

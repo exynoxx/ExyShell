@@ -52,6 +52,7 @@ public class MoveTransition : Object, Transition {
 
 public class AnimationManager : Object {
     private Gee.ArrayList<Transition> transitions = new Gee.ArrayList<Transition>();
+    public bool has_active = true;
 
     private int64 last_time_us;
 
@@ -61,11 +62,12 @@ public class AnimationManager : Object {
 
     public void add(Transition t) {
         transitions.add(t);
+        has_active = true;
     }
 
     public void update() {
         var to_remove = new Gee.ArrayList<Transition>();
-        
+
         // Get current time in microseconds
         int64 current_time_us = get_monotonic_time();
         
@@ -84,9 +86,7 @@ public class AnimationManager : Object {
         foreach (var t in to_remove)
             transitions.remove(t);
 
-    }
+        if(transitions.size == 0) has_active = false;
 
-    public bool has_active(){
-        return transitions.size > 0;
     }
 }

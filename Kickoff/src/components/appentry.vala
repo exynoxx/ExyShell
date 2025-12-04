@@ -48,7 +48,7 @@ public class AppEntry {
         clicked = false;
         if(hovered) {
             //launch_app()
-            Main.animations.add(new MoveTransition(this, 10,10, 0.9));
+            //Main.animations.add(new MoveTransition(this, 10,10, 0.9));
         };
         Main.queue_redraw();
     }
