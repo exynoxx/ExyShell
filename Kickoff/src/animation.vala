@@ -5,31 +5,27 @@ public interface Transition : Object {
 
 public class MoveTransition : Object, Transition {
 
-    private int *ref_x;
-    private int *ref_y;
+    private int* ref_x;
+    private int* ref_y;
 
-    public int start_x;
-    public int start_y;
-    public int end_x;
-    public int end_y;
-    public double duration;
+    private int total_dx;
+    private int total_dy;
+
+    private double duration;
     private double t = 0.0;
 
+    private double last_e = 0.0;
+
     private bool _finished = false;
-    public bool finished { 
-        get { return _finished; }
-    }
+    public bool finished { get { return _finished; } }
 
     public MoveTransition(int* x, int* y, int end_x, int end_y, double duration) {
         ref_x = x;
         ref_y = y;
 
-        this.start_x = *x;
-        this.start_y = *y;
-        this.end_x = end_x;
-        this.end_y = end_y;
+        total_dx = end_x - *x;
+        total_dy = end_y - *y;
         this.duration = duration;
-        // Don't initialize t here - it should start at 0.0
     }
 
     public void update(double dt) {
@@ -37,20 +33,23 @@ public class MoveTransition : Object, Transition {
 
         t += dt;
         double k = double.min(t / duration, 1.0);
-        
-        // easing: easeOutExpo
-        double e = 1.0;
-        if (k != 1.0)
-            e = 1.0 - Math.pow(2.0, -10.0 * k);
 
-        // compute eased float values and convert to int
-        *ref_x = start_x + (int)((end_x - start_x) * e);
-        *ref_y = start_y + (int)((end_y - start_y) * e);
+        // easing
+        double e = (k == 1.0) ? 1.0 : (1.0 - Math.pow(2.0, -10.0 * k));
 
-        if (k >= 1.0)
+        // Compute only the delta since last frame
+        double delta_e = e - last_e;
+        last_e = e;
+
+        // Apply incremental movement
+        *ref_x += (int)(total_dx * delta_e);
+        *ref_y += (int)(total_dy * delta_e);
+
+        if (k >= 0.97)
             _finished = true;
     }
 }
+
 
 public class AnimationManager : Object {
     private Gee.ArrayList<Transition> transitions = new Gee.ArrayList<Transition>();
@@ -97,3 +96,53 @@ public class AnimationManager : Object {
 
     }
 }
+
+
+/*  public class MoveTransition : Object, Transition {
+
+    private int *ref_x;
+    private int *ref_y;
+
+    public int start_x;
+    public int start_y;
+    public int end_x;
+    public int end_y;
+    public double duration;
+    private double t = 0.0;
+
+    private bool _finished = false;
+    public bool finished { 
+        get { return _finished; }
+    }
+
+    public MoveTransition(int* x, int* y, int end_x, int end_y, double duration) {
+        ref_x = x;
+        ref_y = y;
+
+        this.start_x = *x;
+        this.start_y = *y;
+        this.end_x = end_x;
+        this.end_y = end_y;
+        this.duration = duration;
+        // Don't initialize t here - it should start at 0.0
+    }
+
+    public void update(double dt) {
+        if (finished) return;
+
+        t += dt;
+        double k = double.min(t / duration, 1.0);
+        
+        // easing: easeOutExpo
+        double e = 1.0;
+        if (k != 1.0)
+            e = 1.0 - Math.pow(2.0, -10.0 * k);
+
+        // compute eased float values and convert to int
+        *ref_x = start_x + (int)((end_x - start_x) * e);
+        *ref_y = start_y + (int)((end_y - start_y) * e);
+
+        if (k >= 1.0)
+            _finished = true;
+    }
+}  */
