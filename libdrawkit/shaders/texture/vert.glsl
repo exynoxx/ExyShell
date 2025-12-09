@@ -1,4 +1,5 @@
-R"(attribute vec2 position;
+R"(
+attribute vec2 position;
     attribute vec2 texCoord;
     uniform mat4 projection;
     varying vec2 vTexCoord;

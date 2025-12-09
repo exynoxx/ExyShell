@@ -14,7 +14,6 @@ typedef struct {
 typedef struct {
     GLuint rounded_rect_program;
     GLuint texture_program;
-    GLuint text_program;
     GLuint font_atlas_tex;
     GLuint vbo, vao;
     int screen_width;

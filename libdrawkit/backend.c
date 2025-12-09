@@ -179,7 +179,6 @@ void dk_backend_cleanup(dk_context *ctx) {
     glDeleteBuffers(1, &ctx->vbo);
     if (ctx->rounded_rect_program) glDeleteProgram(ctx->rounded_rect_program);
     if (ctx->texture_program) glDeleteProgram(ctx->texture_program);
-    if (ctx->text_program) glDeleteProgram(ctx->text_program);
 }
 
 void dk_set_bg_color(dk_context *ctx, dk_color color) {
@@ -290,10 +289,14 @@ void dk_draw_circle(dk_context *ctx, int cx, int cy, int radius, dk_color color)
     glUniform1i(mode_loc, 2);
 
     // --- Projection ---
-    float proj[16];
-    create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
-    GLint proj_loc = glGetUniformLocation(ctx->rounded_rect_program, "projection");
-    glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
+    GLint proj_loc = glGetUniformLocation(ctx->rounded_rect_program, "projections");
+    for(int i = 0; i < num_projections; i++) {
+        if(!active[i]) {
+            glUniformMatrix4fv(proj_loc+i, 1, GL_FALSE, identity);
+            continue;
+        }
+        glUniformMatrix4fv(proj_loc+i, 1, GL_FALSE, projections[i]);
+    }
 
     GLint color_loc = glGetUniformLocation(ctx->rounded_rect_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
@@ -339,6 +342,9 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
     //printf("draw_text %d %d %d %d",x,y,width,height);
 
     glUseProgram(ctx->texture_program);
+
+    GLint mode_loc = glGetUniformLocation(ctx->texture_program, "mode");
+    glUniform1i(mode_loc, 0);
     
     float proj[16];
     create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
@@ -346,7 +352,14 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
     GLint proj_loc = glGetUniformLocation(ctx->texture_program, "projection");
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, proj);
 
-    
+    /* GLint proj_loc = glGetUniformLocation(ctx->rounded_rect_program, "projections");
+    for(int i = 0; i < num_projections; i++) {
+        if(!active[i]) {
+            glUniformMatrix4fv(proj_loc+i, 1, GL_FALSE, identity);
+            continue;
+        }
+        glUniformMatrix4fv(proj_loc+i, 1, GL_FALSE, projections[i]);
+    } */
     
     GLint color_loc = glGetUniformLocation(ctx->texture_program, "color");
     glUniform4f(color_loc, 1,1,1,1);
@@ -416,13 +429,25 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
     if (!ctx->font_atlas_tex) return;
     if (!text) return;
 
-    glUseProgram(ctx->text_program);
+    glUseProgram(ctx->texture_program);
+
+    GLint mode_loc = glGetUniformLocation(ctx->texture_program, "mode");
+    glUniform1i(mode_loc, 1);
 
     float proj[16];
     create_ortho_matrix(proj, 0, ctx->screen_width, ctx->screen_height, 0);
-    glUniformMatrix4fv(glGetUniformLocation(ctx->text_program, "u_proj"), 1, GL_FALSE, proj);
+    glUniformMatrix4fv(glGetUniformLocation(ctx->texture_program, "projection"), 1, GL_FALSE, proj);
 
-    glUniform4f(glGetUniformLocation(ctx->text_program, "u_color"), 1,1,1,1);
+    /* GLint proj_loc = glGetUniformLocation(ctx->rounded_rect_program, "projections");
+    for(int i = 0; i < num_projections; i++) {
+        if(!active[i]) {
+            glUniformMatrix4fv(proj_loc+i, 1, GL_FALSE, identity);
+            continue;
+        }
+        glUniformMatrix4fv(proj_loc+i, 1, GL_FALSE, projections[i]);
+    } */
+
+    glUniform4f(glGetUniformLocation(ctx->texture_program, "color"), 1,1,1,1);
 
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
 
@@ -463,24 +488,24 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
 
         glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
-        GLint pos_loc = glGetAttribLocation(ctx->text_program, "a_pos");
-        GLint uv_loc  = glGetAttribLocation(ctx->text_program, "a_uv");
+        GLint pos_loc = glGetAttribLocation(ctx->texture_program, "position");
+        GLint texCoord_loc  = glGetAttribLocation(ctx->texture_program, "texCoord");
 
         glEnableVertexAttribArray(pos_loc);
-        glEnableVertexAttribArray(uv_loc);
+        glEnableVertexAttribArray(texCoord_loc);
 
         glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0);
-        glVertexAttribPointer(uv_loc, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
+        glVertexAttribPointer(texCoord_loc, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)(2*sizeof(float)));
 
         glActiveTexture(GL_TEXTURE0);
 
         glBindTexture(GL_TEXTURE_2D, ctx->font_atlas_tex);
-        glUniform1i(glGetUniformLocation(ctx->text_program, "u_tex"), 0);
+        glUniform1i(glGetUniformLocation(ctx->texture_program, "texture0"), 0);
 
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         glDisableVertexAttribArray(pos_loc);
-        glDisableVertexAttribArray(uv_loc);
+        glDisableVertexAttribArray(texCoord_loc);
 
         pen_x += g->ax * scale;
     }

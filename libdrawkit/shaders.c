@@ -24,14 +24,6 @@ static const char* texture_frag_src =
     #include "shaders/texture/frag.glsl"
     "";
 
-static const char* text_vert_src =
-    #include "shaders/text/vert.glsl"
-    "";
-
-static const char* text_frag_src =
-    #include "shaders/text/frag.glsl"
-    "";
-
 char* gen_vertex_shader(int num_projections) {
     int n = num_projections;
     // Calculate the size needed for the projection chain
@@ -135,9 +127,8 @@ void init_shaders(dk_context *ctx, int num_projections){
 
     ctx->rounded_rect_program = create_program(vert, rounded_frag_src);
     ctx->texture_program = create_program(texture_vert_src, texture_frag_src);
-    ctx->text_program = create_program(text_vert_src, text_frag_src);
     
-    if (!ctx->rounded_rect_program  || !ctx->texture_program || !ctx->text_program) {
+    if (!ctx->rounded_rect_program  || !ctx->texture_program) {
         fprintf(stderr, "Failed to create shader programs\n");
         return;
     }
