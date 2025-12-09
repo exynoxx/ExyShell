@@ -12,7 +12,7 @@ typedef struct {
 
 
 typedef struct {
-    GLuint rounded_rect_program;
+    GLuint shapes_program;
     GLuint texture_program;
     GLuint font_atlas_tex;
     GLuint vbo, vao;

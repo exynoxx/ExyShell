@@ -4,12 +4,12 @@
 #include "structures.h"
 #include "shaders.h"
 
-static const char* rounded_frag_src =
-    #include "shaders/rounded/frag.glsl"
+static const char* shapes_frag_src =
+    #include "shaders/shapes/frag.glsl"
     "";
 
-static const char* rounded_vert_src =
-    #include "shaders/rounded/vert.glsl"
+static const char* shapes_vert_src =
+    #include "shaders/shapes/vert.glsl"
     "";
 
 static const char* texture_vert_src =
@@ -108,13 +108,13 @@ static GLuint create_program(const char *vs_source, const char *fs_source) {
 }
 
 void init_shaders(dk_context *ctx, int num_projections){
-    char *vert_shapes = gen_vertex_shader(rounded_vert_src, num_projections);
+    char *vert_shapes = gen_vertex_shader(shapes_vert_src, num_projections);
     char *vert_texture = gen_vertex_shader(texture_vert_src, num_projections);
 
-    ctx->rounded_rect_program = create_program(vert_shapes, rounded_frag_src);
+    ctx->shapes_program = create_program(vert_shapes, shapes_frag_src);
     ctx->texture_program = create_program(vert_texture, texture_frag_src);
     
-    if (!ctx->rounded_rect_program  || !ctx->texture_program) {
+    if (!ctx->shapes_program  || !ctx->texture_program) {
         fprintf(stderr, "Failed to create shader programs\n");
         return;
     }

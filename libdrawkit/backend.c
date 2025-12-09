@@ -183,7 +183,7 @@ bool dk_backend_init(dk_context *ctx, int groups) {
 
 void dk_backend_cleanup(dk_context *ctx) {
     glDeleteBuffers(1, &ctx->vbo);
-    if (ctx->rounded_rect_program) glDeleteProgram(ctx->rounded_rect_program);
+    if (ctx->shapes_program) glDeleteProgram(ctx->shapes_program);
     if (ctx->texture_program) glDeleteProgram(ctx->texture_program);
 }
 
@@ -205,15 +205,15 @@ void dk_end_frame() {
 }
 
 void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height, dk_color color) {
-    glUseProgram(ctx->rounded_rect_program);
+    glUseProgram(ctx->shapes_program);
 
-    GLint mode_loc = glGetUniformLocation(ctx->rounded_rect_program, "mode");
+    GLint mode_loc = glGetUniformLocation(ctx->shapes_program, "mode");
     glUniform1i(mode_loc, 0);
     
-    dk_populate_projections(ctx->rounded_rect_program);
+    dk_populate_projections(ctx->shapes_program);
 
     // Set color
-    GLint color_loc = glGetUniformLocation(ctx->rounded_rect_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->shapes_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
     
     // Create rectangle vertices
@@ -229,7 +229,7 @@ void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height, dk_color
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     
-    GLint pos_loc = glGetAttribLocation(ctx->rounded_rect_program, "position");
+    GLint pos_loc = glGetAttribLocation(ctx->shapes_program, "position");
     glEnableVertexAttribArray(pos_loc);
     glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
     
@@ -238,20 +238,20 @@ void dk_draw_rect(dk_context *ctx, int x, int y, int width, int height, dk_color
 }
 
 void dk_draw_rect_rounded(dk_context *ctx, float x, float y, float width, float height, float radius, dk_color color) {
-    glUseProgram(ctx->rounded_rect_program);
+    glUseProgram(ctx->shapes_program);
 
-    GLint mode_loc = glGetUniformLocation(ctx->rounded_rect_program, "mode");
+    GLint mode_loc = glGetUniformLocation(ctx->shapes_program, "mode");
     glUniform1i(mode_loc, 1);
     
-    dk_populate_projections(ctx->rounded_rect_program);
+    dk_populate_projections(ctx->shapes_program);
 
-    GLint color_loc = glGetUniformLocation(ctx->rounded_rect_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->shapes_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
     
-    GLint rect_loc = glGetUniformLocation(ctx->rounded_rect_program, "rect");
+    GLint rect_loc = glGetUniformLocation(ctx->shapes_program, "rect");
     glUniform4f(rect_loc, x, y, width, height);
     
-    GLint radius_loc = glGetUniformLocation(ctx->rounded_rect_program, "radius");
+    GLint radius_loc = glGetUniformLocation(ctx->shapes_program, "radius");
     glUniform1f(radius_loc, radius);
     
     // Create simple quad that covers the entire rounded rectangle area
@@ -267,7 +267,7 @@ void dk_draw_rect_rounded(dk_context *ctx, float x, float y, float width, float 
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
     
-    GLint pos_loc = glGetAttribLocation(ctx->rounded_rect_program, "position");
+    GLint pos_loc = glGetAttribLocation(ctx->shapes_program, "position");
     glEnableVertexAttribArray(pos_loc);
     glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
     
@@ -276,14 +276,14 @@ void dk_draw_rect_rounded(dk_context *ctx, float x, float y, float width, float 
 }
 
 void dk_draw_circle(dk_context *ctx, int cx, int cy, int radius, dk_color color) {
-    glUseProgram(ctx->rounded_rect_program);
+    glUseProgram(ctx->shapes_program);
 
-    GLint mode_loc = glGetUniformLocation(ctx->rounded_rect_program, "mode");
+    GLint mode_loc = glGetUniformLocation(ctx->shapes_program, "mode");
     glUniform1i(mode_loc, 2);
 
-    dk_populate_projections(ctx->rounded_rect_program);
+    dk_populate_projections(ctx->shapes_program);
 
-    GLint color_loc = glGetUniformLocation(ctx->rounded_rect_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->shapes_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
 
     // --- Rectangle covering the circle ---
@@ -293,11 +293,11 @@ void dk_draw_circle(dk_context *ctx, int cx, int cy, int radius, dk_color color)
     float w = radius * 2.0f;
     float h = radius * 2.0f;
 
-    GLint rect_loc = glGetUniformLocation(ctx->rounded_rect_program, "rect");
+    GLint rect_loc = glGetUniformLocation(ctx->shapes_program, "rect");
     glUniform4f(rect_loc, x, y, w, h);
 
     // --- Radius uniform ---
-    GLint radius_loc = glGetUniformLocation(ctx->rounded_rect_program, "radius");
+    GLint radius_loc = glGetUniformLocation(ctx->shapes_program, "radius");
     glUniform1f(radius_loc, radius);
 
     // --- Create quad vertices ---
@@ -313,7 +313,7 @@ void dk_draw_circle(dk_context *ctx, int cx, int cy, int radius, dk_color color)
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
-    GLint pos_loc = glGetAttribLocation(ctx->rounded_rect_program, "position");
+    GLint pos_loc = glGetAttribLocation(ctx->shapes_program, "position");
     glEnableVertexAttribArray(pos_loc);
     glVertexAttribPointer(pos_loc, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
@@ -331,7 +331,7 @@ void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width
     GLint mode_loc = glGetUniformLocation(ctx->texture_program, "mode");
     glUniform1i(mode_loc, 0);
     
-    dk_populate_projections(ctx->rounded_rect_program);
+    dk_populate_projections(ctx->shapes_program);
     
     GLint color_loc = glGetUniformLocation(ctx->texture_program, "color");
     glUniform4f(color_loc, 1,1,1,1);
@@ -406,7 +406,7 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
     GLint mode_loc = glGetUniformLocation(ctx->texture_program, "mode");
     glUniform1i(mode_loc, 1);
 
-    dk_populate_projections(ctx->rounded_rect_program);
+    dk_populate_projections(ctx->shapes_program);
 
     glUniform4f(glGetUniformLocation(ctx->texture_program, "color"), 1,1,1,1);
 
