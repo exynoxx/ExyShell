@@ -21,6 +21,8 @@ int dk_width_of(dk_context *ctx, const char *text, float font_size);
 int dk_height_of(dk_context *ctx, const char *text, float font_size);
 void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_size);
 
+void dk_populate_projections(GLuint program);
+
 void dk_begin_group(int group);
 void dk_end_group(int group);
 void dk_group_location(int group, int x, int y);
