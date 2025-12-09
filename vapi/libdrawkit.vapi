@@ -23,8 +23,11 @@ namespace DrawKit {
         public int screen_height;
         public Color background_color;
 
+        [CCode (cname = "dk_init_default")]
+        public Context(int screen_width, int screen_height);
+
         [CCode (cname = "dk_init")]
-        public Context(int screen_width, int screen_height, int p);
+        public static Context Init_with_groups(int screen_width, int screen_height, int p);
 
         // Backend functions
         /*  

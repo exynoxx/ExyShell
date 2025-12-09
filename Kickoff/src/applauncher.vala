@@ -25,7 +25,7 @@ public class AppLauncher {
         screen_width = width;
         screen_height = height;
 
-        ctx = new DrawKit.Context(width, height, 2);
+        ctx = Context.Init_with_groups(width, height, 2);
         ctx.set_bg_color(DrawKit.Color(){ r = 0, g =  0, b = 0, a = 0.70f });
 
         int gaps_h = GRID_COLS + 1;
