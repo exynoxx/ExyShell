@@ -20,8 +20,8 @@ namespace Main {
         var size = WLHooks.get_layer_shell_size();
         print("layer shell size: %i %i\n", size.width, size.height);
 
-        launcher = new AppLauncher(/*  size.width, size.height  */1920, 1080);
         animations = new AnimationManager();
+        launcher = new AppLauncher(/*  size.width, size.height  */1920, 1080);
 
         WLHooks.register_on_mouse_down(launcher.mouse_down);
         WLHooks.register_on_mouse_up(launcher.mouse_up);

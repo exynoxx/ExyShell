@@ -3,13 +3,11 @@ public interface Transition : Object {
     public abstract void update(double dt);
 }
 
-public class MoveTransition : Object, Transition {
+public class Transition1D : Object, Transition {
 
     private int* ref_x;
-    private int* ref_y;
-
     private int total_dx;
-    private int total_dy;
+    private int end_x;
 
     private double duration;
     private double t = 0.0;
@@ -19,12 +17,10 @@ public class MoveTransition : Object, Transition {
     private bool _finished = false;
     public bool finished { get { return _finished; } }
 
-    public MoveTransition(int* x, int* y, int end_x, int end_y, double duration) {
+    public Transition1D(int* x, int end_x, double duration) {
         ref_x = x;
-        ref_y = y;
-
         total_dx = end_x - *x;
-        total_dy = end_y - *y;
+        this.end_x = end_x;
         this.duration = duration;
     }
 
@@ -43,13 +39,57 @@ public class MoveTransition : Object, Transition {
 
         // Apply incremental movement
         *ref_x += (int)(total_dx * delta_e);
-        *ref_y += (int)(total_dy * delta_e);
 
-        if (k >= 0.97)
+        if (k >= 0.99){
+            *ref_x = end_x;
             _finished = true;
+        }
     }
 }
 
+public class Transition1Df : Object, Transition {
+
+    private float* ref_x;
+    private float total_dx;
+    private float end_x;
+
+    private double duration;
+    private double t = 0.0;
+
+    private double last_e = 0.0;
+
+    private bool _finished = false;
+    public bool finished { get { return _finished; } }
+
+    public Transition1Df(float* x, float end_x, double duration) {
+        ref_x = x;
+        this.end_x = end_x;
+        total_dx = end_x - *x;
+        this.duration = duration;
+    }
+
+    public void update(double dt) {
+        if (finished) return;
+
+        t += dt;
+        double k = double.min(t / duration, 1.0);
+
+        // easing
+        double e = (k == 1.0) ? 1.0 : (1.0 - Math.pow(2.0, -10.0 * k));
+
+        // Compute only the delta since last frame
+        double delta_e = e - last_e;
+        last_e = e;
+
+        // Apply incremental movement
+        *ref_x += (float)(total_dx * delta_e);
+
+        if (k >= 0.99){
+            *ref_x = end_x;
+            _finished = true;
+        }
+    }
+}
 
 public class AnimationManager : Object {
     private Gee.ArrayList<Transition> transitions = new Gee.ArrayList<Transition>();

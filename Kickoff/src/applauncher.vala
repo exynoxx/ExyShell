@@ -21,12 +21,21 @@ public class AppLauncher {
     private int page_x;
     private int page_y;
 
+    private int screen_center_x;
+    private int screen_center_y;
+
+    private float bg_a = 0;
+    private float grid_zoom[16];
+    private float grid_zoom_factor = 10;
+
     public AppLauncher(int width, int height) {
         screen_width = width;
         screen_height = height;
 
-        ctx = Context.Init_with_groups(width, height, 2);
-        ctx.set_bg_color(DrawKit.Color(){ r = 0, g =  0, b = 0, a = 0.70f });
+        screen_center_x = screen_width/2;
+        screen_center_y = screen_height/2;
+
+        ctx = Context.Init_with_groups(width, height, 3);
 
         int gaps_h = GRID_COLS + 1;
         int gaps_v = GRID_ROWS + 1;
@@ -64,6 +73,12 @@ public class AppLauncher {
             var icon_path = icon_paths[icon];
             apps += new AppEntry(ctx, i++, name, icon_path, exec, padding_h, padding_v);
         }
+
+        Main.animations.add(new Transition1Df(&bg_a, 0.85f, 3));
+        Main.animations.add(new Transition1Df(&grid_zoom_factor, 1, 3));
+        //Main.animations.add(new Transition1Df(&grid_zoom_factor, 1, 3));
+        /*  Main.animations.add(new Transition1D(&page_x, 0, 3));
+        Main.animations.add(new Transition1D(&page_y, 0, 3));  */
     }
 
     public void mouse_down() {
@@ -73,19 +88,17 @@ public class AppLauncher {
     public void mouse_up() {
         foreach (var app in apps)
             app.mouse_up();
-        
-        
     }
 
     public void key_down(uint64 key){
         if(key == 65361){
             //arrow l
-            Main.animations.add(new MoveTransition(&page_x, &page_y, page_x-screen_width, page_y, 1.5));
+            Main.animations.add(new Transition1D(&page_x, page_x-screen_width, 1.5));
         }
 
         if(key == 65363){
             //arrow r
-            Main.animations.add(new MoveTransition(&page_x, &page_y, page_x+screen_width, page_y, 1.5));
+            Main.animations.add(new Transition1D(&page_x, page_x+screen_width, 1.5));
         }
     }
 
@@ -93,16 +106,29 @@ public class AppLauncher {
         foreach (var app in apps)
             app.mouse_move(mouse_x, mouse_y);
     }
-
+    
     public void render() {
+        
+        //translate(x,y) * zoom(factor) * translate(-x,-y)
+        grid_zoom[0] = grid_zoom_factor;
+        grid_zoom[5] = grid_zoom_factor;
+        grid_zoom[10] = 1;
+        grid_zoom[12] = screen_center_x * (1 - grid_zoom_factor);
+        grid_zoom[13] = screen_center_y * (1 - grid_zoom_factor);
+        grid_zoom[15] = 1;
+
+        ctx.set_bg_color(DrawKit.Color(){ r = 0, g =  0, b = 0, a = bg_a });
         ctx.begin_frame();
         
         DrawKit.begin_group(1);
+        DrawKit.begin_group(2);
+        DrawKit.group_matrix(2,grid_zoom);
         DrawKit.group_location(1, page_x, page_y);
         foreach (var app in apps) {
             app.render(ctx);
         }
         DrawKit.end_group(1);
+        DrawKit.end_group(2);
 
         //ctx.draw_rect(10,10,50,50,{1f,1f,1f,1f});
 
@@ -118,5 +144,16 @@ public class AppLauncher {
         ctx.draw_text("3", middle + 50,y+5, 15);
 
         ctx.end_frame();
+    }
+
+    private static float[] create_zoom_matrix(float zoom_factor) {
+        float[] matrix = new float[16];
+        
+        matrix[0] = zoom_factor;  // X scale
+        matrix[5] = zoom_factor;  // Y scale
+        matrix[10] = zoom_factor; // Z scale
+        matrix[15] = 1.0f;        // W (homogeneous)
+        
+        return matrix;
     }
 }

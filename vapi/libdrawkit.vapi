@@ -60,10 +60,7 @@ namespace DrawKit {
 
         [CCode (cname = "dk_draw_text")]
         public void draw_text(string text, int x, int y, float font_size);
-
-        /*[  CCode (cname = "group_matrix")]
-        void group_matrix(int group, float* mat);
-  */
+  
         [CCode (cname = "dk_begin_frame")]
         public void begin_frame();
 
@@ -84,6 +81,8 @@ namespace DrawKit {
     [CCode (cname = "dk_group_location")]
     public void group_location(int group, int x, int y);
 
+    [CCode(cname = "dk_group_matrix")]
+    void group_matrix(int group, float* mat);
 
     // Texture functions
     [CCode (cname = "Image", destroy_function = "", has_type_id = false)]
