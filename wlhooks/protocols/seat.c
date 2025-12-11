@@ -14,7 +14,7 @@ static dk_mouse_info mouse_info = {0};
 struct xkb_context *xkb_context;
 struct xkb_keymap *xkb_keymap;
 struct xkb_state *xkb_state;
-static bool grab_keyboard = false;
+bool grab_keyboard = false;
 
 static seat_mouse_enter mouse_enter_cb;
 static void *mouse_enter_userdata = NULL;
@@ -195,6 +195,7 @@ static void seat_capabilities(void *data, struct wl_seat *seat, uint32_t capabil
     }
 
     if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD && grab_keyboard) {
+        printf("grapping keyboard\n");
         keyboard = wl_seat_get_keyboard(seat);
         wl_keyboard_add_listener(keyboard, &keyboard_listener, data);
     }
