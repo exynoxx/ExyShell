@@ -18,6 +18,7 @@ sources = [
   'protocols/layershell.c',
   'protocols/seat.c',
   'protocols/toplevel.c',
+  'protocols/output.c',
   'protocols/screencopy.c',
   'generated/wlr-layer-shell-unstable-v1-protocol.c',
   'generated/xdg-shell-client-protocol.c',

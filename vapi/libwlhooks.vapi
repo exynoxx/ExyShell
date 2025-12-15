@@ -17,8 +17,8 @@ namespace WLHooks {
         public int height;
     }
 
-    [CCode(cname="get_layer_shell_size", has_target = false)]
-    public unowned SurfaceSize get_layer_shell_size();
+    [CCode(cname="get_screen_size", has_target = false)]
+    public unowned SurfaceSize *get_screen_size();
 
     // dk_mouse_info is a plain struct, returned as pointer
     [CCode(cname="dk_mouse_info", has_type_id=false)]
@@ -37,6 +37,9 @@ namespace WLHooks {
         public unowned ToplevelInfo* next;
         // handle omitted, add if needed: public unowned IntPtr handle;
     }
+
+    [CCode(cname="wlhooks_init")]
+    public int init();
 
     [CCode(cname="init_layer_shell")]
     public int init_layer_shell(string layer_name, int width, int height, Anchor anchor, bool exclusive_zone);

@@ -10,9 +10,11 @@
 #include "protocols/seat.h"
 #include "protocols/toplevel.h"
 #include "protocols/screencopy.h"
+#include "protocols/output.h"
 
 extern struct wl_display *wl_display;
 
+int wlhooks_init();
 int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone);
 void destroy();
 struct wl_display *get_wl_display();

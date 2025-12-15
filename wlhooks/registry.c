@@ -52,7 +52,8 @@ static const struct wl_registry_listener registry_listener = {
 void registry_init(struct wl_display *display) {
     global_registry = wl_display_get_registry(display);
     wl_registry_add_listener(global_registry, &registry_listener, NULL);
-    wl_display_roundtrip(display);
+    wl_display_roundtrip(display);  // Gets registry globals
+    wl_display_roundtrip(display);  // Gets output mode/geometry
 }
 
 void registry_cleanup(void) {

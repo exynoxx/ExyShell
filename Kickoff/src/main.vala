@@ -15,11 +15,16 @@ namespace Main {
     static int main(string[] args) {
     
         WLHooks.grab_keyboard(true);
+        WLHooks.init();
+
+        var size = WLHooks.get_screen_size();
+        print("layer shell size: %i %i\n", size.width, size.height);
+        
         WLHooks.init_layer_shell("Kickoff-overlay", 1920, 1080, UP | LEFT | RIGHT | DOWN, false);
     
-        var size = WLHooks.get_layer_shell_size();
+        size = WLHooks.get_screen_size();
         print("layer shell size: %i %i\n", size.width, size.height);
-
+        
         animations = new AnimationManager();
         launcher = new AppLauncher(/*  size.width, size.height  */1920, 1080);
 

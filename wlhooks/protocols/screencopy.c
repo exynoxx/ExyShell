@@ -11,8 +11,8 @@
 #include <errno.h>
 
 static struct zwlr_screencopy_manager_v1 *screencopy_manager = NULL;
-struct wl_output *wl_output;
 struct wl_shm *wl_shm = NULL;
+extern struct wl_output *wl_output;
 
 typedef struct {
     struct zwlr_screencopy_frame_v1 *frame;
@@ -198,14 +198,8 @@ static void screencopy_registry_handler(void *data, struct wl_registry *registry
 
 // Somewhere globally or in your context struct
 
-static void output_handler(void *user_data, struct wl_registry *registry,
-                           uint32_t name, const char *interface, uint32_t version) {
-    wl_output = wl_registry_bind(registry, name, &wl_output_interface, version);
-}
-
 void screencopy_init(void) {
     registry_add_handler("zwlr_screencopy_manager_v1", screencopy_registry_handler, NULL);
-    registry_add_handler("wl_output", output_handler, NULL);
     registry_add_handler("wl_shm", handle_shm_registry, NULL);
 }
 

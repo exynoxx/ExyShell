@@ -8,9 +8,7 @@
 
 struct wl_display *wl_display = NULL;
 
-//TODO enable disable keyboar.
-
-int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone) {
+int wlhooks_init(){
     wl_display = wl_display_connect(NULL);
     if (!wl_display) { 
         fprintf(stderr,"Failed to connect to Wayland display\n"); 
@@ -21,10 +19,13 @@ int init_layer_shell(const char *layer_name, int width, int height, Anchor ancho
     layer_shell_init();
     seat_init();
     toplevel_init();
+    output_init();
     //screencopy_init();
 
     registry_init(wl_display);
+}
 
+int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone) {
     struct wl_surface *surface = layer_shell_create_surface(layer_name, width, height, anchor, exclusive_zone);
     egl_init(wl_display, surface, width, height);
 
@@ -46,6 +47,7 @@ void destroy(void) {
     toplevel_cleanup();
     egl_cleanup();
     registry_cleanup();
+    output_destroy();
     //screencopy_cleanup();
 
     wl_display_disconnect(wl_display);
