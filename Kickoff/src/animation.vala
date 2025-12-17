@@ -1,70 +1,36 @@
+using Gee;
+
 public interface Transition : Object {
+    public abstract int id { get; }
     public abstract bool finished { get; }
     public abstract void update(double dt);
+
+    public float easeOutExpo(float k){
+        return (k == 1f) ? 1f : (1f - Math.powf(2f, -10f * k));
+    }
 }
 
 public class Transition1D : Object, Transition {
-
-    private int* ref_x;
-    private int total_dx;
-    private int end_x;
-
-    private double duration;
-    private double t = 0.0;
-
-    private double last_e = 0.0;
-
-    private bool _finished = false;
-    public bool finished { get { return _finished; } }
-
-    public Transition1D(int* x, int end_x, double duration) {
-        ref_x = x;
-        total_dx = end_x - *x;
-        this.end_x = end_x;
-        this.duration = duration;
-    }
-
-    public void update(double dt) {
-        if (finished) return;
-
-        t += dt;
-        double k = double.min(t / duration, 1.0);
-
-        // easing
-        double e = (k == 1.0) ? 1.0 : (1.0 - Math.pow(2.0, -10.0 * k));
-
-        // Compute only the delta since last frame
-        double delta_e = e - last_e;
-        last_e = e;
-
-        // Apply incremental movement
-        *ref_x += (int)(total_dx * delta_e);
-
-        if (k >= 1){
-            *ref_x = end_x;
-            _finished = true;
-        }
-    }
-}
-
-public class Transition1Df : Object, Transition {
+    private int _id;
+    public int id {get {return _id; }}
 
     private float* ref_x;
-    private float total_dx;
+    private float start_x;
     private float end_x;
 
     private double duration;
     private double t = 0.0;
 
-    private double last_e = 0.0;
+    private float last_distance_progress = 0f;
 
     private bool _finished = false;
     public bool finished { get { return _finished; } }
 
-    public Transition1Df(float* x, float end_x, double duration) {
+    public Transition1D(int id, float* x, float end_x, double duration) {
+        _id = id;
         ref_x = x;
+        start_x = *x;
         this.end_x = end_x;
-        total_dx = end_x - *x;
         this.duration = duration;
     }
 
@@ -72,19 +38,17 @@ public class Transition1Df : Object, Transition {
         if (finished) return;
 
         t += dt;
-        double k = double.min(t / duration, 1.0);
+        float time_progress = float.min((float)(t / duration), 1.0f);
+        float distance_progress = easeOutExpo(time_progress);
+        float delta_progress = distance_progress - last_distance_progress;
+        last_distance_progress = distance_progress;
 
-        // easing
-        double e = (k == 1.0) ? 1.0 : (1.0 - Math.pow(2.0, -10.0 * k));
+        // apply
+        float total_distance = end_x - start_x;
+        float dx = total_distance * delta_progress;
+        *ref_x += dx;
 
-        // Compute only the delta since last frame
-        double delta_e = e - last_e;
-        last_e = e;
-
-        // Apply incremental movement
-        *ref_x += (float)(total_dx * delta_e);
-
-        if (k >= 0.99){
+        if (time_progress >= 1.0) {
             *ref_x = end_x;
             _finished = true;
         }
@@ -92,8 +56,8 @@ public class Transition1Df : Object, Transition {
 }
 
 public class AnimationManager : Object {
-    private Gee.ArrayList<Transition> transitions = new Gee.ArrayList<Transition>();
-    public bool has_active = true;
+    private HashMap<int,Transition> transitions = new HashMap<int,Transition>();
+    public bool has_active = false;
 
     private int64 last_time_us;
 
@@ -102,7 +66,7 @@ public class AnimationManager : Object {
     }
 
     public void add(Transition t) {
-        transitions.add(t);
+        transitions[t.id] = t;
         has_active = true;
     }
 
@@ -121,19 +85,18 @@ public class AnimationManager : Object {
         // Calculate delta time in seconds (convert from microseconds)
         double dt = dt_us / 1000000.0;
         
-        var to_remove = new Gee.ArrayList<Transition>();
-        foreach (var t in transitions) {
+        foreach (var t in transitions.values) {
             t.update(dt);
-            if (t.finished)
-                to_remove.add(t);
+        }
+
+        var iter = transitions.map_iterator();
+        while (iter.next()) {
+            if (iter.get_value().finished) {
+                iter.unset();
+            }
         }
         
-        // Remove finished transitions
-        foreach (var t in to_remove)
-            transitions.remove(t);
-
         if(transitions.size == 0) has_active = false;
-
     }
 }
 

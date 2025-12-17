@@ -76,8 +76,8 @@ public class AppLauncher {
 
         print("Apps after filter %i\n", apps.length);
 
-        Main.animations.add(new Transition1Df(&bg_a, 0.9f, 3));
-        Main.animations.add(new Transition1Df(&grid_zoom_factor, 1, 1.5));
+        Main.animations.add(new Transition1D(0, &bg_a, 0.9f, 3));
+        Main.animations.add(new Transition1D(1, &grid_zoom_factor, 1, 1.5));
         //Main.animations.add(new Transition1Df(&grid_zoom_factor, 1, 3));
         /*  Main.animations.add(new Transition1D(&page_x, 0, 3));
         Main.animations.add(new Transition1D(&page_y, 0, 3));  */
@@ -95,12 +95,12 @@ public class AppLauncher {
     public void key_down(uint64 key){
         if(key == 65363){
             //arrow r
-            Main.animations.add(new Transition1D(&page_x, page_x-screen_width, 1.5));
+            Main.animations.add(new Transition1D(2, &page_x, page_x-screen_width, 1.5));
         }
 
         if(key == 65361){
             //arrow l
-            Main.animations.add(new Transition1D(&page_x, page_x+screen_width, 1.5));
+            Main.animations.add(new Transition1D(3, &page_x, page_x+screen_width, 1.5));
         }
     }
 
