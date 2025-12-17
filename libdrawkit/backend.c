@@ -51,7 +51,7 @@ bool dk_backend_init_default(dk_context *ctx) {
 bool dk_backend_init(dk_context *ctx, int groups) {  
 
     printf("init with group count %d\n", groups);
-    num_projections = groups;
+    num_projections = groups+1;
 
     init_shaders(ctx, num_projections);
     create_identity_matrix(identity);
@@ -356,7 +356,7 @@ void dk_populate_projections(GLuint program){
 }
 
 void dk_begin_group(int group){
-    if (group >= num_projections) {
+    if (group == 0 || group >= num_projections) {
         printf("group out of bouds");
         return;
     }
@@ -366,7 +366,7 @@ void dk_begin_group(int group){
 }
 
 void dk_end_group(int group){
-    if (group >= num_projections) {
+    if (group == 0 || group >= num_projections) {
         printf("group out of bouds");
         return;
     }
@@ -376,7 +376,7 @@ void dk_end_group(int group){
 }
 
 void dk_group_location(int group, int x, int y){
-    if (group >= num_projections) {
+    if (group == 0 || group >= num_projections) {
         printf("group out of bouds");
         return;
     }
@@ -386,7 +386,7 @@ void dk_group_location(int group, int x, int y){
 }
 
 void dk_group_matrix(int group, float* mat){
-    if (group >= num_projections) {
+    if (group == 0 || group >= num_projections) {
         printf("group out of bouds");
         return;
     }
