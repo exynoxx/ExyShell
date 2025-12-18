@@ -54,6 +54,19 @@ public class Transition1D : Object, Transition {
     }
 }
 
+public class TransitionEmpty : Object, Transition {
+    public int id {get {return 0; }}
+    public bool finished { get { return true; } }
+
+    public TransitionEmpty() {
+    }
+
+    public void update(double dt) {
+
+    }
+}
+
+
 public class AnimationManager : Object {
     private HashMap<int,Transition> transitions = new HashMap<int,Transition>();
     public bool has_active = false;

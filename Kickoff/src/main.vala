@@ -28,12 +28,12 @@ namespace Main {
         WLHooks.register_on_mouse_down(launcher.mouse_down);
         WLHooks.register_on_mouse_up(launcher.mouse_up);
         WLHooks.register_on_mouse_motion(launcher.mouse_move); //fix double
-        WLHooks.register_on_key_down(key=> {
+        WLHooks.register_on_key_up(key=> {
             if(key == 65307){
                 WLHooks.destroy();
                 Process.exit (0);
             }
-            launcher.key_down(key);
+            launcher.key_up(key);
         });
         
         while (WLHooks.display_dispatch_blocking() != -1) {

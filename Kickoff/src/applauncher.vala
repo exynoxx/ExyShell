@@ -4,17 +4,13 @@ using GLES2;
 
 const int GRID_COLS = 6;
 const int GRID_ROWS = 4;
+static int PER_PAGE = GRID_COLS*GRID_ROWS;
 const int ICON_SIZE = 96;
 const int ICON_HOVER_PADDING = 8;
 const int PADDING_EDGES_Y = 80;
 const int PADDING_EDGES_X = 150;
 
 public class AppLauncher {
-
-    DrawKit.Context ctx;
-
-    private AppEntry[] apps;
-    private Navigation navigation;
     private int screen_width;
     private int screen_height;
     
@@ -23,11 +19,18 @@ public class AppLauncher {
     
     private float page_x;
     private int active_page;
+    private int prev_page;
+    private int page_count;
 
     private float bg_a = 0;
     private float grid_zoom[16];
     private float grid_zoom_factor = 10;
-    private Transition1D init_transition;
+    private Transition init_transition;
+    private Transition move_transition;
+
+    private DrawKit.Context ctx;
+    private AppEntry[] apps;
+    private Navigation navigation;
 
     public AppLauncher(int width, int height) {
         screen_width = width;
@@ -71,43 +74,57 @@ public class AppLauncher {
             var icon_path = icon_paths[icon];
             var pos = grid_positions[i++];
             apps += new AppEntry(ctx, name, icon_path, exec, pos.x, pos.y);
-
-            if(i>GRID_COLS*GRID_ROWS*3) break;
         }
 
         print("Apps after filter %i\n", apps.length);
 
-        navigation = new Navigation(apps.length/(GRID_COLS*GRID_ROWS), screen_width, screen_height);
+        page_count = apps.length/PER_PAGE;
+        active_page = 0;
+
+        print("Pages: %i\n", page_count);
+
+        navigation = new Navigation(page_count, screen_width, screen_height);
 
         init_transition = new Transition1D(1, &grid_zoom_factor, 1, 1.5);
         Main.animations.add(new Transition1D(0, &bg_a, 0.9f, 3));
         Main.animations.add(init_transition);
-    }
 
-    public void mouse_down() {
-        foreach (var app in apps)
-            app.mouse_down();
-    }
-    public void mouse_up() {
-        foreach (var app in apps)
-            app.mouse_up();
-    }
-
-    public void key_down(uint64 key){
-        if(key == 65363){
-            active_page--;
-            Main.animations.add(new Transition1D(2, &page_x, active_page*screen_width, 1.5));
-        }
-
-        if(key == 65361){
-            active_page++;
-            Main.animations.add(new Transition1D(3, &page_x, active_page*screen_width, 1.5));
-        }
+        move_transition = new TransitionEmpty();
     }
 
     public void mouse_move(double mouse_x, double mouse_y) {
-        foreach (var app in apps)
-            app.mouse_move(mouse_x, mouse_y);
+        var start = active_page*PER_PAGE;
+        for(int i = start; i < start+PER_PAGE; i++)
+            apps[i].mouse_move(mouse_x, mouse_y);
+    }
+
+    public void mouse_down() {
+        var start = active_page*PER_PAGE;
+        for(int i = start; i < start+PER_PAGE; i++)
+            apps[i].mouse_down();
+    }
+    public void mouse_up() {
+        var start = active_page*PER_PAGE;
+        for(int i = start; i < start+PER_PAGE; i++)
+            apps[i].mouse_up();
+    }
+
+    //inverted scrolling
+    public void key_up(uint64 key){
+        if(key == 65363){ //r
+            if(active_page == page_count-1) return;
+            prev_page = active_page;
+            active_page++;
+        }
+
+        if(key == 65361){ //l
+            if(active_page == 0) return;
+            prev_page = active_page;
+            active_page--;
+        }
+
+        move_transition = new Transition1D(2, &page_x, -active_page*screen_width, 1.5);
+        Main.animations.add(move_transition);
     }
     
     public void render() {
@@ -122,25 +139,24 @@ public class AppLauncher {
         
         DrawKit.begin_group(1);
         DrawKit.group_location(1, (int)page_x, 0);
-        foreach (var app in apps) {
-            app.render(ctx);
+
+        //main
+        var start = active_page*PER_PAGE;
+        for(int i = start; i < start+PER_PAGE; i++)
+            apps[i].render(ctx);
+
+        //prev page
+        if(!move_transition.finished){
+            start = prev_page*PER_PAGE;
+            for(int i = start; i < start+PER_PAGE; i++)
+                apps[i].render(ctx);
         }
+
         DrawKit.end_group(1);
         DrawKit.end_group(2);
 
         navigation.render(ctx);
     
         ctx.end_frame();
-    }
-
-    private static float[] create_zoom_matrix(float zoom_factor) {
-        float[] matrix = new float[16];
-        
-        matrix[0] = zoom_factor;  // X scale
-        matrix[5] = zoom_factor;  // Y scale
-        matrix[10] = zoom_factor; // Z scale
-        matrix[15] = 1.0f;        // W (homogeneous)
-        
-        return matrix;
     }
 }
