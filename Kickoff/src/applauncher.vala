@@ -76,6 +76,11 @@ public class AppLauncher {
             apps += new AppEntry(ctx, name, icon_path, exec, pos.x, pos.y);
         }
 
+        //async
+        foreach (var app in apps){
+            app.load_texture();
+        }
+
         print("Apps after filter %i\n", apps.length);
 
         page_count = apps.length/PER_PAGE;

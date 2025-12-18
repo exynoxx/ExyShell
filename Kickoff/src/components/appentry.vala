@@ -82,13 +82,6 @@ public class AppEntry {
                 clicked ? clicked_color : hovered_color);
         }
 
-        // Load texture on demand
-        if (!texture_loaded) {
-            var tex = ImageUtils.Upload_texture(icon_path, ICON_SIZE);
-            texture_id = tex;
-            texture_loaded = true;
-        }
-        
         // Draw icon or placeholder
         if (texture_id > 0) {
             ctx.draw_texture(texture_id, grid_x+icon_offset_x, grid_y+ICON_HOVER_PADDING, ICON_SIZE, ICON_SIZE);
@@ -98,6 +91,11 @@ public class AppEntry {
 
         //label
         ctx.draw_text(name_short, grid_x + width/2, grid_y + ICON_SIZE + 2*ICON_HOVER_PADDING+5, 20);
+    }
+
+    public async void load_texture(){
+        texture_id = ImageUtils.Upload_texture(icon_path, ICON_SIZE);
+        texture_loaded = true;
     }
 
     private void launch_app() {
