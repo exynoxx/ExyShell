@@ -3,18 +3,22 @@ using DrawKit;
 
 public class PageButton {
 
+    private int i;
     private int x;
     private int y;
     private string label;
     private Color color = {0.3f,0.3f,0.3f,1f};
+    private Color color_active = {1f,1f,1f,1f};
 
-    public PageButton (int x, int y, string label){
+    public PageButton (int x, int y, int i){
         this.x = x;
         this.y = y;
-        this.label = label;
+        this.i = i;
+        this.label = (i+1).to_string();
     }
     
-    public void render(Context ctx) {
+    public void render(Context ctx, int active_idx) {
+        var color = (i==active_idx)? color_active : color;
         ctx.draw_circle(x,y, 15, color);
         ctx.draw_text(label, x, y+5, 15);
     }
@@ -32,13 +36,13 @@ public class Navigation {
         var offset = (screen_width/2) - (total_width/2);
 
         for (int i = 0; i < count; i++){
-            pages.add(new PageButton(offset+50*i, y, (i+1).to_string()));
+            pages.add(new PageButton(offset+50*i, y, i));
         }
     }
 
-    public void render(Context ctx) {
+    public void render(Context ctx, int active_idx) {
         foreach (var page in pages){
-            page.render(ctx);
+            page.render(ctx, active_idx);
         }
     } 
 

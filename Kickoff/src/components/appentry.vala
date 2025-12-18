@@ -8,7 +8,6 @@ public class AppEntry {
     private string icon_path;
     private string exec;
     private GLuint texture_id;
-    private bool texture_loaded;
 
     private bool hovered;
     private bool clicked;
@@ -95,7 +94,6 @@ public class AppEntry {
 
     public async void load_texture(){
         texture_id = ImageUtils.Upload_texture(icon_path, ICON_SIZE);
-        texture_loaded = true;
     }
 
     private void launch_app() {

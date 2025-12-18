@@ -160,7 +160,7 @@ public class AppLauncher {
         DrawKit.end_group(1);
         DrawKit.end_group(2);
 
-        navigation.render(ctx);
+        navigation.render(ctx, active_page);
     
         ctx.end_frame();
     }
