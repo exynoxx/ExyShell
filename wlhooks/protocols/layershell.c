@@ -42,14 +42,18 @@ void layer_shell_init(void) {
 }
 
 void layer_shell_cleanup(void){
-    if (surface) { 
-        wl_surface_destroy(surface);
-        surface = NULL; 
+    layer_shell_destroy();
+}
+
+void layer_shell_destroy(void) {
+    if (layer_surface) {
+        zwlr_layer_surface_v1_destroy(layer_surface);
+        layer_surface = NULL;
     }
 
-    if (layer_shell) { 
-        zwlr_layer_shell_v1_destroy(layer_shell); 
-        layer_shell = NULL; 
+    if (surface) {
+        wl_surface_destroy(surface);
+        surface = NULL;
     }
 }
 

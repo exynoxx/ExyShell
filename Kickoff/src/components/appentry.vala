@@ -40,10 +40,10 @@ public class AppEntry {
     public void mouse_up (){
         clicked = false;
         if(hovered) {
-            //launch_app()
-            //Main.animations.add(new MoveTransition(this, 10,10, 0.9));
+            launch_app();
+            WLHooks.destroy_layer_shell();
+            //Main.queue_redraw();
         };
-        Main.queue_redraw();
     }
 
     public void mouse_down(){

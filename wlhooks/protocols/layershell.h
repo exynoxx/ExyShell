@@ -17,6 +17,7 @@ typedef enum {
 
 void layer_shell_init();
 void layer_shell_cleanup();
+void layer_shell_destroy();
 
 struct wl_surface *layer_shell_create_surface(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone);
 struct wl_surface *layer_shell_get_surface(void);

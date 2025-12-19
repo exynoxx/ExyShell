@@ -33,6 +33,11 @@ namespace Main {
                 WLHooks.destroy();
                 Process.exit (0);
             }
+
+            if(key == 97){
+                WLHooks.destroy_layer_shell();
+            }
+            
             launcher.key_up(key);
         });
         

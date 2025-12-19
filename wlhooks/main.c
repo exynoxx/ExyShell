@@ -40,7 +40,7 @@ int display_dispatch_blocking(){
     return wl_display_dispatch(wl_display);
 }
 
-void destroy(void) {
+void wlhooks_destroy(void) {
     compositor_cleanup();
     layer_shell_cleanup();
     seat_cleanup();
