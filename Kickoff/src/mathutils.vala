@@ -32,8 +32,8 @@ public class MathUtils {
             int row = page_i / GRID_COLS;
             int col = page_i % GRID_COLS;
 
-            var grid_x = page*screen_width + PADDING_EDGES_X + col * padding_h + col * ICON_SIZE;
-            var grid_y = PADDING_EDGES_Y + row * padding_v + row * ICON_SIZE;
+            var grid_x = page*screen_width +    PADDING_EDGES_X + col * (ICON_SIZE+padding_h);
+            var grid_y =                        PADDING_EDGES_Y + row * (ICON_SIZE+padding_v);
 
 
             
