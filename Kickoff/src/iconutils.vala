@@ -3,7 +3,7 @@ using Gee;
 
 public class IconUtils {
     public static string? find_icon_theme_base(string theme_name) {
-        foreach (var base_dir in SystemUtils.get_icon_theme_dirs()) {
+        foreach (var base_dir in Utils.System.get_icon_theme_dirs()) {
             string theme_dir = Path.build_filename(base_dir, theme_name);
     
             // Check if directory exists and has index.theme

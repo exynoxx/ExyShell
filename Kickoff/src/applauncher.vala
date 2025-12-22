@@ -43,11 +43,11 @@ public class AppLauncher {
 
         ctx = Context.Init_with_groups(width, height, 2);
 
-        var icon_theme = SystemUtils.get_current_theme();
+        var icon_theme = Utils.System.get_current_theme();
         var icon_paths = IconUtils.find_icon_paths(icon_theme, 96);
         print("using icon theme: %s. Num icons: %i\n", icon_theme, icon_paths.size);
 
-        var desktop_files = SystemUtils.get_desktop_files();
+        var desktop_files = Utils.System.get_desktop_files();
         print("Apps %i\n", desktop_files.length);
 
         var grid_positions = MathUtils.Calculate_grid_positions(screen_width, screen_height, desktop_files.length);
