@@ -44,7 +44,7 @@ public class AppLauncher {
         ctx = Context.Init_with_groups(width, height, 2);
 
         var icon_theme = Utils.System.get_current_theme();
-        var icon_paths = IconUtils.find_icon_paths(icon_theme, 96);
+        var icon_paths = Utils.Icon.find_icon_paths(icon_theme, 96);
         print("using icon theme: %s. Num icons: %i\n", icon_theme, icon_paths.size);
 
         var desktop_files = Utils.System.get_desktop_files();
