@@ -41,7 +41,9 @@ public class AppEntry {
         clicked = false;
         if(hovered) {
             launch_app();
-            WLHooks.destroy_layer_shell();
+            WLHooks.destroy();
+            Process.exit (0);
+            //WLHooks.destroy_layer_shell();
             //Main.queue_redraw();
         };
     }
