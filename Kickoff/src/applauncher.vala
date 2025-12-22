@@ -16,7 +16,7 @@ public class AppLauncher {
     
     private int screen_center_x;
     private int screen_center_y;
-    
+
     private float page_x;
     private int active_page;
     private int prev_page;
@@ -60,14 +60,7 @@ public class AppLauncher {
 
             var name = entries["Name"];
             var icon = entries["Icon"];
-            var exec = entries["Exec"]
-                .replace("%f", "")
-                .replace("%F", "")
-                .replace("%u", "")
-                .replace("%U", "")
-                .replace("%i", "")
-                .replace("%c", "")
-                .strip();
+            var exec = entries["Exec"];
 
             if(!icon_paths.has_key(icon)){
                 continue;

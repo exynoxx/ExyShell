@@ -34,8 +34,6 @@ public class MathUtils {
 
             var grid_x = page*screen_width +    PADDING_EDGES_X + col * (ICON_SIZE+padding_h);
             var grid_y =                        PADDING_EDGES_Y + row * (ICON_SIZE+padding_v);
-
-
             
             r[i] = new Position(grid_x, grid_y); 
         }
@@ -71,45 +69,30 @@ public class MathUtils {
         mat[15] = 1;
     }
 
+    //O(1) mouse hover
+    public static int tile_index_from_mouse(int mouse_x, int mouse_y, int padding_h, int padding_v, int page_offset)
+    {
+        int gx = mouse_x - PADDING_EDGES_X;
+        int gy = mouse_y - PADDING_EDGES_Y;
+    
+        if (gx < 0 || gy < 0)
+            return -1;
+    
+        int col = gx / (ICON_SIZE + padding_h);
+        int row = gy / (ICON_SIZE + padding_v);
+    
+        if (col < 0 || col >= GRID_COLS)
+            return -1;
+        if (row < 0 || row >= GRID_ROWS)
+            return -1;
+    /*  
+        int inside_x = gx % (ICON_SIZE + padding_h);
+        int inside_y = gy % (ICON_SIZE + padding_v);
+    
+        if (inside_x >= ICON_SIZE || inside_y >= ICON_SIZE)
+            return -1;
+      */
+        return /*  page * page_size  */page_offset + row * GRID_COLS + col;
+    }
+
 }
-
-//O(1) app hover algo
-/*  public Tile? find_hovered_tile_grid(Gee.ArrayList<Tile> tiles,
-    int mouse_x, int mouse_y,
-    int screen_width, int screen_height) {
-// Calculate which grid cell the mouse is in
-int gaps_h = GRID_COLS + 1;
-int gaps_v = GRID_ROWS + 1;
-
-var padding_h = (screen_width - GRID_COLS * ICON_SIZE) / gaps_h;
-var padding_v = (screen_height - GRID_ROWS * ICON_SIZE) / gaps_v;
-
-int cell_width = ICON_SIZE + padding_h;
-int cell_height = ICON_SIZE + padding_v;
-
-// Determine page
-int page = mouse_x / screen_width;
-int page_x = mouse_x % screen_width;
-
-// Calculate row and column
-int col = (page_x - PADDING_EDGES_X) / cell_width;
-int row = (mouse_y - PADDING_EDGES_Y) / cell_height;
-
-// Bounds check
-if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) {
-return null;
-}
-
-// Calculate tile index
-int tile_index = page * (GRID_ROWS * GRID_COLS) + row * GRID_COLS + col;
-
-if (tile_index >= tiles.size) return null;
-
-// Verify the point is actually inside (not in padding)
-var tile = tiles[tile_index];
-if (tile.contains_point(mouse_x, mouse_y)) {
-return tile;
-}
-
-return null;
-}  */
