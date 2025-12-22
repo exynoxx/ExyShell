@@ -272,7 +272,7 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
 
     dk_populate_projections(ctx->shapes_program);
 
-    GLint color_loc = glGetUniformLocation(ctx->shapes_program, "color");
+    GLint color_loc = glGetUniformLocation(ctx->texture_program, "color");
     glUniform4f(color_loc, color.r, color.g, color.b, color.a);
 
     glBindBuffer(GL_ARRAY_BUFFER, ctx->vbo);
