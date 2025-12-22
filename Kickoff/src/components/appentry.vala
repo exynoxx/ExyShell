@@ -95,7 +95,7 @@ public class AppEntry {
     }
 
     public async void load_texture(){
-        texture_id = ImageUtils.Upload_texture(icon_path, ICON_SIZE);
+        texture_id = Utils.Image.Upload_texture(icon_path, ICON_SIZE);
     }
 
     private void launch_app() {

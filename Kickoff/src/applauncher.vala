@@ -50,7 +50,7 @@ public class AppLauncher {
         var desktop_files = Utils.System.get_desktop_files();
         print("Apps %i\n", desktop_files.length);
 
-        var grid_positions = MathUtils.Calculate_grid_positions(screen_width, screen_height, desktop_files.length);
+        var grid_positions = Utils.Math.Calculate_grid_positions(screen_width, screen_height, desktop_files.length);
 
         int i = 0;
         foreach (var desktop in desktop_files){
@@ -137,7 +137,7 @@ public class AppLauncher {
         ctx.begin_frame();
 
         if(!init_transition.finished){
-            MathUtils.centered_zoom_marix(grid_zoom, screen_center_x, screen_center_y, grid_zoom_factor);
+            Utils.Math.centered_zoom_marix(grid_zoom, screen_center_x, screen_center_y, grid_zoom_factor);
             DrawKit.begin_group(2);
             DrawKit.group_matrix(2,grid_zoom);
         }
