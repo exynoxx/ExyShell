@@ -33,6 +33,7 @@ public class AppLauncher {
     private AppEntry[] apps;
     private Navigation navigation;
     private SearchBar searchbar;
+    private SearchDb searchDb;
 
     public AppLauncher(int width, int height) {
         screen_width = width;
@@ -72,6 +73,8 @@ public class AppLauncher {
             var pos = grid_positions[i++];
             apps += new AppEntry(ctx, name, icon_path, exec, pos.x, pos.y);
         }
+
+        searchDb = new SearchDb(apps);
 
         //async
         foreach (var app in apps){
