@@ -17,20 +17,23 @@ public class App {
     public int tex_x;
     public int tex_y;
 
-    public App (string app_id, string title, int i){
-        const int padding_side = (App.WIDTH - 32)/2;
-        const int padding_top = (App.HEIGHT - 32)/2;
+    const int padding_side = (App.WIDTH - 32)/2;
+    const int padding_top = (App.HEIGHT - 32)/2;
 
+    public App (string app_id, string title, int i){
         this.app_id = app_id;
         this.title = title;
-        this.idx = i;
-
-        this.x = i*WIDTH+2; //2 from seperator
         this.y = 0;
+
+        reset_order(i);
+        load_icon();
+    }
+
+    public void reset_order(int i){
+        this.idx = i;
+        this.x = i*WIDTH+2; //2 from seperator
         this.tex_x = x + padding_side;
         this.tex_y = y + padding_top;
-
-        load_icon();
     }
 
     public void mouse_motion(double x, double y){
@@ -62,6 +65,10 @@ public class App {
     
         WLHooks.toplevel_activate_by_id(app_id, title);
         redraw = true;
+    }
+
+    public void free(){
+        DrawKit.texture_free(tex);
     }
 
     private void load_icon(){

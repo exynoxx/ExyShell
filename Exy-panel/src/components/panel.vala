@@ -32,10 +32,14 @@ public class Panel {
         for (var i = 0; i < entries.size ; i++){
             var entry = entries[i];
             if(entry.app_id == app_id && entry.title == title){
+                entry.free();
                 entries.remove (entry);
-                //TODO free
                 redraw = true;
             }
+        }
+
+        for (var i = 1; i < entries.size ; i++){
+            entries[i].reset_order(i);
         }
     }
 
