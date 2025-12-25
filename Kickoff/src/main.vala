@@ -26,16 +26,17 @@ namespace Main {
         WLHooks.register_on_mouse_down(launcher.mouse_down);
         WLHooks.register_on_mouse_up(launcher.mouse_up);
         WLHooks.register_on_mouse_motion(launcher.mouse_move); //fix double
+        WLHooks.register_on_key_down(launcher.key_down);
         WLHooks.register_on_key_up(key=> {
             if(key == 65307){
                 WLHooks.destroy();
                 Process.exit (0);
             }
 
-            if(key == 97){
+           /*   if(key == 97){
                 WLHooks.destroy_layer_shell();
             }
-
+  */
             launcher.key_up(key);
         });
         

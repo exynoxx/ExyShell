@@ -122,8 +122,11 @@ public class AppLauncher {
             apps[i].mouse_up();
     }
 
-    //inverted scrolling
-    public void key_up(uint64 key){
+    public void key_down(uint32 key){
+        searchDb.key_down((char)key);
+    }
+
+    public void key_up(uint32 key){
         if(key == 65363){ //r
             if(active_page == page_count-1) return;
             prev_page = active_page;
@@ -136,8 +139,13 @@ public class AppLauncher {
             active_page--;
         }
 
-        move_transition = new Transition1D(2, &page_x, -active_page*screen_width, 1.5);
-        Main.animations.add(move_transition);
+        if(key == 65361 || key == 65363){
+            move_transition = new Transition1D(2, &page_x, -active_page*screen_width, 1.5);
+            Main.animations.add(move_transition);
+            return;
+        }
+
+        searchDb.key_up((char)key);
     }
     
     public void render() {
@@ -170,7 +178,7 @@ public class AppLauncher {
         DrawKit.end_group(2);
 
         navigation.render(ctx, active_page);
-        searchbar.render(ctx);
+        searchbar.render(ctx, searchDb.get_search());
 
         ctx.end_frame();
     }

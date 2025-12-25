@@ -6,7 +6,6 @@ public class SearchBar {
     private int y = 50;
     private const int width = 250;
     private const int height = 30;
-    private const string label = "Search";
     private int label_x;
 
     public SearchBar(Context ctx, int screen_center_x){
@@ -14,8 +13,8 @@ public class SearchBar {
         this.label_x = screen_center_x;
     }
 
-    public void render(Context ctx){
+    public void render(Context ctx, string label){
         ctx.draw_rect_rounded(x, y, width, height, 4f, {0.9f,0.9f,0.9f,0.75f});
-        ctx.draw_text("Search", this.label_x, y+20, 18, {0f,0f,0f,1f});
+        ctx.draw_text(label, this.label_x, y+20, 18, {0f,0f,0f,1f});
     }
 }
