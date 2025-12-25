@@ -123,7 +123,7 @@ public class AppLauncher {
     }
 
     public void key_down(uint32 key){
-        searchDb.key_down((char)key);
+        searchDb.key_down(key);
     }
 
     public void key_up(uint32 key){
@@ -145,7 +145,7 @@ public class AppLauncher {
             return;
         }
 
-        searchDb.key_up((char)key);
+        searchDb.key_up(key);
     }
     
     public void render() {

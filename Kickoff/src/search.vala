@@ -1,14 +1,17 @@
 using GLib;
+using Gee;
 
 public class SearchDb {
 
     const int64 INITIAL_INTERVAL_MS = 150;
     const int64 REPEAT_INTERVAL_MS = 50;
-    const int BACKSPACE_KEYCODE = 8;
+
+    const int KEY_BACKSPACE = 65288;
+    const int KEY_CTRL = 65507;
 
     int64 last_time = 0; // in milliseconds
 
-    private Gee.HashSet<char> key_down_set;
+    private HashSet<uint32> key_down_set;
     private bool initial_delayed = false;
 
     private string[] strings;
@@ -23,10 +26,10 @@ public class SearchDb {
         }
 
         current_search = new StringBuilder();
-        key_down_set = new Gee.HashSet<char>();
+        key_down_set = new HashSet<uint32>();
     }
 
-    public void key_down(char key){
+    public void key_down(uint32 key){
         initial_delayed = false;
 
         key_down_set.add(key);
@@ -36,7 +39,7 @@ public class SearchDb {
         last_time = get_monotonic_time();
     }
 
-    public void key_up(char key){
+    public void key_up(uint32 key){
         key_down_set.remove(key);
 
         if(key_down_set.size == 0) {
@@ -44,6 +47,28 @@ public class SearchDb {
             initial_delayed = false;
         }
         last_time = get_monotonic_time();
+    }
+    
+    private void on_key(uint32 key){
+        if(key < 500){
+            current_search.append_c((char)key);
+            Main.queue_redraw();
+            return;
+        }
+
+        if(key == KEY_BACKSPACE && key_down_set.contains(KEY_CTRL))
+        {
+            current_search.truncate();
+            Main.queue_redraw();
+            return;
+        }
+
+        if(key == KEY_BACKSPACE && current_search.len > 0)
+        {
+            current_search.erase(current_search.len - 1, 1);
+            Main.queue_redraw();
+            return;
+        }
     }
 
     public void main_loop(){
@@ -58,21 +83,6 @@ public class SearchDb {
             on_key(key);
         }
         last_time = get_monotonic_time();
-    }
-
-    private void on_key(char key){
-        if(key == 8 && current_search.len > 0) //backspace
-        {
-            current_search.erase(current_search.len - 1, 1);
-            Main.queue_redraw();
-            return;
-        }
-
-        if(key != 8){
-            current_search.append_c(key);
-            Main.queue_redraw();
-            return;
-        }
     }
 
     public string get_search(){
