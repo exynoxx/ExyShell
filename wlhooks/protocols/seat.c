@@ -10,7 +10,6 @@ static struct wl_seat *seat = NULL;
 struct wl_keyboard *keyboard;
 struct wl_pointer *pointer;
 
-static dk_mouse_info mouse_info = {0};
 struct xkb_context *xkb_context;
 struct xkb_keymap *xkb_keymap;
 struct xkb_state *xkb_state;
@@ -42,19 +41,12 @@ static void *key_up_userdata = NULL;
 static void pointer_enter(void *data, struct wl_pointer *pointer,
                          uint32_t serial, struct wl_surface *surface,
                          wl_fixed_t x, wl_fixed_t y) {
-    dk_mouse_info *info = data;
-    info->mouse_x = wl_fixed_to_double(x);
-    info->mouse_y = wl_fixed_to_double(y);
-
     if(mouse_enter_cb){
         mouse_enter_cb(mouse_enter_userdata);
     }
 }
 
 void pointer_leave(void *data, struct wl_pointer *wl_pointer,uint32_t serial, struct wl_surface *surface) {
-    dk_mouse_info *info = data;
-    info->mouse_x = -1;
-    info->mouse_y = -1;
     if(mouse_leave_cb){
         mouse_leave_cb(mouse_leave_userdata);
     }
@@ -62,25 +54,19 @@ void pointer_leave(void *data, struct wl_pointer *wl_pointer,uint32_t serial, st
 
 static void pointer_motion(void *data, struct wl_pointer *pointer,
                           uint32_t time, wl_fixed_t x, wl_fixed_t y) {
-    dk_mouse_info *info = data;
-    info->mouse_x = wl_fixed_to_double(x);
-    info->mouse_y = wl_fixed_to_double(y);
     if(mouse_motion_cb){
-        mouse_motion_cb(info->mouse_x, info->mouse_y, mouse_motion_userdata);
+        mouse_motion_cb(x, y, mouse_motion_userdata);
     }
 }
 
 static void pointer_button(void *data, struct wl_pointer *pointer,
                           uint32_t serial, uint32_t time, uint32_t button,
                           uint32_t state) {
-    dk_mouse_info *info = data;
     if (state == WL_POINTER_BUTTON_STATE_PRESSED) {
-        info->mouse_buttons |= (1 << button);
         if(mouse_down_cb){
             mouse_down_cb(mouse_down_userdata);
         }
     } else {
-        info->mouse_buttons &= ~(1 << button);
         if(mouse_up_cb){
             mouse_up_cb(mouse_up_userdata);
         }
@@ -212,7 +198,7 @@ static void seat_registry_handler(void *data, struct wl_registry *registry,
                                  uint32_t name, const char *interface,
                                  uint32_t version) {
     seat = wl_registry_bind(registry, name, &wl_seat_interface, 5);
-    wl_seat_add_listener(seat, &seat_listener, &mouse_info);
+    wl_seat_add_listener(seat, &seat_listener, NULL);
 }
 
 void seat_init(void) {
@@ -236,10 +222,6 @@ void set_grab_keyboard(bool value){
 
 struct wl_seat *get_wl_seat(){
     return seat;
-}
-
-dk_mouse_info *seat_mouse_info(void) {
-    return &mouse_info;
 }
 
 void register_on_mouse_enter(seat_mouse_enter cb, void* user_data){

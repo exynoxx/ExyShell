@@ -20,14 +20,6 @@ namespace WLHooks {
     [CCode(cname="get_screen_size", has_target = false)]
     public unowned SurfaceSize *get_screen_size();
 
-    // dk_mouse_info is a plain struct, returned as pointer
-    [CCode(cname="dk_mouse_info", has_type_id=false)]
-    public struct MouseInfo {
-        public float mouse_x;
-        public float mouse_y;
-        public uint32 mouse_buttons;
-    }
-
     // toplevel_info struct with pointer to next
     [CCode(cname="toplevel_info", has_type_id=false)]
     public struct ToplevelInfo {
@@ -75,14 +67,11 @@ namespace WLHooks {
     [CCode(cname = "toplevel_minimize_by_id")]
     void toplevel_minimize_by_id(string app_id, string title);
 
-    [CCode(cname="seat_mouse_info")]
-    public unowned MouseInfo *seat_mouse_info();
-
     public delegate void SeatMouseEnter();
     public delegate void SeatMouseLeave();
     public delegate void SeatMouseDown();
     public delegate void SeatMouseUp();
-    public delegate void SeatMouseMotion(double x, double y);
+    public delegate void SeatMouseMotion(int x, int y);
     public delegate void SeatKeyDown(uint32 key);
     public delegate void SeatKeyUp(uint32 key);
 
