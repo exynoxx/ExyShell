@@ -20,7 +20,6 @@ public class AppLauncher {
 
     private float page_x;
     private int active_page;
-    private int prev_page;
     private int page_count;
 
     private float bg_a = 0;
@@ -32,6 +31,9 @@ public class AppLauncher {
 
     private DrawKit.Context ctx;
     private AppEntry[] apps;
+    private Utils.Span<AppEntry> current_page;
+    private Utils.Span<AppEntry> prev_page;
+
     private Navigation navigation;
     private SearchBar searchbar;
     public SearchDb searchDb;
@@ -75,8 +77,6 @@ public class AppLauncher {
             apps += new AppEntry(ctx, name, icon_path, exec, pos.x, pos.y);
         }
 
-        searchDb = new SearchDb(apps);
-
         //async
         foreach (var app in apps){
             app.load_texture();
@@ -86,9 +86,12 @@ public class AppLauncher {
 
         page_count = apps.length/PER_PAGE;
         active_page = 0;
+        current_page = new Utils.Span<AppEntry>(apps);
+        prev_page = new Utils.Span<AppEntry>(apps);
 
         print("Pages: %i\n", page_count);
 
+        searchDb = new SearchDb(apps);
         navigation = new Navigation(page_count, screen_width, screen_height);
         searchbar = new SearchBar(ctx, screen_center_x);
 
@@ -108,31 +111,31 @@ public class AppLauncher {
     public void mouse_move(int mouse_x, int mouse_y) {
         var absolut_x = mouse_x + active_page*screen_width;
         for(int i = 0; i < PER_PAGE; i++)
-            apps[active_page*PER_PAGE+i].mouse_move(absolut_x, mouse_y);
+            current_page[i].mouse_move(absolut_x, mouse_y);
     }
 
     public void mouse_down() {
-        var start = active_page*PER_PAGE;
-        for(int i = start; i < start+PER_PAGE; i++)
-            apps[i].mouse_down();
+        for(int i = 0; i < PER_PAGE; i++)
+            current_page[i].mouse_down();
     }
     public void mouse_up() {
-        var start = active_page*PER_PAGE;
-        for(int i = start; i < start+PER_PAGE; i++)
-            apps[i].mouse_up();
+        for(int i = 0; i < PER_PAGE; i++)
+            current_page[i].mouse_up();
     }
 
     public void key_down(uint32 key){
         if(key == 65363){ //r
             if(active_page == page_count-1) return;
-            prev_page = active_page;
+            prev_page = current_page;
             active_page++;
+            current_page = new Utils.Span<AppEntry>(apps, active_page*PER_PAGE);
         }
 
         if(key == 65361){ //l
             if(active_page == 0) return;
-            prev_page = active_page;
+            prev_page = current_page;
             active_page--;
+            current_page = new Utils.Span<AppEntry>(apps, active_page*PER_PAGE);
         }
 
         if(key == 65361 || key == 65363){
@@ -157,15 +160,13 @@ public class AppLauncher {
         DrawKit.group_matrix(1, grid_move);
 
         //main
-        var start = active_page*PER_PAGE;
-        for(int i = start; i < start+PER_PAGE; i++)
-            apps[i].render(ctx);
+        for(int i = 0; i < PER_PAGE; i++)
+            current_page[i].render(ctx);
 
         //prev page
         if(!move_transition.finished){
-            start = prev_page*PER_PAGE;
-            for(int i = start; i < start+PER_PAGE; i++)
-                apps[i].render(ctx);
+            for(int i = 0; i < PER_PAGE; i++)
+                prev_page[i].render(ctx);
         }
 
         DrawKit.end_group(1);
