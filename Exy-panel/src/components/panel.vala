@@ -70,7 +70,7 @@ public class Panel {
         }
     }
     
-    public void on_mouse_motion(double x, double y){
+    public void on_mouse_motion(int x, int y){
         foreach(var app in entries){
             app.mouse_motion(x,y);
         }

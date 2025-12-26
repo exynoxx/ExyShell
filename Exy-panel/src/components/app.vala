@@ -36,7 +36,7 @@ public class App {
         this.tex_y = y + padding_top;
     }
 
-    public void mouse_motion(double x, double y){
+    public void mouse_motion(int x, int y){
         var box_x = this.x;
         var box_y = this.y;
         var oldval = hovered;
