@@ -4,10 +4,10 @@ using GLES2;
 
 public class AppEntry {
     public string name {get; private set;}
-    private string name_short;
+    public string name_short;
     private string icon_path;
-    private string exec;
-    private GLuint texture_id;
+    public string exec;
+    public GLuint texture_id;
 
     private bool hovered;
     private bool clicked;
@@ -35,6 +35,13 @@ public class AppEntry {
 
         grid_x = x - (width/2);
         grid_y = y;
+    }
+
+    public void populate_from(AppEntry other){
+        this.name = other.name;
+        this.name_short = other.name_short;
+        this.exec = other.exec;
+        this.texture_id = other.texture_id;
     }
 
     public void mouse_up (){

@@ -91,7 +91,7 @@ public class AppLauncher {
 
         print("Pages: %i\n", page_count);
 
-        searchDb = new SearchDb(apps);
+        searchDb = new SearchDb(ctx, apps, screen_width, screen_height);
         navigation = new Navigation(page_count, screen_width, screen_height);
         searchbar = new SearchBar(ctx, screen_center_x);
 
@@ -155,24 +155,29 @@ public class AppLauncher {
             DrawKit.group_matrix(2,grid_zoom);
         }
         
-        DrawKit.begin_group(1);
-        Utils.Math.translation_matrix(grid_move, page_x, 0);
-        DrawKit.group_matrix(1, grid_move);
+        if(searchDb.active){
+            for(int i = 0; i < searchDb.size; i++)
+                searchDb[i].render(ctx);
+        } else {
+            DrawKit.begin_group(1);
+            Utils.Math.translation_matrix(grid_move, page_x, 0);
+            DrawKit.group_matrix(1, grid_move);
 
-        //main
-        for(int i = 0; i < PER_PAGE; i++)
-            current_page[i].render(ctx);
-
-        //prev page
-        if(!move_transition.finished){
+            //main
             for(int i = 0; i < PER_PAGE; i++)
-                prev_page[i].render(ctx);
+                current_page[i].render(ctx);
+
+            //prev page
+            if(!move_transition.finished){
+                for(int i = 0; i < PER_PAGE; i++)
+                    prev_page[i].render(ctx);
+            }
+            DrawKit.end_group(1);
+
+            navigation.render(ctx, active_page);
         }
 
-        DrawKit.end_group(1);
         DrawKit.end_group(2);
-
-        navigation.render(ctx, active_page);
         searchbar.render(ctx, searchDb.get_search());
 
         ctx.end_frame();

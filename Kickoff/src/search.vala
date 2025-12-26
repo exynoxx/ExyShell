@@ -1,36 +1,45 @@
 using GLib;
+using DrawKit;
 using Gee;
 
 public class SearchDb {
     public StringBuilder current_search;
+    public StringBuilder technical_search;
     public bool active;
+    public int size;
 
-    private unowned AppEntry[] apps;
+    private unowned AppEntry[] all_apps;
+    private AppEntry[] grid_apps;
+
     private const string standard_label = "Search";
 
     const int KEY_BACKSPACE = 65288;
     const int KEY_CTRL = 65507;
 
-    private int filter_map[PER_PAGE];
-    private int size;
 
-    public SearchDb(AppEntry[] apps) {
-        this.apps = apps;
+    public SearchDb(Context ctx, AppEntry[] apps, int screen_width, int screen_height) {
+        this.all_apps = apps;
 
-        for(int i = 0; i < PER_PAGE; i++) 
-            filter_map[i] = i;
+        var grid_positions = Utils.Math.Calculate_grid_positions(screen_width, screen_height, PER_PAGE);
+        grid_apps = new AppEntry[]{};
+        for(int i = 0; i < PER_PAGE; i++){
+            grid_apps += new AppEntry(ctx, "..", "..", "..", grid_positions[i].x, grid_positions[i].y);
+        }
 
         current_search = new StringBuilder();
+        technical_search = new StringBuilder("*");
         Main.keyboardMngr.on_key = on_key;
     }
 
     public AppEntry get(int i){
-        return apps[filter_map[i]];
+        return grid_apps[i];
     }
     
     public void on_key(uint32 key){
         if(key < 500){
             current_search.append_c((char)key);
+            technical_search.append_c((char)key);
+            technical_search.append_c('*');
             active = true;
             index();
             Main.queue_redraw();
@@ -47,7 +56,8 @@ public class SearchDb {
         if(key == KEY_BACKSPACE && current_search.len > 0)
         {
             current_search.erase(current_search.len - 1, 1);
-            active = (current_search.len > 0)
+            technical_search.erase(technical_search.len - 2, 2);
+            active = (current_search.len > 0);
             index();
             Main.queue_redraw();
             return;
@@ -57,14 +67,16 @@ public class SearchDb {
     private void index(){
 
         if(current_search.len == 0) return;
-        var q = current_search.str;
+        var q = new PatternSpec(technical_search.str);
         
         size = 0;
         int j = 0;
 
-        for(int i = 0; i < min(apps.length, PER_PAGE); i++){
-            if(apps[i].name.contains(q)){
-                filter_map[j++] = i;
+        //TODO show matched part
+        for(int i = 0; i < all_apps.length; i++){
+            if(j>= PER_PAGE) break;
+            if(q.match_string(all_apps[i].name.ascii_down())){
+                grid_apps[j++].populate_from(all_apps[i]);
                 size++;
             }
         }
@@ -76,9 +88,5 @@ public class SearchDb {
             return standard_label;
         } 
         return current_search.str;
-    }
-
-    private int min(int x, int y){
-        return (x<y)?x:y;
     }
 }

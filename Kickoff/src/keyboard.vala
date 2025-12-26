@@ -5,7 +5,7 @@ public delegate void OnKeyCallback(uint32 key);
 
 public class KeyboardManager {
 
-    const int64 INITIAL_INTERVAL_MS = 150;
+    const int64 INITIAL_INTERVAL_MS = 200;
     const int64 REPEAT_INTERVAL_MS = 50;
 
     const int KEY_BACKSPACE = 65288;
