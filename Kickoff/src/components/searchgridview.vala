@@ -46,8 +46,4 @@ public class SearchGridView : IGrid {
             this.apps[i].set_properties(ctx, apps[i]);
         }
     }
-
-    public void clear(){
-        size = 0;
-    }
 }
