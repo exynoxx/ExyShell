@@ -18,6 +18,7 @@ public class KeyboardManager {
 
     public bool key_is_down = false;
     public OnKeyCallback on_key = () => 1+1;
+    public bool ctrl_down = false;
 
     public KeyboardManager() {
         key_down_set = new HashSet<uint32>();
@@ -29,12 +30,16 @@ public class KeyboardManager {
         key_down_set.add(key);
         key_is_down = true;
 
+        if(key == KEY_CTRL) ctrl_down = true;
+
         on_key(key);
         last_time = get_monotonic_time();
     }
 
     public void key_up(uint32 key){
         key_down_set.remove(key);
+
+        if(key == KEY_CTRL) ctrl_down = false;
 
         if(key_down_set.size == 0) {
             key_is_down = false;

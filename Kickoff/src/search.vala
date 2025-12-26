@@ -46,13 +46,15 @@ public class SearchDb {
             return;
         }
 
-       /*   if(key == KEY_BACKSPACE && key_down_set.contains(KEY_CTRL))
+        if(key == KEY_BACKSPACE && Main.keyboardMngr.ctrl_down)
         {
+            active = false;
             current_search.truncate();
+            technical_search.erase(1, technical_search.len - 1);
             Main.queue_redraw();
             return;
         }
-  */
+
         if(key == KEY_BACKSPACE && current_search.len > 0)
         {
             current_search.erase(current_search.len - 1, 1);
