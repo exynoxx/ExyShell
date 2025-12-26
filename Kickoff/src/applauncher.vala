@@ -107,7 +107,6 @@ public class AppLauncher {
         WLHooks.init_layer_shell("Kickoff-overlay", screen_width, screen_height, UP | LEFT | RIGHT | DOWN, false);
     }
 
-    //TODO int mouse pos
     public void mouse_move(int mouse_x, int mouse_y) {
         var absolut_x = mouse_x + active_page*screen_width;
         for(int i = 0; i < PER_PAGE; i++)
