@@ -18,7 +18,7 @@ public class AppEntry {
         
         try {
             Process.spawn_command_line_async(exec);
-        } catch (SpawnError e) {
+        } catch (Error e) {
             stderr.printf("Failed to launch %s: %s\n", name, e.message);
         }
 

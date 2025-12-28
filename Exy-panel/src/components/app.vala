@@ -61,7 +61,11 @@ public class App {
     public void on_click(){
 
         if(id == KICKOFF_ID){
-            Process.spawn_command_line_sync("/home/nicholas/Dokumenter/layer-shell-experiments/Kickoff/main");
+            try {
+                Process.spawn_command_line_async("/home/nicholas/Dokumenter/layer-shell-experiments/Kickoff/main");
+            } catch (Error e) {
+                stderr.printf("Kickoff exception: %s\n", e.message);
+            }
         } 
     
         WLHooks.toplevel_activate_by_id(id);
