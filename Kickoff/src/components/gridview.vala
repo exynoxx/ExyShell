@@ -23,7 +23,6 @@ public class GridView : IGrid {
     public int active_page;
     public int page_count;
 
-    private float bg_a;
     private float grid_zoom[16];
     private float grid_zoom_factor = 10;
     private float grid_move[16];
@@ -60,7 +59,6 @@ public class GridView : IGrid {
         prev_page = new Utils.Span<AppView>(this.apps);
 
         init_transition = new Transition1D(1, &grid_zoom_factor, 1, 0.8f);
-        Main.animations.add(new Transition1D(0, &bg_a, 0.8f, 3));
         Main.animations.add(init_transition);
 
         move_transition = new TransitionEmpty();
@@ -109,8 +107,6 @@ public class GridView : IGrid {
     }
     
     public void render() {
-        ctx.set_bg_color(DrawKit.Color(){ r = 0, g =  0, b = 0, a = bg_a });
-
         if(!init_transition.finished){
             Utils.Math.centered_zoom_marix(grid_zoom, screen_center_x, screen_center_y, grid_zoom_factor);
             DrawKit.begin_group(2);

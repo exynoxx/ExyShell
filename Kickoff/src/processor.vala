@@ -13,6 +13,8 @@ public class Processor {
     private SearchGridView search_grid;
     private unowned IGrid grid;
 
+    private float bg_a;
+
     public Processor(int screen_width, int screen_height) {
         WLHooks.init_layer_shell("Kickoff-overlay", screen_width, screen_height, UP | LEFT | RIGHT | DOWN, false);
 
@@ -50,6 +52,8 @@ public class Processor {
         main_grid = new GridView(ctx, apps, screen_width, screen_height);
         search_grid = new SearchGridView(ctx, screen_width, screen_height);
         grid = main_grid;
+
+        Main.animations.add(new Transition1D(0, &bg_a, 0.8f, 3));
     }
 
     /*  public void show_overlay (){
@@ -87,6 +91,8 @@ public class Processor {
     
     public void render() {
         ctx.begin_frame();
+
+        ctx.set_bg_color(DrawKit.Color(){ r = 0, g =  0, b = 0, a = bg_a });
 
         searchbar.render(searchDb.get_search());
         grid.render();
