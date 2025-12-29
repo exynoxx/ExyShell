@@ -29,3 +29,4 @@ Kickoff
 <img width="1920" height="1080" alt="20251229_19h31m35s_grim" src="https://github.com/user-attachments/assets/31268306-9153-4358-aa86-85810d480bc1" />
 
 ### License
+GNU General Public License v3.0
