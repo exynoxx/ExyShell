@@ -9,7 +9,7 @@ public class SearchDb {
     public int size;
 
     private unowned AppEntry[] all_apps;
-    public AppEntry[] filtered;
+    public Utils.AliasArray<AppEntry> filtered;
 
     private const string standard_label = "Search";
 
@@ -19,7 +19,7 @@ public class SearchDb {
     public SearchDb(AppEntry[] apps, int screen_width, int screen_height) {
         this.all_apps = apps;
 
-        filtered = new AppEntry[PER_PAGE];
+        filtered = new Utils.AliasArray<AppEntry>(apps, PER_PAGE);
 
         current_search = new StringBuilder();
         technical_search = new StringBuilder("*");
@@ -27,8 +27,9 @@ public class SearchDb {
     
     public void on_key(uint32 key){
         if(key < 500){
-            current_search.append_c((char)key);
-            technical_search.append_c((char)key);
+            var c = ((char)key).tolower();
+            current_search.append_c(c);
+            technical_search.append_c(c);
             technical_search.append_c('*');
             active = true;
             index();
@@ -56,20 +57,24 @@ public class SearchDb {
         }
     }
 
+    //TODO show matched part
     private void index(){
         if(current_search.len == 0) return;
 
-        var q = new PatternSpec(technical_search.str);
-        
         size = 0;
-
-        //TODO show matched part
         for(int i = 0; i < all_apps.length; i++){
             if(size>= PER_PAGE) break;
-            if(q.match_string(all_apps[i].name.ascii_down())){
-                filtered[size] = all_apps[i];
-                size++;
-            }
+            if(all_apps[i].name.has_prefix(current_search.str))
+                filtered.alias_index(size++,i);
+        }
+
+        var q = new PatternSpec(technical_search.str);
+        
+        for(int i = 0; i < all_apps.length; i++){
+            if(size>= PER_PAGE) break;
+
+            if(q.match_string(all_apps[i].name))
+                filtered.alias_index(size++,i);
         }
     }
 

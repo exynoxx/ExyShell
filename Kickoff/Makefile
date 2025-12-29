@@ -17,6 +17,7 @@ VALA_PKGS = \
 # Compiler and linker flags (static libraries)
 CFLAGS = \
     -X -O2 \
+    -X -w \
     -X -I$(DRAWKIT_SRC) \
     -X $(DRAWKIT_BUILD)/libdrawkit.a \
     -X -I$(WLHOOKS_SRC) \

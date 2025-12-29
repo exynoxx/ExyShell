@@ -40,9 +40,9 @@ public class SearchGridView : IGrid {
             apps[i].render(ctx);
     }
     
-    public void add(AppEntry[] apps, int number){
+    public void add(Utils.AliasArray<AppEntry> apps, int number){
         size = number;
-        for (int i = 0; i < PER_PAGE; i++){
+        for (int i = 0; i < size; i++){
             this.apps[i].set_properties(ctx, apps[i]);
         }
     }

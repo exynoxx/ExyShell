@@ -37,8 +37,6 @@ namespace Utils {
             } catch (Error e) {
                 warning("Failed to read INI file '%s': %s", file_path, e.message);
             }
-            
-            return result;
         }
     
         public static string? valueOrDefault (HashMap<string, string> lookup, string key, string defaul){

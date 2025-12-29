@@ -25,7 +25,6 @@ public class Processor {
         var desktop_files = Utils.System.get_desktop_files();
         print("#desktop files: %i\n", desktop_files.length);
 
-        int i = 0;
         foreach (var desktop in desktop_files){
             var entries = Utils.Config.parse(desktop, "Desktop Entry");
 

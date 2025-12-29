@@ -8,7 +8,7 @@ public class AppEntry {
 
     public AppEntry(string name, string icon_path, string exec){
         this.short_name = name.char_count() > 20 ? name.substring(0, 20) + "..." : name;
-        this.name = name;
+        this.name = name.ascii_down();
         this.exec = exec;
         load_icon(icon_path);
     }
