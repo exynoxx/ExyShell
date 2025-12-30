@@ -61,19 +61,23 @@ public class SearchDb {
     private void index(){
         if(current_search.len == 0) return;
 
+        var included = new bool[all_apps.length];
+
         size = 0;
         for(int i = 0; i < all_apps.length; i++){
             if(size>= PER_PAGE) break;
             if(all_apps[i].name.has_prefix(current_search.str))
+            {
+                included[i] = true; 
                 filtered.alias_index(size++,i);
+            }
         }
 
         var q = new PatternSpec(technical_search.str);
-        
         for(int i = 0; i < all_apps.length; i++){
             if(size>= PER_PAGE) break;
 
-            if(q.match_string(all_apps[i].name))
+            if(!included[i] && q.match_string(all_apps[i].name))
                 filtered.alias_index(size++,i);
         }
     }
