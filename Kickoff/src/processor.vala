@@ -90,9 +90,9 @@ public class Processor {
     }
     
     public void render() {
-        ctx.begin_frame();
-
         ctx.set_bg_color(DrawKit.Color(){ r = 0, g =  0, b = 0, a = bg_a });
+        
+        ctx.begin_frame();
 
         searchbar.render(searchDb.get_search());
         grid.render();

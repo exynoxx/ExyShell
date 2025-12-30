@@ -65,8 +65,8 @@ namespace DrawKit {
         [CCode (cname = "dk_begin_frame")]
         public void begin_frame();
 
-        [CCode (cname = "dk_end_frame")]
-        public void end_frame();
+        [CCode (cname = "dk_end_frame", has_target=false)]
+        public static void end_frame();
 
         // Layout functions
         [CCode (cname = "dk_reset")]
