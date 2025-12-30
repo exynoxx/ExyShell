@@ -1,6 +1,7 @@
 using DrawKit;
 using WLHooks;
 using GLES2;
+using Gee;
 
 public class Processor {
     private Context ctx;
@@ -27,6 +28,8 @@ public class Processor {
         var desktop_files = Utils.System.get_desktop_files();
         print("#desktop files: %i\n", desktop_files.length);
 
+        var imported_names = new HashSet<string>();
+
         foreach (var desktop in desktop_files){
             var entries = Utils.Config.parse(desktop, "Desktop Entry");
 
@@ -36,9 +39,13 @@ public class Processor {
             var icon = entries["Icon"];
             var exec = entries["Exec"];
 
-            if(!icon_paths.has_key(icon)){
+            if(!icon_paths.has_key(icon))
                 continue;
-            }
+            
+            if(imported_names.contains(name)) 
+                continue;
+            
+            imported_names.add(name);
 
             var icon_path = icon_paths[icon];
             apps += new AppEntry(name, icon_path, exec);
