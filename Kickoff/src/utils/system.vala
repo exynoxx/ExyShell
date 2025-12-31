@@ -25,8 +25,13 @@ namespace Utils {
             return data_dirs;
         }
 
-        public static HashMap<string,HashSet<string>> data_dir_cache = new HashMap<string,HashSet<string>>();
+        public static HashMap<string,HashSet<string>> data_dir_cache;
         public static string[] get_data_dir(string dir) {
+
+            if(data_dir_cache == null){
+                data_dir_cache = new HashMap<string,HashSet<string>>();
+            }
+
             if(data_dir_cache.has_key(dir)) 
                 return data_dir_cache[dir].to_array();;
 
@@ -54,7 +59,8 @@ namespace Utils {
             return "hicolor";
         }
 
-        public static string[] enumerate_dir(string path){
+        public delegate bool filter(string name);
+        public static string[] enumerate_dir(string path, filter f){
             var files = new Gee.ArrayList<string>();
             try {
                 Dir? dir = Dir.open(path);
@@ -63,11 +69,10 @@ namespace Utils {
                     return files.to_array();; // skip non-existent dirs
                 string? name;
                 while ((name = dir.read_name()) != null) {
+                    if(f(name)){
+                        files.add(Path.build_filename(path, name));
+                    }
 
-                    if (!FileUtils.test(path, FileTest.IS_REGULAR))
-                        continue;
-
-                    files.add(Path.build_filename(path, name));
                 }
             } catch(FileError e){
                 return files.to_array();
@@ -79,11 +84,12 @@ namespace Utils {
         public static string[] get_desktop_files() {
             var applications = get_data_dir("applications");
 
+            filter f = (name) => name.has_suffix(".desktop");
+
             var files = new Gee.ArrayList<string>();
             foreach(var app_dir in applications){
-                foreach (var name in enumerate_dir(app_dir)) {
-                    if (name.has_suffix(".desktop"))
-                        files.add(name);
+                foreach (var name in enumerate_dir(app_dir,f)) {
+                    files.add(name);
                 }
             }
             

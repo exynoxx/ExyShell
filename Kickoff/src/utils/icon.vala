@@ -5,7 +5,7 @@ namespace Utils {
 
     public class Icon {
         public static string? find_icon_theme_base(string theme_name) {
-            foreach (var base_dir in System.get_icon_theme_dirs()) {
+            foreach (var base_dir in System.get_data_dir("icons")) {
                 string theme_dir = Path.build_filename(base_dir, theme_name);
         
                 // Check if directory exists and has index.theme
