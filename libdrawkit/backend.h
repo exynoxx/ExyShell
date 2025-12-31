@@ -18,6 +18,9 @@ void dk_draw_circle(dk_context *ctx, int cx, int cy, int radius, dk_color color)
 void dk_draw_texture(dk_context *ctx, GLuint texture_id, int x, int y, int width, int height);
 void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_size, dk_color color);
 
+void dk_stencil_push(dk_context *ctx);
+void dk_stencil_apply(dk_context *ctx);
+void dk_stencil_pop(dk_context *ctx);
 
 void dk_begin_group(dk_context *ctx, int group);
 void dk_end_group(dk_context *ctx, int group);

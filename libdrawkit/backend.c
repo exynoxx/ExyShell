@@ -85,6 +85,7 @@ void dk_begin_frame(dk_context *ctx) {
     glViewport(0, 0, ctx->screen_width, ctx->screen_height);
     glClearColor(ctx->background_color.r, ctx->background_color.g, ctx->background_color.b, ctx->background_color.a);
     glClear(GL_COLOR_BUFFER_BIT);
+    
 }
 
 void dk_end_frame() {
@@ -349,6 +350,29 @@ void dk_draw_text(dk_context *ctx, const char *text, int x, int y, float font_si
     glDisableVertexAttribArray(texCoord_loc);
     
     free(all_vertices);
+}
+
+void dk_stencil_push(dk_context *ctx){
+    glEnable(GL_STENCIL_TEST);
+    glClear(GL_STENCIL_BUFFER_BIT);
+    glStencilMask(0xFF);
+
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+}
+
+void dk_stencil_apply(dk_context *ctx) {
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    glStencilFunc(GL_EQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+}
+
+void dk_stencil_pop(dk_context *ctx){
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glDisable(GL_STENCIL_TEST);
 }
 
 void dk_populate_projections(GLuint program, dk_context *ctx){

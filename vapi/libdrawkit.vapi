@@ -52,6 +52,15 @@ namespace DrawKit {
 
         [CCode (cname = "dk_draw_text")]
         public void draw_text(string text, int x, int y, float font_size, Color color);
+
+        [CCode (cname = "dk_stencil_push")]
+        void stencil_push();
+
+        [CCode (cname = "dk_stencil_apply")]
+        void stencil_apply();
+
+        [CCode (cname = "dk_stencil_pop")]
+        void stencil_pop();
   
         [CCode (cname = "dk_begin_frame")]
         public void begin_frame();
