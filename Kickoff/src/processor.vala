@@ -21,33 +21,51 @@ public class Processor {
 
         ctx = Context.Init_with_groups(screen_width, screen_height, 2);
 
-        var icon_theme = Utils.System.get_current_theme();
-        var icon_paths = Utils.Icon.find_icon_paths(icon_theme, 96);
-        print("using icon theme: %s. Num icons: %i\n", icon_theme, icon_paths.size);
+        var icon_paths = Utils.Icon.load_or_create_icon_cache(96);
+        print("Num icons in cache: %i\n", icon_paths.size);
 
         var desktop_files = Utils.System.get_desktop_files();
         print("#desktop files: %i\n", desktop_files.length);
 
-        var imported_names = new HashSet<string>();
+        /*  print("icons paths: \n");
+        foreach(var key in icon_paths.keys){
+            print("%s -> %s\n", key, icon_paths[key]);
+        }
+        return;  */
+
+        var deduplication = new HashSet<string>();
 
         foreach (var desktop in desktop_files){
             var entries = Utils.Config.parse(desktop, "Desktop Entry");
 
-            if (entries["Icon"] == null || entries["Exec"] == null || entries["Name"] == null) continue;
-
             var name = entries["Name"];
             var icon = entries["Icon"];
             var exec = entries["Exec"];
+            
+            if (icon == null || icon == "" || name == null || exec == null) 
+                continue;
 
-            if(!icon_paths.has_key(icon))
+            
+            if(deduplication.contains(name)) 
                 continue;
             
-            if(imported_names.contains(name)) 
-                continue;
-            
-            imported_names.add(name);
+            deduplication.add(name);
 
-            var icon_path = icon_paths[icon];
+            string icon_path = null;
+            if(Path.is_absolute(icon))
+            {
+                icon_path = icon;
+                //print("entry %s %s - absolut\n", name, icon);
+            }
+            else if(!icon_paths.has_key(icon)){
+                //print("entry %s %s - no has key\n", name, icon);
+                continue;
+            }
+            else {
+                //print("entry %s %s - found\n", name, icon);
+                icon_path = icon_paths[icon];
+            }
+            
             apps += new AppEntry(name, icon_path, exec);
         }
 
