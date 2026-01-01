@@ -25,8 +25,8 @@ int wlhooks_init(){
     registry_init(wl_display);
 }
 
-int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone) {
-    struct wl_surface *surface = layer_shell_create_surface(layer_name, width, height, anchor, exclusive_zone);
+int init_layer_shell(const char *layer_name, int width, int height, Anchor anchor, bool exclusive_zone, int exclusive_zone_height) {
+    struct wl_surface *surface = layer_shell_create_surface(layer_name, width, height, anchor, exclusive_zone, exclusive_zone_height);
     egl_init(wl_display, surface, width, height);
 
     return 0;
