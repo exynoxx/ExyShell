@@ -5,28 +5,32 @@ public class TrayIcon {
 
     private const string base_path = "/home/nicholas/Dokumenter/layer-shell-experiments/Exy-panel/src/res/";
     private const int ICON_SIZE = 32;
+    private const int NARGIN_TOP = (Tray.TRAY_HEIGHT - ICON_SIZE)/2;
 
+    private string id;
     private GLuint tex;
-    private int y;
     private bool hovered;
     
     private int x;
+    private int y;
+    private int hover_x;
+    private int hover_y;
+
     public int width {get; private set;}
 
-    public int global_x;
-    public int global_width;
-
-    public TrayIcon(int x, int y, string icon){
+    public TrayIcon(string id, int y, string icon){
+        this.id = id;
         this.x = x;
-        this.y = y+8;
+        this.y = y + NARGIN_TOP;
+        this.hover_x = x + ICON_SIZE/2;
+        this.hover_y = this.y + ICON_SIZE/2;
         load(icon);
         width = ICON_SIZE;
     }
 
-    public void set_position(int global_x, int global_width, int local_x){
-        this.global_x = global_x;
-        this.global_width = global_width;
-        this.x = local_x;
+    public void set_position(int x){
+        this.x = x;
+        this.hover_x = x + ICON_SIZE/2;
     }
 
     public void load(string icon){
@@ -53,7 +57,6 @@ public class TrayIcon {
         var hover_initial = hovered;
 
         hovered = (mouse_x >= x && mouse_x <= w && mouse_y >= y && mouse_y <= h);
-        print("hovered %b\n", hovered);
         if(hovered != hover_initial) 
             redraw = true;
     }
@@ -61,18 +64,14 @@ public class TrayIcon {
     public void render(Context ctx){
         
         if(hovered){
-            ctx.stencil_push();
+            ctx.draw_circle(hover_x, hover_y, 24, {1,1,1,1});
+            ctx.set_tex_color({0,0,0,1});
+            ctx.draw_texture(tex, x, y, ICON_SIZE, ICON_SIZE);
+            ctx.set_tex_color({1,1,1,1});
+            return;
 
-            //mask
-            ctx.draw_rect_rounded(global_x, Tray.MARGIN_TOP, global_width, Tray.TRAY_HEIGHT, 24, {1,1,1,1});
+        } 
 
-            ctx.stencil_apply();
-
-            ctx.draw_rect(this.x - Tray.SPACING, Tray.MARGIN_TOP, 100, Tray.TRAY_HEIGHT, {1,1,1,1});
-
-            ctx.stencil_pop();
-        }
-        
         ctx.draw_texture(tex, x, y, ICON_SIZE, ICON_SIZE);
     }
 }

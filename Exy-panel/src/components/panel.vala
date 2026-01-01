@@ -68,12 +68,14 @@ public class Panel {
                 app.on_click();
             }
         }
+        tray.on_mouse_down();
     }
 
     public void on_mouse_up(){
         foreach(var app in entries.values){
             app.clicked = false;
         }
+        tray.on_mouse_up();
     }
     
     public void on_mouse_motion(int x, int y){
@@ -88,6 +90,7 @@ public class Panel {
             app.hovered = false;
         }
         redraw = true;
+        tray.on_mouse_leave();
     }
 
     public void render(){

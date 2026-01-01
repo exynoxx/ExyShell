@@ -2,9 +2,10 @@ using WLHooks;
 using GLES2;
 using Gee;
 
+public const uint KICKOFF_ID = uint.MAX;
 public static bool redraw = true;
 public static Panel panel;
-public const uint KICKOFF_ID = uint.MAX;
+public static AnimationManager animations;
 
 public static int main(string[] args) {
 
@@ -12,6 +13,7 @@ public static int main(string[] args) {
     var size = WLHooks.get_screen_size();
 
     panel = new Panel(size.width);
+    animations = new AnimationManager();
 
     WLHooks.register_on_window_new(panel.on_window_new);
     WLHooks.register_on_window_rm(panel.on_window_rm);
@@ -23,12 +25,12 @@ public static int main(string[] args) {
     WLHooks.register_on_mouse_leave(panel.on_mouse_leave);
 
     while (WLHooks.display_dispatch_blocking() != -1) {
-        if(!redraw) continue;
-
-        panel.render();
-        WLHooks.swap_buffers();
-
-        redraw = false;
+        if(redraw || animations.has_active){
+            animations.update();
+            panel.render();
+            WLHooks.swap_buffers();
+            redraw = false;
+        }
     }
 
     WLHooks.destroy();
