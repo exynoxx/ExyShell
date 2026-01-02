@@ -91,6 +91,12 @@ public abstract class TrayIcon : Object, ITray {
     }
 }
 
+/*  # Overall connectivity state
+nmcli networking connectivity
+# Wi-Fi status
+nmcli device status
+  */
+
 public class WifiTray : TrayIcon {
 
     public WifiTray() {
@@ -119,6 +125,13 @@ public class ExitTray : TrayIcon {
 
     }
 }
+
+/*  /sys/class/power_supply/BAT0/
+capacity → battery percentage (0–100)
+
+status → Charging, Discharging, Full
+
+voltage_now, current_now → detailed info  */
 
 public class BatteryTray : TrayIcon {
 
