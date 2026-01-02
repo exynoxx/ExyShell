@@ -1,17 +1,22 @@
 using DrawKit;
 
-public class TrayClock : ITray{
+public class ClockTray : Object, ITray {
     
     private int x;
     private int y;
 
     private string text;
-    private const int FONT_SIZE = 12;
+    private const int FONT_SIZE = 16;
 
     private int width;
+    private int margin_top;
+    private int margin_left;
 
-    public TrayClock(Context ctx){
+    public ClockTray(Context ctx){
+        update();
         width = ctx.width_of(text, FONT_SIZE);
+        margin_top = (Tray.TRAY_HEIGHT - ctx.height_of(text, FONT_SIZE))/2;
+        margin_left = width/2; //text drawn with x in center
     }
 
     public int get_width() {
@@ -19,8 +24,8 @@ public class TrayClock : ITray{
     }
 
     public void set_position(int x, int y){
-        this.x = x;
-        this.y = y;
+        this.x = x+margin_left;
+        this.y = y+margin_top;
     }
 
     public void mouse_down(){}

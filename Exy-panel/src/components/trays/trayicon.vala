@@ -1,15 +1,16 @@
 using DrawKit;
 using GLES2;
 
-public interface ITray {
+public interface ITray : GLib.Object{
     public abstract int get_width();
     public abstract void set_position(int x, int y);
     public abstract void mouse_down();
     public abstract void mouse_up();
     public abstract void mouse_motion(int mouse_x, int mouse_y);
+    public abstract void render(Context ctx);
 }
 
-public abstract class TrayIcon : ITray {
+public abstract class TrayIcon : Object, ITray {
 
     private const string base_path = "/home/nicholas/Dokumenter/layer-shell-experiments/Exy-panel/src/res/";
     private const int ICON_SIZE = 32;
@@ -31,12 +32,12 @@ public abstract class TrayIcon : ITray {
     }
 
     public int get_width() {
-        return 24*2;
+        return width;
     }
 
     public void set_position(int x, int y){
         this.x = x;
-        this.y = y + MARGIN_TOP;
+        this.y = y;
         this.hover_x = this.x + ICON_SIZE/2;
         this.hover_y = this.y + ICON_SIZE/2;
     }
@@ -47,7 +48,7 @@ public abstract class TrayIcon : ITray {
 
         var image = DrawKit.image_from_svg(path,ICON_SIZE,ICON_SIZE);
         if(image == null){
-            print("Launcher icon not found");
+            print("Launcher icon not found\n");
             return;
         }
 

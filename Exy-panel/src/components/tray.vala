@@ -15,14 +15,14 @@ public class Tray {
     public const int MARGIN_RIGHT = 20;
     public const int TRAY_HEIGHT = EXCLUSIVE_HEIGHT - 12;
     public const int MARGIN_TOP = (EXCLUSIVE_HEIGHT - TRAY_HEIGHT)/2;
-    public const int TRAY_Y = HEIGHT - TRAY_HEIGHT - MARGIN_TOP;
+    public const int TRAY_Y = HEIGHT - TRAY_HEIGHT;
     public const int TRAY_MAX_HEIGHT = HEIGHT - MARGIN_TOP;
     public const int SPACING = 20;
 
     private unowned Context ctx;
     private int screen_width;
 
-    private TrayIcon[] trays;
+    private ITray[] trays;
     private int base_width;
 
     private int width;
@@ -42,14 +42,16 @@ public class Tray {
         //calc width
         var wifi = new WifiTray();
         var battery = new BatteryTray();
+        var clock = new ClockTray(ctx);
         var exit = new ExitTray();
 
         trays += wifi;
         trays += battery;
+        trays += clock;
         trays += exit;
 
         foreach(var t in trays) 
-            base_width += wifi.get_width();
+            base_width += t.get_width();
 
         base_width+=4*SPACING;
         width = base_width;
