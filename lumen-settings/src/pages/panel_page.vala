@@ -107,7 +107,6 @@ namespace LumenSettings {
             colors.add_row(color_row("app.hover",             "App hover",             "#2c3140ff", "taskbar app background while the pointer is over it"));
             colors.add_row(color_row("app.launching",         "App launching",         "#3d7affff", "taskbar app background while the app is starting up"));
             colors.add_row(color_row("app.open-indicator-color", "Open app indicator", "#3d7affff", "color of the open-app dot, brackets, or shade"));
-            box.append(colors);
 
             var clock_group = new BoxedList("Clock");
 
@@ -222,6 +221,8 @@ namespace LumenSettings {
             });
 
             box.append(multi_group);
+
+            box.append(colors);
 
             return box;
         }
