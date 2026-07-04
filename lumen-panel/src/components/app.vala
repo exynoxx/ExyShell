@@ -285,9 +285,12 @@ public class AppEntry : Gtk.Button {
 
         // Glass fill goes behind everything (like the CSS :hover background) so
         // the icon stays crisp on top. The edge-drawn styles run after base.
+        // ROUND is the same frosted sheen clipped to a circle instead of a
+        // rounded rect.
         if (!is_active() && has_open_windows()
-            && PanelConfig.open_indicator == PanelConfig.OpenIndicator.GLASS) {
-            draw_glass(s);
+            && (PanelConfig.open_indicator == PanelConfig.OpenIndicator.GLASS
+                || PanelConfig.open_indicator == PanelConfig.OpenIndicator.ROUND)) {
+            draw_glass(s, PanelConfig.open_indicator == PanelConfig.OpenIndicator.ROUND);
         }
 
         // Recenter the whole icon group (front + back copies) for multi-window
@@ -334,6 +337,7 @@ public class AppEntry : Gtk.Button {
         switch (PanelConfig.open_indicator) {
             case PanelConfig.OpenIndicator.NONE:
             case PanelConfig.OpenIndicator.GLASS:   // drawn behind the icon, pre-base
+            case PanelConfig.OpenIndicator.ROUND:   // drawn behind the icon, pre-base
                 return;
 
             case PanelConfig.OpenIndicator.DOT:
@@ -383,19 +387,29 @@ public class AppEntry : Gtk.Button {
         s.append_color(open_color(), r);
     }
 
-    // Frosted rounded fill behind the icon — a persistent hover-like sheen.
-    void draw_glass (Gtk.Snapshot s) {
+    // Frosted fill behind the icon — a persistent hover-like sheen. `round`
+    // clips it to a centered circle (diameter = the slot's short side minus
+    // inset) instead of the rounded-rect footprint, for the ROUND indicator.
+    void draw_glass (Gtk.Snapshot s, bool round = false) {
         float w = get_width(), h = get_height();
         float inset = OPEN_GLASS_INSET;
-        var area = Graphene.Rect();
-        area.init(inset, inset, w - 2 * inset, h - 2 * inset);
+        Graphene.Rect area = Graphene.Rect();
+        float radius;
+        if (round) {
+            float d = float.min(w, h);
+            area.init((w - d) / 2f, (h - d) / 2f, d, d);
+            radius = d / 2f;
+        } else {
+            area.init(inset, inset, w - 2 * inset, h - 2 * inset);
+            radius = OPEN_GLASS_RADIUS;
+        }
         var rr = Gsk.RoundedRect();
-        rr.init_from_rect(area, OPEN_GLASS_RADIUS);
+        rr.init_from_rect(area, radius);
         s.push_rounded_clip(rr);
         var top = Graphene.Point();
-        top.init(0, inset);
+        top.init(0, area.get_y());
         var bot = Graphene.Point();
-        bot.init(0, h - inset);
+        bot.init(0, area.get_y() + area.get_height());
         Gsk.ColorStop[] stops = {
             { 0.0f, OPEN_GLASS_TOP },
             { 1.0f, OPEN_GLASS_BOT },

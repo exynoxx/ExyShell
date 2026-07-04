@@ -11,7 +11,7 @@ public class PanelConfig {
     // How a taskbar entry signals it has open windows but isn't focused, so a
     // running app is distinguishable from a pinned-but-closed one. Read once at
     // startup; AppEntry.snapshot() branches on it. SHADE is the default.
-    public enum OpenIndicator { SHADE, DOT, CORNERS, GLASS, NONE }
+    public enum OpenIndicator { SHADE, DOT, CORNERS, GLASS, ROUND, NONE }
     public static OpenIndicator open_indicator = OpenIndicator.SHADE;
 
     // Multi-monitor: when true a panel is placed on every connected output.
@@ -156,6 +156,7 @@ public class PanelConfig {
             case "dot":     return OpenIndicator.DOT;
             case "corners": return OpenIndicator.CORNERS;
             case "glass":   return OpenIndicator.GLASS;
+            case "round":   return OpenIndicator.ROUND;
             case "none":    return OpenIndicator.NONE;
             default:        return OpenIndicator.SHADE;
         }

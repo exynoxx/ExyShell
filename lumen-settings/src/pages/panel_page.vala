@@ -171,8 +171,8 @@ namespace LumenSettings {
             });
             behavior_group.add_row(autohide_opacity_row);
 
-            string[] ind_labels = { "Bottom shade", "Dot", "Corner brackets", "Glass (hover look)", "None" };
-            string[] ind_values = { "shade", "dot", "corners", "glass", "none" };
+            string[] ind_labels = { "Bottom shade", "Dot", "Corner brackets", "Glass (squared)", "Glass (rounded)", "None" };
+            string[] ind_values = { "shade", "dot", "corners", "glass", "round", "none" };
             var ind_initial = store.get_string("app.open-indicator") ?? "shade";
             var ind_row = new ComboRow("Open app indicator", ind_labels, ind_values, ind_initial,
                 "how a running app is marked apart from a pinned, closed one");
