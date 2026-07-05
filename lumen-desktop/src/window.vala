@@ -201,6 +201,23 @@ public class DesktopWindow : Gtk.ApplicationWindow {
         dots.set_visible(grid.page_count > 1);
     }
 
+    // Driven by DesktopApp's AppInfoMonitor when installed .desktop files change
+    // (dnf/flatpak install/remove). The grid is immutable after construction, so
+    // we swap in a fresh PagedGrid; SearchDb must be rebuilt too because it (and
+    // its AliasArray) hold *unowned* aliases of the old apps[] backing array.
+    public void reload() {
+        load_apps();
+        search_db = new SearchDb(apps);
+
+        body_stack.remove(grid);
+        grid = new PagedGrid(apps);
+        body_stack.add_named(grid, "grid");
+        grid.page_changed.connect((p) => dots.set_active(p));
+
+        dots.set_count(grid.page_count);
+        reset_view();
+    }
+
     private void build_ui() {
         var root = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
         root.set_halign(Gtk.Align.FILL);

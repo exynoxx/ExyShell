@@ -6,6 +6,8 @@ public class DesktopApp : Gtk.Application {
     private GLib.GenericArray<DesktopWindow> wins = new GLib.GenericArray<DesktopWindow>();
     private bool bound = false;
     private bool hotplug_wired = false;
+    private AppInfoMonitor app_monitor;   // keep a ref so it isn't collected
+    private uint refresh_source = 0;
 
     construct {
         application_id = "dev.lumen.desktop";
@@ -41,9 +43,26 @@ public class DesktopApp : Gtk.Application {
                 var monitors = Gdk.Display.get_default().get_monitors();
                 monitors.items_changed.connect((p, r, a) => rebuild_windows());
                 hotplug_wired = true;
+
+                // Auto-refresh the grid when apps are installed/removed (dnf,
+                // flatpak, …). AppInfoMonitor watches every applications/ dir on
+                // XDG_DATA_DIRS and invalidates GIO's AppInfo cache, so the
+                // debounced reload() below sees the new set.
+                app_monitor = AppInfoMonitor.get();
+                app_monitor.changed.connect(schedule_app_refresh);
             }
         }
         for (int i = 0; i < wins.length; i++) wins.get(i).present();
+    }
+
+    // A package transaction fires `changed` many times; coalesce into one reload.
+    private void schedule_app_refresh() {
+        if (refresh_source != 0) GLib.Source.remove(refresh_source);
+        refresh_source = GLib.Timeout.add(1500, () => {
+            refresh_source = 0;
+            for (int i = 0; i < wins.length; i++) wins.get(i).reload();
+            return GLib.Source.REMOVE;
+        });
     }
 
     // One drawer per monitor. The curtain/slide peek is per-output, so every

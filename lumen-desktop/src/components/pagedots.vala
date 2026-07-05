@@ -10,7 +10,17 @@ public class PageDots : Gtk.Box {
         add_css_class("page-dots");
         set_halign(Gtk.Align.CENTER);
 
+        set_count(page_count);
+    }
+
+    // Reused across an app-list reload so the same PageDots widget can take a
+    // new page count in place, rather than being swapped out.
+    public void set_count(int page_count) {
+        Gtk.Widget? c;
+        while ((c = get_first_child()) != null) c.unparent();
+
         dots = new Gtk.Button[page_count];
+        active = 0;
         for (int i = 0; i < page_count; i++) {
             var dot = new Gtk.Button.with_label((i + 1).to_string());
             dot.add_css_class("page-dot");
