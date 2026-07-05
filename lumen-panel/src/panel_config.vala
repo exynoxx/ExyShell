@@ -14,6 +14,14 @@ public class PanelConfig {
     public enum OpenIndicator { SHADE, DOT, CORNERS, GLASS, ROUND, NONE }
     public static OpenIndicator open_indicator = OpenIndicator.SHADE;
 
+    // How the focused (active) taskbar entry is marked. UNDERLINE is the
+    // original accent bar under the icon; RING draws an accent ring around it;
+    // SUNSHINE radiates triangular rays around it; GLASS is a navy frosted disc
+    // behind it; CIRCLE is the ROUND open-glass white sheen, but fainter. Read
+    // once at startup; AppEntry resolves it to a draw routine at construction.
+    public enum ActiveIndicator { UNDERLINE, RING, SUNSHINE, GLASS, CIRCLE }
+    public static ActiveIndicator active_indicator = ActiveIndicator.UNDERLINE;
+
     // Multi-monitor: when true a panel is placed on every connected output.
     // per_monitor_apps (a sub-option) makes each panel's taskbar show only the
     // windows on its own monitor.
@@ -55,6 +63,7 @@ public class PanelConfig {
 
         at_top            = get_string(vals, "position") == "top";
         open_indicator    = parse_indicator(get_string(vals, "app.open-indicator"));
+        active_indicator  = parse_active_indicator(get_string(vals, "app.active-indicator"));
         multi_monitor     = get_bool(vals, "behavior.multi-monitor");
         per_monitor_apps  = get_bool(vals, "behavior.per-monitor-apps");
         tray_all_monitors = get_bool(vals, "behavior.tray-all-monitors");
@@ -159,6 +168,17 @@ public class PanelConfig {
             case "round":   return OpenIndicator.ROUND;
             case "none":    return OpenIndicator.NONE;
             default:        return OpenIndicator.SHADE;
+        }
+    }
+
+    static ActiveIndicator parse_active_indicator (string? s) {
+        switch (s) {
+            case "ring":      return ActiveIndicator.RING;
+            case "sunshine":  return ActiveIndicator.SUNSHINE;
+            case "glass":     return ActiveIndicator.GLASS;
+            case "circle":    return ActiveIndicator.CIRCLE;
+            case "underline": return ActiveIndicator.UNDERLINE;
+            default:          return ActiveIndicator.UNDERLINE;
         }
     }
 }

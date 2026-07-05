@@ -58,6 +58,7 @@ public class AppEntry : Gtk.Button {
         };
         set_child(image);
         load_icon();
+        resolve_indicators();
 
         clicked.connect(on_primary_click);
 
@@ -232,6 +233,12 @@ public class AppEntry : Gtk.Button {
     // color is hard-coded here (matches @app_active_underline in style.css).
     static Gdk.RGBA UNDERLINE_COLOR = Utils.rgba(0.0f, 0.17f, 0.9f, 1.0f);
 
+    // RING active-indicator: an accent ring around the icon instead of the
+    // underline bar. Its circle matches the ROUND glass footprint (diameter =
+    // the slot's short side).
+    const int ACTIVE_RING_THICK = 2;   // px stroke width of the ring
+    static Gdk.RGBA RING_COLOR = Utils.rgba(0.0f, 0.0f, 0.0f, 1.0f);
+
     // Open-but-not-focused apps get one of several indicator styles (chosen via
     // PanelConfig.open_indicator) so a running app is distinguishable from a
     // pinned-but-closed one. The dot, corner brackets and shade are all tinted
@@ -283,14 +290,13 @@ public class AppEntry : Gtk.Button {
             s.translate(t);
         }
 
-        // Glass fill goes behind everything (like the CSS :hover background) so
-        // the icon stays crisp on top. The edge-drawn styles run after base.
-        // ROUND is the same frosted sheen clipped to a circle instead of a
-        // rounded rect.
-        if (!is_active() && has_open_windows()
-            && (PanelConfig.open_indicator == PanelConfig.OpenIndicator.GLASS
-                || PanelConfig.open_indicator == PanelConfig.OpenIndicator.ROUND)) {
-            draw_glass(s, PanelConfig.open_indicator == PanelConfig.OpenIndicator.ROUND);
+        // Background indicators (glass sheens) paint behind everything so the
+        // icon stays crisp on top; the edge-drawn styles run after base. Which
+        // routine (if any) is used was resolved once at construction.
+        if (is_active()) {
+            if (active_bg != null) active_bg(s);
+        } else if (has_open_windows()) {
+            if (open_bg != null) open_bg(s);
         }
 
         // Recenter the whole icon group (front + back copies) for multi-window
@@ -320,64 +326,176 @@ public class AppEntry : Gtk.Button {
         base.snapshot(s);
 
         if (stacked) s.restore();  // stack recenter
+        // Foreground indicators (over the icon) — style resolved at ctor.
         if (is_active()) {
-            var rect = Graphene.Rect();
-            rect.init(9, get_height() - UNDERLINE_H, get_width() - 18, UNDERLINE_H);
-            s.append_color(UNDERLINE_COLOR, rect);
+            if (active_fg != null) active_fg(s);
         } else if (has_open_windows()) {
-            draw_open_indicator(s);
+            if (open_fg != null) open_fg(s);
         }
 
         if (shifted) s.restore();
     }
 
-    void draw_open_indicator (Gtk.Snapshot s) {
-        float w = get_width();
-        float h = get_height();
-        switch (PanelConfig.open_indicator) {
-            case PanelConfig.OpenIndicator.NONE:
-            case PanelConfig.OpenIndicator.GLASS:   // drawn behind the icon, pre-base
-            case PanelConfig.OpenIndicator.ROUND:   // drawn behind the icon, pre-base
-                return;
+    // The active/open indicator STYLE is fixed for the life of the process
+    // (PanelConfig reads it once at startup), so bind each style to its draw
+    // routine here rather than switching on the enum every snapshot(). `_bg`
+    // routines paint behind the icon (pre-base); `_fg` routines paint over it.
+    // A null field means "nothing to draw in that slot" (e.g. NONE, or GLASS
+    // which only has a background).
+    delegate void IndicatorDraw (Gtk.Snapshot s);
+    IndicatorDraw? active_bg = null;
+    IndicatorDraw? active_fg = null;
+    IndicatorDraw? open_bg   = null;
+    IndicatorDraw? open_fg   = null;
 
-            case PanelConfig.OpenIndicator.DOT:
-                var dot = Graphene.Rect();
-                dot.init((w - OPEN_DOT_D) / 2f, h - OPEN_DOT_D - OPEN_DOT_GAP,
-                         OPEN_DOT_D, OPEN_DOT_D);
-                var rr = Gsk.RoundedRect();
-                rr.init_from_rect(dot, OPEN_DOT_D / 2f);
-                s.push_rounded_clip(rr);
-                s.append_color(open_color(), dot);
-                s.pop();
-                return;
-
-            case PanelConfig.OpenIndicator.CORNERS:
-                float L = OPEN_CORNER_LEN, t = OPEN_CORNER_THICK;
-                // Each corner gets an L: one arm along each edge meeting there.
-                fill(s, 0,     0,     L, t);  fill(s, 0,     0,     t, L);  // top-left
-                fill(s, w - L, 0,     L, t);  fill(s, w - t, 0,     t, L);  // top-right
-                fill(s, 0,     h - t, L, t);  fill(s, 0,     h - L, t, L);  // bottom-left
-                fill(s, w - L, h - t, L, t);  fill(s, w - t, h - L, t, L);  // bottom-right
-                return;
-
-            case PanelConfig.OpenIndicator.SHADE:
-            default:
-                var bounds = Graphene.Rect();
-                bounds.init(0, h - OPEN_SHADE_H, w, OPEN_SHADE_H);
-                var top = Graphene.Point();
-                top.init(0, h - OPEN_SHADE_H);
-                var bot = Graphene.Point();
-                bot.init(0, h);
-                var c = open_color();
-                var shade_top = c; shade_top.alpha = 0f;
-                var shade_bot = c; shade_bot.alpha = OPEN_SHADE_ALPHA;
-                Gsk.ColorStop[] stops = {
-                    { 0.0f, shade_top },
-                    { 1.0f, shade_bot },
-                };
-                s.append_linear_gradient(bounds, top, bot, stops);
-                return;
+    void resolve_indicators () {
+        switch (PanelConfig.active_indicator) {
+            case PanelConfig.ActiveIndicator.RING:     active_fg = draw_active_ring;      break;
+            case PanelConfig.ActiveIndicator.SUNSHINE: active_fg = draw_active_sunshine;  break;
+            case PanelConfig.ActiveIndicator.GLASS:    active_bg = draw_active_glass;     break;
+            case PanelConfig.ActiveIndicator.CIRCLE:   active_bg = draw_active_circle;    break;
+            case PanelConfig.ActiveIndicator.UNDERLINE:
+            default:                                   active_fg = draw_active_underline; break;
         }
+        switch (PanelConfig.open_indicator) {
+            case PanelConfig.OpenIndicator.DOT:     open_fg = draw_open_dot;               break;
+            case PanelConfig.OpenIndicator.CORNERS: open_fg = draw_open_corners;           break;
+            case PanelConfig.OpenIndicator.GLASS:   open_bg = (s) => draw_glass(s, false); break;
+            case PanelConfig.OpenIndicator.ROUND:   open_bg = (s) => draw_glass(s, true);  break;
+            case PanelConfig.OpenIndicator.NONE:                                           break;
+            case PanelConfig.OpenIndicator.SHADE:
+            default:                                open_fg = draw_open_shade;             break;
+        }
+    }
+
+    // UNDERLINE active-indicator: the original accent bar under the icon.
+    void draw_active_underline (Gtk.Snapshot s) {
+        var rect = Graphene.Rect();
+        rect.init(9, get_height() - UNDERLINE_H, get_width() - 18, UNDERLINE_H);
+        s.append_color(UNDERLINE_COLOR, rect);
+    }
+
+    // Accent ring circumscribing the icon, drawn as a rounded-rect (circle)
+    // border in the underline blue.
+    void draw_active_ring (Gtk.Snapshot s) {
+        float w = get_width(), h = get_height();
+        // Match the ROUND glass circle exactly: diameter = the slot's short side.
+        float d = float.min(w, h);
+        var area = Graphene.Rect();
+        area.init((w - d) / 2f, (h - d) / 2f, d, d);
+        var rr = Gsk.RoundedRect();
+        rr.init_from_rect(area, d / 2f);
+        float[] widths = { ACTIVE_RING_THICK, ACTIVE_RING_THICK,
+                           ACTIVE_RING_THICK, ACTIVE_RING_THICK };
+        Gdk.RGBA[] colors = { RING_COLOR, RING_COLOR, RING_COLOR, RING_COLOR };
+        s.append_border(rr, widths, colors);
+    }
+
+    // SUNSHINE active-indicator: triangular rays radiating around the icon (no
+    // connecting ring), in the accent blue. Static; drawn over the icon edges
+    // like the ring. Inner/outer radii are keyed off the icon (not the slot) so
+    // the tips stay inside the slot's short side.
+    const int SUNSHINE_RAYS = 12;
+    void draw_active_sunshine (Gtk.Snapshot s) {
+        float cx = get_width() / 2f, cy = get_height() / 2f;
+        float r_in  = ICON_SIZE / 2f + 3f;
+        float r_out = ICON_SIZE / 2f + 12f;
+        double step = 2.0 * Math.PI / SUNSHINE_RAYS;
+        double half = step * 0.28;   // angular half-width of each ray's base
+        var pb = new Gsk.PathBuilder();
+        for (int i = 0; i < SUNSHINE_RAYS; i++) {
+            double a = i * step;
+            pb.move_to(cx + (float) (Math.cos(a - half) * r_in),
+                       cy + (float) (Math.sin(a - half) * r_in));
+            pb.line_to(cx + (float) (Math.cos(a) * r_out),
+                       cy + (float) (Math.sin(a) * r_out));
+            pb.line_to(cx + (float) (Math.cos(a + half) * r_in),
+                       cy + (float) (Math.sin(a + half) * r_in));
+            pb.close();
+        }
+        s.append_fill(pb.to_path(), Gsk.FillRule.WINDING, UNDERLINE_COLOR);
+    }
+
+    // GLASS active-indicator: a navy frosted disc behind the icon — the ROUND
+    // open-sheen footprint tinted deep navy (transparent-topped gradient).
+    static Gdk.RGBA ACTIVE_GLASS_TOP = Utils.rgba(0.08f, 0.16f, 0.35f, 0.60f);
+    static Gdk.RGBA ACTIVE_GLASS_BOT = Utils.rgba(0.08f, 0.16f, 0.35f, 0.30f);
+    void draw_active_glass (Gtk.Snapshot s) {
+        draw_circle_glass(s, ACTIVE_GLASS_TOP, ACTIVE_GLASS_BOT);
+    }
+
+    // CIRCLE active-indicator: a flat white disc behind the icon so the focused
+    // app lights up brighter than any open-but-unfocused one. No gradient — a
+    // single uniform fill (passed as both gradient stops).
+    static Gdk.RGBA ACTIVE_CIRCLE_FILL = Utils.rgba(1.0f, 1.0f, 1.0f, 0.65f);
+    void draw_active_circle (Gtk.Snapshot s) {
+        draw_circle_glass(s, ACTIVE_CIRCLE_FILL, ACTIVE_CIRCLE_FILL);
+    }
+
+    // Shared circle sheen behind the icon (GLASS + CIRCLE active indicators):
+    // a rounded-clipped vertical gradient from `top_color` to `bot_color`,
+    // diameter = the slot's short side.
+    void draw_circle_glass (Gtk.Snapshot s, Gdk.RGBA top_color, Gdk.RGBA bot_color) {
+        float w = get_width(), h = get_height();
+        float d = float.min(w, h);
+        var area = Graphene.Rect();
+        area.init((w - d) / 2f, (h - d) / 2f, d, d);
+        var rr = Gsk.RoundedRect();
+        rr.init_from_rect(area, d / 2f);
+        s.push_rounded_clip(rr);
+        var top = Graphene.Point();
+        top.init(0, area.get_y());
+        var bot = Graphene.Point();
+        bot.init(0, area.get_y() + area.get_height());
+        Gsk.ColorStop[] stops = {
+            { 0.0f, top_color },
+            { 1.0f, bot_color },
+        };
+        s.append_linear_gradient(area, top, bot, stops);
+        s.pop();
+    }
+
+    // DOT open-indicator: a centered dot near the bottom edge.
+    void draw_open_dot (Gtk.Snapshot s) {
+        float w = get_width(), h = get_height();
+        var dot = Graphene.Rect();
+        dot.init((w - OPEN_DOT_D) / 2f, h - OPEN_DOT_D - OPEN_DOT_GAP,
+                 OPEN_DOT_D, OPEN_DOT_D);
+        var rr = Gsk.RoundedRect();
+        rr.init_from_rect(dot, OPEN_DOT_D / 2f);
+        s.push_rounded_clip(rr);
+        s.append_color(open_color(), dot);
+        s.pop();
+    }
+
+    // CORNERS open-indicator: an L bracket in each corner.
+    void draw_open_corners (Gtk.Snapshot s) {
+        float w = get_width(), h = get_height();
+        float L = OPEN_CORNER_LEN, t = OPEN_CORNER_THICK;
+        // Each corner gets an L: one arm along each edge meeting there.
+        fill(s, 0,     0,     L, t);  fill(s, 0,     0,     t, L);  // top-left
+        fill(s, w - L, 0,     L, t);  fill(s, w - t, 0,     t, L);  // top-right
+        fill(s, 0,     h - t, L, t);  fill(s, 0,     h - L, t, L);  // bottom-left
+        fill(s, w - L, h - t, L, t);  fill(s, w - t, h - L, t, L);  // bottom-right
+    }
+
+    // SHADE open-indicator: a bottom band fading up from the indicator color.
+    void draw_open_shade (Gtk.Snapshot s) {
+        float w = get_width(), h = get_height();
+        var bounds = Graphene.Rect();
+        bounds.init(0, h - OPEN_SHADE_H, w, OPEN_SHADE_H);
+        var top = Graphene.Point();
+        top.init(0, h - OPEN_SHADE_H);
+        var bot = Graphene.Point();
+        bot.init(0, h);
+        var c = open_color();
+        var shade_top = c; shade_top.alpha = 0f;
+        var shade_bot = c; shade_bot.alpha = OPEN_SHADE_ALPHA;
+        Gsk.ColorStop[] stops = {
+            { 0.0f, shade_top },
+            { 1.0f, shade_bot },
+        };
+        s.append_linear_gradient(bounds, top, bot, stops);
     }
 
     // Append a solid indicator-colored rectangle (corner-bracket arm).

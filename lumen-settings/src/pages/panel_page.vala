@@ -170,6 +170,17 @@ namespace LumenSettings {
             });
             behavior_group.add_row(autohide_opacity_row);
 
+            string[] active_labels = { "Underline", "Ring", "Sunshine", "Glass (navy)", "Circle (glass)" };
+            string[] active_values = { "underline", "ring", "sunshine", "glass", "circle" };
+            var active_initial = store.get_string("app.active-indicator") ?? "underline";
+            var active_row = new ComboRow("Active app indicator", active_labels, active_values, active_initial,
+                "how the focused app is marked: an accent bar, a ring, sunshine rays, a navy glass disc, or a faint glass circle");
+            active_row.value_changed.connect((v) => {
+                store.set_string("app.active-indicator", v);
+                store.save();
+            });
+            behavior_group.add_row(active_row);
+
             string[] ind_labels = { "Bottom shade", "Dot", "Corner brackets", "Glass (squared)", "Glass (rounded)", "None" };
             string[] ind_values = { "shade", "dot", "corners", "glass", "round", "none" };
             var ind_initial = store.get_string("app.open-indicator") ?? "shade";
