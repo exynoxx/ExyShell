@@ -1,0 +1,582 @@
+using Gtk;
+
+namespace LumenSettings {
+
+    // Live WiFi + Bluetooth + Ethernet management page. Reuses the shared
+    // lumen-common backends (WifiService/BluetoothService) via their passive
+    // constructors so opening Settings never toggles the user's radios. The
+    // dynamic network/device lists are rebuilt on the services' state_changed
+    // signals; the `building` guard suppresses the switch handlers during the
+    // programmatic .active restore (same shape as DisplayPage).
+    public class NetworkingPage : GLib.Object, SettingsPage {
+        public string id        { owned get { return "networking"; } }
+        public string title     { owned get { return "Networking"; } }
+        public string icon_name { owned get { return "network-wireless-symbolic"; } }
+
+        public override string? restart_target() { return null; }   // live page
+
+        WifiService      wifi = new WifiService.passive();
+        BluetoothService bt   = new BluetoothService.passive();
+        bool building = false;
+
+        Gtk.Box root_box;
+
+        // Wi-Fi
+        SwitchRow   wifi_switch;
+        Gtk.Spinner wifi_spinner;
+        Gtk.Box     wifi_list_holder;
+
+        // Wi-Fi details
+        BoxedList wifi_details_group;
+        ActionRow wifi_ip_row;
+        ActionRow wifi_gw_row;
+        ActionRow wifi_dns_row;
+        ActionRow wifi_mac_row;
+        ActionRow wifi_sec_row;
+        ActionRow wifi_band_row;
+
+        // Ethernet
+        ActionRow eth_status_row;
+        SwitchRow eth_switch;
+        BoxedList eth_details_group;
+        ActionRow eth_ip_row;
+        ActionRow eth_gw_row;
+        ActionRow eth_dns_row;
+        ActionRow eth_mac_row;
+
+        // Bluetooth
+        SwitchRow   bt_switch;
+        Gtk.Spinner bt_spinner;
+        Gtk.Box     bt_list_holder;
+        BoxedList   bt_details_group;
+        ActionRow   bt_name_row;
+        ActionRow   bt_type_row;
+        ActionRow   bt_battery_row;
+        ActionRow   bt_addr_row;
+        ActionRow   bt_paired_row;
+
+        // Connection tracking so details are (re)fetched only on a real change.
+        string last_wifi_conn = "";
+        bool   last_eth_conn  = false;
+        string last_bt_conn   = "";
+
+        // The SSID whose password dialog is open, so the single connect_result
+        // handler can re-prompt on BAD_PASSWORD keyed on the right network.
+        string pending_pw_ssid = "";
+
+        public Gtk.Widget build() {
+            root_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 18) {
+                margin_top = 18, margin_bottom = 18,
+                margin_start = 18, margin_end = 18,
+            };
+
+            build_wifi();
+            build_wifi_details();
+            build_ethernet();
+            build_bluetooth();
+
+            // Live updates.
+            wifi.state_changed.connect(rebuild_wifi);
+            wifi.state_changed.connect(rebuild_eth);
+            wifi.connect_result.connect(on_wifi_connect_result);
+            wifi.details_ready.connect(on_details_ready);
+            bt.state_changed.connect(rebuild_bt);
+            bt.device_details_ready.connect(on_bt_details_ready);
+
+            rebuild_wifi();
+            rebuild_eth();
+            rebuild_bt();
+
+            wifi.refresh_scan(true);
+            bt.refresh_scan(true);
+            return root_box;
+        }
+
+        // ---- Wi-Fi ---------------------------------------------------------
+
+        void build_wifi() {
+            var group = new BoxedList("Wi-Fi");
+
+            wifi_switch = new SwitchRow("Wi-Fi", "", wifi.enabled);
+            wifi_switch.toggled.connect((v) => {
+                if (building) return;
+                wifi.set_radio(v);
+            });
+            group.add_row(wifi_switch);
+
+            var hb = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
+            wifi_spinner = new Gtk.Spinner();
+            var rescan = new Gtk.Button.from_icon_name("view-refresh-symbolic");
+            rescan.add_css_class("flat");
+            rescan.tooltip_text = "Rescan";
+            rescan.clicked.connect(() => wifi.refresh_scan(true));
+            hb.append(wifi_spinner);
+            hb.append(rescan);
+            group.set_header_suffix(hb);
+
+            root_box.append(group);
+
+            wifi_list_holder = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+            root_box.append(wifi_list_holder);
+        }
+
+        void rebuild_wifi() {
+            building = true;
+
+            wifi_switch.sw.active = wifi.enabled;
+            wifi_spinner.visible  = wifi.scanning;
+            if (wifi.scanning) wifi_spinner.start(); else wifi_spinner.stop();
+
+            clear_box(wifi_list_holder);
+            if (wifi.enabled) {
+                var bl = new BoxedList(null);
+                foreach (var net in sorted_nets())
+                    bl.add_row(make_wifi_row(net));
+
+                var hidden = new ActionRow("Connect to Hidden Network…");
+                hidden.add_prefix(new Gtk.Image.from_icon_name("list-add-symbolic"));
+                hidden.activatable = true;
+                hidden.activated.connect(() => prompt_hidden());
+                bl.add_row(hidden);
+
+                wifi_list_holder.append(bl);
+                wifi_list_holder.visible = true;
+            } else {
+                wifi_list_holder.visible = false;
+            }
+
+            update_conn_tracking();
+            building = false;
+        }
+
+        WifiNet[] sorted_nets() {
+            WifiNet[] head = {};
+            WifiNet[] tail = {};
+            foreach (var n in wifi.nets) {
+                if (n.ssid == wifi.connected_ssid) head += n;
+                else                               tail += n;
+            }
+            WifiNet[] all = {};
+            foreach (var n in head) all += n;
+            foreach (var n in tail) all += n;
+            return all;
+        }
+
+        ActionRow make_wifi_row(WifiNet net) {
+            string sub;
+            if      (net.ssid == wifi.connected_ssid) sub = "Connected";
+            else if (net.is_saved)                    sub = "Saved";
+            else if (net.is_secured())                sub = net.security;
+            else                                      sub = "Open";
+
+            var row = new ActionRow(net.ssid, sub);
+            row.add_prefix(new Gtk.Image.from_icon_name(signal_icon(net)));
+            if (net.is_secured())
+                row.add_prefix(new Gtk.Image.from_icon_name("network-wireless-encrypted-symbolic"));
+            row.activatable = true;
+
+            if (net.ssid == wifi.connecting_ssid) {
+                var sp = new Gtk.Spinner();
+                sp.start();
+                row.set_suffix(sp);
+            } else if (net.ssid == wifi.connected_ssid) {
+                row.set_suffix(new Gtk.Image.from_icon_name("emblem-ok-symbolic"));
+            }
+
+            row.activated.connect(() => on_wifi_row_activated(net));
+            return row;
+        }
+
+        string signal_icon(WifiNet net) {
+            string level;
+            if      (net.signal >= 80) level = "excellent";
+            else if (net.signal >= 55) level = "good";
+            else if (net.signal >= 35) level = "ok";
+            else if (net.signal >= 15) level = "weak";
+            else                       level = "none";
+            return "network-wireless-signal-%s-symbolic".printf(level);
+        }
+
+        void on_wifi_row_activated(WifiNet net) {
+            if (net.ssid == wifi.connected_ssid) {
+                var dlg = new Adw.AlertDialog(net.ssid, "This network is connected.");
+                dlg.add_response("cancel", "Cancel");
+                dlg.add_response("forget", "Forget");
+                dlg.add_response("disconnect", "Disconnect");
+                dlg.set_response_appearance("disconnect", Adw.ResponseAppearance.SUGGESTED);
+                dlg.set_response_appearance("forget", Adw.ResponseAppearance.DESTRUCTIVE);
+                dlg.set_close_response("cancel");
+                dlg.response.connect((resp) => {
+                    if (resp == "disconnect") wifi.disconnect_active();
+                    else if (resp == "forget") wifi.forget(net.ssid);
+                });
+                dlg.present(root_widget());
+            } else if (net.is_saved) {
+                wifi.connect_to(net.ssid, "", true);
+            } else if (!net.is_secured()) {
+                wifi.connect_to(net.ssid, "", false);
+            } else {
+                prompt_password(net.ssid, false);
+            }
+        }
+
+        void on_wifi_connect_result(string ssid, WifiConnectResult res) {
+            if (res == WifiConnectResult.BAD_PASSWORD && ssid == pending_pw_ssid)
+                prompt_password(ssid, true);
+            else
+                pending_pw_ssid = "";
+        }
+
+        void prompt_password(string ssid, bool error) {
+            var dlg = new Adw.AlertDialog("Connect to " + ssid, null);
+
+            var body = new Gtk.Box(Gtk.Orientation.VERTICAL, 8);
+            var pw = new Adw.PasswordEntryRow();
+            pw.title = "Password";
+            var lb = new BoxedList(null);
+            lb.add_row(pw);
+            body.append(lb);
+            if (error) {
+                var err = new Gtk.Label("Incorrect password. Please try again.") {
+                    xalign = 0,
+                };
+                err.add_css_class("error");
+                body.append(err);
+            }
+            dlg.set_extra_child(body);
+
+            dlg.add_response("cancel", "Cancel");
+            dlg.add_response("connect", "Connect");
+            dlg.set_response_appearance("connect", Adw.ResponseAppearance.SUGGESTED);
+            dlg.set_default_response("connect");
+            dlg.set_close_response("cancel");
+            dlg.response.connect((resp) => {
+                if (resp == "connect") {
+                    pending_pw_ssid = ssid;
+                    wifi.connect_to(ssid, pw.text, false);
+                } else {
+                    pending_pw_ssid = "";
+                }
+            });
+            dlg.present(root_widget());
+        }
+
+        void prompt_hidden() {
+            var dlg = new Adw.AlertDialog("Connect to Hidden Network", null);
+
+            var body = new Gtk.Box(Gtk.Orientation.VERTICAL, 8);
+            var lb = new BoxedList(null);
+
+            var ssid = new Adw.EntryRow();
+            ssid.title = "Network name (SSID)";
+            lb.add_row(ssid);
+
+            var sec = new ComboRow("Security",
+                new string[] { "None", "WPA/WPA2 Personal" },
+                new string[] { "open", "wpa" }, "wpa");
+            lb.add_row(sec);
+
+            var pw = new Adw.PasswordEntryRow();
+            pw.title = "Password";
+            lb.add_row(pw);
+            body.append(lb);
+            dlg.set_extra_child(body);
+
+            dlg.add_response("cancel", "Cancel");
+            dlg.add_response("connect", "Connect");
+            dlg.set_response_appearance("connect", Adw.ResponseAppearance.SUGGESTED);
+            dlg.set_default_response("connect");
+            dlg.set_close_response("cancel");
+
+            string chosen_sec = "wpa";
+            sec.value_changed.connect((v) => chosen_sec = v);
+
+            dlg.response.connect((resp) => {
+                if (resp != "connect") return;
+                var name = ssid.text.strip();
+                if (name == "") return;
+                var pass = chosen_sec == "open" ? "" : pw.text;
+                pending_pw_ssid = name;
+                wifi.connect_to_hidden(name, pass);
+            });
+            dlg.present(root_widget());
+        }
+
+        // ---- Wi-Fi details -------------------------------------------------
+
+        void build_wifi_details() {
+            wifi_details_group = new BoxedList("Wi-Fi details");
+            wifi_ip_row   = new ActionRow("IPv4 address");
+            wifi_gw_row   = new ActionRow("Gateway");
+            wifi_dns_row  = new ActionRow("DNS");
+            wifi_mac_row  = new ActionRow("Hardware address");
+            wifi_sec_row  = new ActionRow("Security");
+            wifi_band_row = new ActionRow("Band");
+            wifi_details_group.add_row(wifi_ip_row);
+            wifi_details_group.add_row(wifi_gw_row);
+            wifi_details_group.add_row(wifi_dns_row);
+            wifi_details_group.add_row(wifi_mac_row);
+            wifi_details_group.add_row(wifi_sec_row);
+            wifi_details_group.add_row(wifi_band_row);
+            wifi_details_group.visible = false;
+            root_box.append(wifi_details_group);
+        }
+
+        // ---- Ethernet ------------------------------------------------------
+
+        void build_ethernet() {
+            var group = new BoxedList("Ethernet");
+
+            eth_status_row = new ActionRow("Wired connection", "");
+            eth_status_row.add_prefix(new Gtk.Image.from_icon_name("network-wired-symbolic"));
+            group.add_row(eth_status_row);
+
+            eth_switch = new SwitchRow("Enable wired connection", "", false);
+            eth_switch.toggled.connect((v) => {
+                if (building) return;
+                wifi.set_ethernet(v);
+            });
+            group.add_row(eth_switch);
+            root_box.append(group);
+
+            eth_details_group = new BoxedList("Ethernet details");
+            eth_ip_row  = new ActionRow("IPv4 address");
+            eth_gw_row  = new ActionRow("Gateway");
+            eth_dns_row = new ActionRow("DNS");
+            eth_mac_row = new ActionRow("Hardware address");
+            eth_details_group.add_row(eth_ip_row);
+            eth_details_group.add_row(eth_gw_row);
+            eth_details_group.add_row(eth_dns_row);
+            eth_details_group.add_row(eth_mac_row);
+            eth_details_group.visible = false;
+            root_box.append(eth_details_group);
+        }
+
+        void rebuild_eth() {
+            building = true;
+            string status;
+            if      (wifi.ethernet_device == "") status = "Disabled";
+            else if (wifi.ethernet_connected)    status = "Connected";
+            else                                 status = "Cable unplugged";
+            eth_status_row.subtitle = status;
+            eth_switch.sw.active    = wifi.ethernet_connected;
+            eth_switch.sensitive    = wifi.ethernet_device != "";
+            building = false;
+        }
+
+        // ---- shared details fill ------------------------------------------
+
+        void on_details_ready(NetDetails wifi_det, NetDetails eth_det) {
+            wifi_ip_row.subtitle   = or_dash(wifi_det.ip4);
+            wifi_gw_row.subtitle   = or_dash(wifi_det.gateway);
+            wifi_dns_row.subtitle  = or_dash(string.joinv(", ", wifi_det.dns));
+            wifi_mac_row.subtitle  = or_dash(wifi_det.mac);
+            wifi_sec_row.subtitle  = or_dash(wifi.connected ? current_security() : "");
+            wifi_band_row.subtitle = or_dash(wifi_det.band);
+
+            eth_ip_row.subtitle   = or_dash(eth_det.ip4);
+            eth_gw_row.subtitle   = or_dash(eth_det.gateway);
+            eth_dns_row.subtitle  = or_dash(string.joinv(", ", eth_det.dns));
+            eth_mac_row.subtitle  = or_dash(eth_det.mac);
+        }
+
+        string current_security() {
+            foreach (var n in wifi.nets)
+                if (n.ssid == wifi.connected_ssid)
+                    return n.is_secured() ? n.security : "Open";
+            return "";
+        }
+
+        void update_conn_tracking() {
+            bool changed = false;
+            if (wifi.connected_ssid != last_wifi_conn) { last_wifi_conn = wifi.connected_ssid; changed = true; }
+            if (wifi.ethernet_connected != last_eth_conn) { last_eth_conn = wifi.ethernet_connected; changed = true; }
+
+            wifi_details_group.visible = wifi.connected;
+            eth_details_group.visible  = wifi.ethernet_connected;
+
+            if (changed && (wifi.connected || wifi.ethernet_connected))
+                wifi.request_details();
+        }
+
+        // ---- Bluetooth -----------------------------------------------------
+
+        void build_bluetooth() {
+            var group = new BoxedList("Bluetooth");
+
+            bt_switch = new SwitchRow("Bluetooth", "", bt.powered);
+            bt_switch.toggled.connect((v) => {
+                if (building) return;
+                bt.set_power(v);
+            });
+            group.add_row(bt_switch);
+
+            var hb = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
+            bt_spinner = new Gtk.Spinner();
+            var rescan = new Gtk.Button.from_icon_name("view-refresh-symbolic");
+            rescan.add_css_class("flat");
+            rescan.tooltip_text = "Scan";
+            rescan.clicked.connect(() => bt.refresh_scan(true));
+            hb.append(bt_spinner);
+            hb.append(rescan);
+            group.set_header_suffix(hb);
+
+            root_box.append(group);
+
+            bt_list_holder = new Gtk.Box(Gtk.Orientation.VERTICAL, 0);
+            root_box.append(bt_list_holder);
+
+            bt_details_group = new BoxedList("Device details");
+            bt_name_row    = new ActionRow("Name");
+            bt_type_row    = new ActionRow("Type");
+            bt_battery_row = new ActionRow("Battery");
+            bt_addr_row    = new ActionRow("Address");
+            bt_paired_row  = new ActionRow("Paired");
+            bt_details_group.add_row(bt_name_row);
+            bt_details_group.add_row(bt_type_row);
+            bt_details_group.add_row(bt_battery_row);
+            bt_details_group.add_row(bt_addr_row);
+            bt_details_group.add_row(bt_paired_row);
+            bt_details_group.visible = false;
+            root_box.append(bt_details_group);
+        }
+
+        void rebuild_bt() {
+            building = true;
+
+            bt_switch.sw.active = bt.powered;
+            bt_spinner.visible  = bt.scanning;
+            if (bt.scanning) bt_spinner.start(); else bt_spinner.stop();
+
+            clear_box(bt_list_holder);
+            if (bt.powered) {
+                var bl = new BoxedList(null);
+                foreach (var d in sorted_devices())
+                    bl.add_row(make_bt_row(d));
+                bt_list_holder.append(bl);
+                bt_list_holder.visible = true;
+            } else {
+                bt_list_holder.visible = false;
+            }
+
+            update_bt_tracking();
+            building = false;
+        }
+
+        BtDevice[] sorted_devices() {
+            BtDevice[] conn = {};
+            BtDevice[] paired = {};
+            BtDevice[] rest = {};
+            foreach (var d in bt.devices) {
+                if      (d.connected) conn   += d;
+                else if (d.paired)    paired += d;
+                else                  rest   += d;
+            }
+            BtDevice[] all = {};
+            foreach (var d in conn)   all += d;
+            foreach (var d in paired) all += d;
+            foreach (var d in rest)   all += d;
+            return all;
+        }
+
+        ActionRow make_bt_row(BtDevice d) {
+            string sub;
+            if      (d.connected) sub = "Connected";
+            else if (d.paired)    sub = "Paired";
+            else                  sub = "Available";
+
+            var row = new ActionRow(d.name, sub);
+            row.add_prefix(new Gtk.Image.from_icon_name(bt_type_icon(d.dev_icon)));
+            row.activatable = true;
+            if (d.connected)
+                row.set_suffix(new Gtk.Image.from_icon_name("emblem-ok-symbolic"));
+            row.activated.connect(() => on_bt_row_activated(d));
+            return row;
+        }
+
+        string bt_type_icon(string dev_icon) {
+            switch (dev_icon) {
+                case "audio-card":
+                case "audio-headset":
+                case "audio-headphones": return "audio-headphones-symbolic";
+                case "input-mouse":      return "input-mouse-symbolic";
+                case "input-keyboard":   return "input-keyboard-symbolic";
+                case "phone":            return "phone-symbolic";
+                default:                 return "bluetooth-symbolic";
+            }
+        }
+
+        void on_bt_row_activated(BtDevice d) {
+            var dlg = new Adw.AlertDialog(d.name, null);
+            dlg.add_response("cancel", "Cancel");
+            if (d.connected) {
+                dlg.add_response("disconnect", "Disconnect");
+                dlg.set_response_appearance("disconnect", Adw.ResponseAppearance.DESTRUCTIVE);
+            } else if (d.paired) {
+                dlg.add_response("connect", "Connect");
+                dlg.set_response_appearance("connect", Adw.ResponseAppearance.SUGGESTED);
+            } else {
+                dlg.add_response("pair", "Pair");
+                dlg.set_response_appearance("pair", Adw.ResponseAppearance.SUGGESTED);
+            }
+            if (d.paired)
+                dlg.add_response("remove", "Remove");
+            dlg.set_close_response("cancel");
+            dlg.response.connect((resp) => {
+                switch (resp) {
+                    case "connect":    bt.connect_device(d.mac);    break;
+                    case "disconnect": bt.disconnect_device(d.mac); break;
+                    case "pair":       bt.pair_device(d.mac);       break;
+                    case "remove":     bt.remove_device(d.mac);     break;
+                }
+            });
+            dlg.present(root_widget());
+
+            if (d.connected) bt.request_device_details(d.mac);
+        }
+
+        void update_bt_tracking() {
+            if (bt.connected_name != last_bt_conn) {
+                last_bt_conn = bt.connected_name;
+                if (bt.connected) {
+                    var mac = connected_mac();
+                    if (mac != "") bt.request_device_details(mac);
+                }
+            }
+            bt_details_group.visible = bt.connected;
+        }
+
+        string connected_mac() {
+            foreach (var d in bt.devices)
+                if (d.connected) return d.mac;
+            return "";
+        }
+
+        void on_bt_details_ready(BtDeviceDetails d) {
+            bt_name_row.subtitle    = or_dash(d.name);
+            bt_type_row.subtitle    = or_dash(d.dev_icon);
+            bt_battery_row.subtitle = d.battery >= 0 ? "%d%%".printf(d.battery) : "—";
+            bt_addr_row.subtitle    = or_dash(d.mac);
+            bt_paired_row.subtitle  = d.bonded ? "Bonded" : (d.paired ? "Paired" : "No");
+        }
+
+        // ---- helpers -------------------------------------------------------
+
+        Gtk.Widget? root_widget() {
+            return root_box.get_root() as Gtk.Widget;
+        }
+
+        static void clear_box(Gtk.Box box) {
+            var c = box.get_first_child();
+            while (c != null) {
+                var n = c.get_next_sibling();
+                box.remove(c);
+                c = n;
+            }
+        }
+
+        static string or_dash(string v) {
+            return v == "" ? "—" : v;
+        }
+    }
+}

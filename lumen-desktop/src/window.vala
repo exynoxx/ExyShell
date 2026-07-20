@@ -302,6 +302,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
     }
 
     private bool on_key_pressed(uint keyval, uint keycode, Gdk.ModifierType state) {
+        stderr.printf("[DBG] on_key_pressed keyval=%u search_active=%s\n", keyval, search_db.active.to_string());
         var mods = state & (Gdk.ModifierType.CONTROL_MASK
                           | Gdk.ModifierType.ALT_MASK
                           | Gdk.ModifierType.SHIFT_MASK

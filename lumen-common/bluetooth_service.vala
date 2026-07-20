@@ -4,6 +4,9 @@ public class BluetoothService : GLib.Object {
 
     public signal void state_changed();
 
+    /** Fires on the main thread once request_device_details() resolves. */
+    public signal void device_details_ready(BtDeviceDetails d);
+
     public bool       powered        { get; private set; default = false; }
     public bool       scanning       { get; private set; default = false; }
     public BtDevice[] devices        = {};
@@ -25,6 +28,17 @@ public class BluetoothService : GLib.Object {
         var saved = RadioState.get_bluetooth();
         if (saved != null) apply_power(saved);
         else               poll_state();
+        GLib.Timeout.add_seconds(POLL_INTERVAL_SEC, () => {
+            poll_state();
+            return Source.CONTINUE;
+        });
+    }
+
+    // Same as the default ctor but WITHOUT re-applying the saved power state, so
+    // merely constructing the service (e.g. the settings page building at app
+    // launch) never toggles the user's Bluetooth. Use in read/observe contexts.
+    public BluetoothService.passive() {
+        poll_state();
         GLib.Timeout.add_seconds(POLL_INTERVAL_SEC, () => {
             poll_state();
             return Source.CONTINUE;
@@ -76,6 +90,17 @@ public class BluetoothService : GLib.Object {
     public void remove_device(string mac) {
         btctl.remove(mac);
         schedule_rescan(800);
+    }
+
+    /** Fetch extended info for one device off the main loop. */
+    public void request_device_details(string mac) {
+        new GLib.Thread<void>("bt-details", () => {
+            var d = btctl.device_details(mac);
+            GLib.Idle.add(() => {
+                device_details_ready(d);
+                return Source.REMOVE;
+            });
+        });
     }
 
     public void refresh_scan(bool rescan = false) {

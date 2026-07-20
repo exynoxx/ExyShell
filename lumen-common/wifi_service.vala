@@ -7,12 +7,16 @@ public class WifiService : GLib.Object {
     /** Fires on the main thread once a connect_to() attempt resolves. */
     public signal void connect_result(string ssid, WifiConnectResult result);
 
+    /** Fires on the main thread once request_details() resolves. */
+    public signal void details_ready(NetDetails wifi, NetDetails eth);
+
     public string    connected_ssid     { get; private set; default = ""; }
     public string    connecting_ssid    { get; private set; default = ""; }
     public WifiNet[] nets               = {};
     public bool      scanning           { get; private set; default = false; }
     public bool      enabled            { get; private set; default = true; }
     public bool      ethernet_connected { get; private set; default = false; }
+    public string    ethernet_device    { get; private set; default = ""; }
 
     public bool connected { get { return connected_ssid != ""; } }
 
@@ -29,6 +33,17 @@ public class WifiService : GLib.Object {
         var saved = RadioState.get_wifi();
         if (saved != null) apply_radio(saved);
         else               poll_connection();
+        GLib.Timeout.add_seconds(POLL_INTERVAL_SEC, () => {
+            poll_connection();
+            return Source.CONTINUE;
+        });
+    }
+
+    // Same as the default ctor but WITHOUT re-applying the saved radio state, so
+    // merely constructing the service (e.g. the settings page building at app
+    // launch) never toggles the user's WiFi. Use in read/observe contexts.
+    public WifiService.passive() {
+        poll_connection();
         GLib.Timeout.add_seconds(POLL_INTERVAL_SEC, () => {
             poll_connection();
             return Source.CONTINUE;
@@ -101,14 +116,58 @@ public class WifiService : GLib.Object {
             var new_nets = new_enabled ? nmcli.fetch_nets() : new WifiNet[0];
             var new_conn = nmcli.query_connected();
             var new_eth  = nmcli.query_ethernet_connected();
+            var new_ethdev = nmcli.get_ethernet_device();
             GLib.Idle.add(() => {
                 enabled            = new_enabled;
                 nets               = new_nets;
                 connected_ssid     = new_conn;
                 ethernet_connected = new_eth;
+                ethernet_device    = new_ethdev;
                 scanning           = false;
                 scan_in_flight     = false;
                 state_changed();
+                return Source.REMOVE;
+            });
+        });
+    }
+
+    /** Bring the ethernet device up/down, then refresh. */
+    public void set_ethernet(bool on) {
+        nmcli.set_ethernet_enabled(on);
+        schedule_rescan(1000);
+    }
+
+    /**
+     * Connect to a hidden SSID (one that doesn't broadcast). Runs on a worker
+     * thread and emits connect_result exactly like connect_to().
+     */
+    public void connect_to_hidden(string ssid, string password) {
+        if (connecting_ssid != "") return;
+        connecting_ssid = ssid;
+        state_changed();
+
+        new GLib.Thread<void>("wifi-connect-hidden", () => {
+            var res = nmcli.connect_hidden(ssid, password);
+            GLib.Idle.add(() => {
+                connecting_ssid = "";
+                connect_result(ssid, res);
+                if (res == WifiConnectResult.SUCCESS) refresh_scan(false);
+                else                                  state_changed();
+                return Source.REMOVE;
+            });
+        });
+    }
+
+    /**
+     * Fetch per-device IP details for the WiFi and ethernet devices off the
+     * main loop; details_ready fires with both halves.
+     */
+    public void request_details() {
+        new GLib.Thread<void>("wifi-details", () => {
+            var wifi_det = nmcli.device_details(nmcli.get_wifi_device());
+            var eth_det  = nmcli.device_details(ethernet_device);
+            GLib.Idle.add(() => {
+                details_ready(wifi_det, eth_det);
                 return Source.REMOVE;
             });
         });

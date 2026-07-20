@@ -130,17 +130,21 @@ public class PagedGrid : Gtk.Widget {
     }
 
     public void next_page() {
-        if (active_page >= page_count - 1) return;
+        stderr.printf("[DBG] next_page ENTER active=%d count=%d width=%d\n", active_page, page_count, get_width());
+        if (active_page >= page_count - 1) { stderr.printf("[DBG] next_page GUARD hit\n"); return; }
         active_page++;
         page_changed(active_page);
         start_slide_to(active_page * (float) get_width());
+        stderr.printf("[DBG] next_page EXIT active=%d\n", active_page);
     }
 
     public void prev_page() {
-        if (active_page <= 0) return;
+        stderr.printf("[DBG] prev_page ENTER active=%d count=%d width=%d\n", active_page, page_count, get_width());
+        if (active_page <= 0) { stderr.printf("[DBG] prev_page GUARD hit\n"); return; }
         active_page--;
         page_changed(active_page);
         start_slide_to(active_page * (float) get_width());
+        stderr.printf("[DBG] prev_page EXIT active=%d\n", active_page);
     }
 
     public void goto_page(int page) {
@@ -155,6 +159,8 @@ public class PagedGrid : Gtk.Widget {
         slide_from_offset = current_offset;
         slide_to_offset   = target;
         var clock = get_frame_clock();
+        stderr.printf("[DBG] start_slide_to target=%.0f from=%.0f clock_null=%s tick_id=%u mapped=%s\n",
+                      target, current_offset, (clock == null).to_string(), slide_tick_id, get_mapped().to_string());
         slide_start_us = (clock != null) ? clock.get_frame_time() : GLib.get_monotonic_time();
         if (slide_tick_id == 0) {
             slide_tick_id = add_tick_callback(on_slide_tick);
@@ -167,6 +173,7 @@ public class PagedGrid : Gtk.Widget {
         double t = double.min(elapsed_s / SLIDE_DURATION_S, 1.0);
         double eased = ease_out_expo(t);
         current_offset = (float) (slide_from_offset + (slide_to_offset - slide_from_offset) * eased);
+        stderr.printf("[DBG] tick t=%.2f current_offset=%.0f -> to=%.0f\n", t, current_offset, slide_to_offset);
         // queue_allocate (not queue_draw) — pages are positioned via their
         // allocation transform, so the slide has to re-allocate to move.
         queue_allocate();

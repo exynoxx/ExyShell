@@ -17,6 +17,23 @@ public class BtDevice : GLib.Object {
 }
 
 /**
+ * Extended per-device info from `bluetoothctl info` — everything BtDevice holds
+ * plus pairing/trust/battery detail for the settings device-detail expansion.
+ */
+public class BtDeviceDetails : GLib.Object {
+    public string mac          = "";
+    public string name         = "";
+    public string dev_icon     = "";
+    public string address_type = "";
+    public bool   paired       = false;
+    public bool   bonded       = false;
+    public bool   trusted      = false;
+    public bool   connected    = false;
+    public int    battery      = -1;   // -1 when absent
+    public string rssi         = "";
+}
+
+/**
  * bluetoothctl accepts one-shot subcommands non-interactively, so reads use
  * LumenCommon.Proc.run_capture (blocking) and fire-and-forget actions use
  * LumenCommon.Proc.spawn_detached.
@@ -79,6 +96,45 @@ public class BtctlClient : GLib.Object {
         }
         if (name == "") name = mac;
         return new BtDevice(mac, name, dev_icon, paired, connected);
+    }
+
+    /**
+     * Full parse of `bluetoothctl info <mac>` — same command as info() but also
+     * reads AddressType/Bonded/Trusted/RSSI and the Battery Percentage line
+     * ("Battery Percentage: 0x64 (100)" → 100). Blocking; call off the main loop.
+     */
+    public BtDeviceDetails device_details(string mac) {
+        var d = new BtDeviceDetails();
+        d.mac  = mac;
+        d.name = mac;
+
+        string? out_str = LumenCommon.Proc.run_capture(new string[]{ "bluetoothctl", "info", mac });
+        if (out_str == null) return d;
+
+        foreach (var line in out_str.split("\n")) {
+            var t = line.strip();
+            if      (t.has_prefix("Name:"))         d.name         = field_value(t);
+            else if (t.has_prefix("Icon:"))         d.dev_icon     = field_value(t);
+            else if (t.has_prefix("AddressType:"))  d.address_type = field_value(t);
+            else if (t.has_prefix("Paired:"))       d.paired       = field_value(t) == "yes";
+            else if (t.has_prefix("Bonded:"))       d.bonded       = field_value(t) == "yes";
+            else if (t.has_prefix("Trusted:"))      d.trusted      = field_value(t) == "yes";
+            else if (t.has_prefix("Connected:"))    d.connected    = field_value(t) == "yes";
+            else if (t.has_prefix("RSSI:"))         d.rssi         = field_value(t);
+            else if (t.has_prefix("Battery Percentage:")) {
+                // "0x64 (100)" — take the parenthesized decimal.
+                var v = field_value(t);
+                int lp = v.index_of_char('(');
+                int rp = v.index_of_char(')');
+                if (lp >= 0 && rp > lp) {
+                    int pct = 0;
+                    if (int.try_parse(v.substring(lp + 1, rp - lp - 1).strip(), out pct))
+                        d.battery = pct;
+                }
+            }
+        }
+        if (d.name == "") d.name = mac;
+        return d;
     }
 
     public void scan(uint secs) {

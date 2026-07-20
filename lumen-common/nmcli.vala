@@ -29,6 +29,20 @@ public class WifiNet : GLib.Object {
     }
 }
 
+/**
+ * Per-device network details (IP configuration, link identity), as reported by
+ * `nmcli device show`. Empty strings for fields NetworkManager doesn't report.
+ */
+public class NetDetails : GLib.Object {
+    public string   ip4      = "";
+    public string   gateway  = "";
+    public string[] dns      = {};
+    public string   ip6      = "";
+    public string   mac      = "";
+    public string   security = "";
+    public string   band     = "";
+}
+
 public class NmcliClient : GLib.Object {
 
     /**
@@ -112,6 +126,58 @@ public class NmcliClient : GLib.Object {
         return "";
     }
 
+    public string get_ethernet_device() {
+        string? out_str = LumenCommon.Proc.run_capture(new string[]{
+            "nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"
+        });
+        if (out_str == null) return "";
+
+        foreach (var line in out_str.split("\n")) {
+            var p = split_terse(line, 3);
+            if (p.length >= 3 && p[1] == "ethernet")
+                return p[0];
+        }
+        return "";
+    }
+
+    /**
+     * BLOCKING — call from a background thread. Reads a device's IP config and
+     * link identity via `nmcli device show`, parsing the terse KEY:VALUE lines
+     * (indexed keys like IP4.ADDRESS[1] / IP4.DNS[1]). Missing fields stay "".
+     */
+    public NetDetails device_details(string dev) {
+        var d = new NetDetails();
+        if (dev == "") return d;
+
+        string? out_str = LumenCommon.Proc.run_capture(new string[]{
+            "nmcli", "-t", "-f",
+            "IP4.ADDRESS,IP4.GATEWAY,IP4.DNS,IP6.ADDRESS,GENERAL.HWADDR,GENERAL.CONNECTION",
+            "device", "show", dev
+        });
+        if (out_str == null) return d;
+
+        string[] dns = {};
+        foreach (var line in out_str.split("\n")) {
+            var p = split_terse(line, 2);
+            if (p.length < 2) continue;
+            string key = p[0].strip();
+            string val = p[1].strip();
+            if (val == "" || val == "--") continue;
+
+            // Strip the [n] index suffix so IP4.ADDRESS[1] matches IP4.ADDRESS.
+            int br = key.index_of_char('[');
+            string bare = br >= 0 ? key.substring(0, br) : key;
+
+            if (bare == "IP4.ADDRESS" && d.ip4 == "") d.ip4 = val;
+            else if (bare == "IP4.GATEWAY")           d.gateway = val;
+            else if (bare == "IP4.DNS")               dns += val;
+            else if (bare == "IP6.ADDRESS" && d.ip6 == "") d.ip6 = val;
+            else if (bare == "GENERAL.HWADDR")        d.mac = val;
+        }
+        d.dns = dns;
+        return d;
+    }
+
     public bool query_enabled() {
         string? out_str = LumenCommon.Proc.run_capture(new string[]{ "nmcli", "radio", "wifi" });
         if (out_str == null) return false;
@@ -174,6 +240,51 @@ public class NmcliClient : GLib.Object {
             || err.contains("password"))
             return WifiConnectResult.BAD_PASSWORD;
         return WifiConnectResult.FAILED;
+    }
+
+    /**
+     * Connect to a hidden SSID (not present in scan results). Mirrors connect()
+     * but adds `hidden yes` so NetworkManager probes the SSID directly. Blocking
+     * — call from a background thread.
+     */
+    public WifiConnectResult connect_hidden(string ssid, string password) {
+        string[] argv;
+        if (password == "")
+            argv = new string[] { "nmcli", "device", "wifi", "connect", ssid, "hidden", "yes" };
+        else
+            argv = new string[] { "nmcli", "device", "wifi", "connect", ssid, "password", password, "hidden", "yes" };
+
+        string std_out = "", std_err = "";
+        int status = -1;
+        try {
+            Process.spawn_sync(null, argv, null, SpawnFlags.SEARCH_PATH,
+                null, out std_out, out std_err, out status);
+        } catch (SpawnError e) {
+            return WifiConnectResult.FAILED;
+        }
+
+        bool ok = false;
+        try { ok = Process.check_wait_status(status); } catch (Error e) { ok = false; }
+        if (ok) return WifiConnectResult.SUCCESS;
+
+        string err = (std_err + " " + std_out).down();
+        if (err.contains("secrets were required")
+            || err.contains("no secrets")
+            || err.contains("802-11-wireless-security")
+            || err.contains("802.1x")
+            || err.contains("authentication")
+            || err.contains("password"))
+            return WifiConnectResult.BAD_PASSWORD;
+        return WifiConnectResult.FAILED;
+    }
+
+    /** Fire-and-forget: bring the ethernet device up or down. */
+    public void set_ethernet_enabled(bool on) {
+        string dev = get_ethernet_device();
+        if (dev == "") return;
+        LumenCommon.Proc.spawn_detached(new string[] {
+            "nmcli", "device", on ? "connect" : "disconnect", dev
+        });
     }
 
     /**

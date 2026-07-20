@@ -89,6 +89,8 @@ settings_sources = files(
   'src/pages/keyboard_page.vala',
   'src/pages/mouse_page.vala',
   'src/pages/touchpad_page.vala',
+  'src/pages/networking_page.vala',
+  'src/pages/sound_page.vala',
 )
 
 # Shared display-profile store (lumen-common) — the Display page saves the
@@ -98,6 +100,13 @@ settings_sources += display_profiles_source
 # Shared tray-applet catalog (lumen-common) — the Panel page's reorder list
 # builds its rows from this, the same list lumen-panel resolves config against.
 settings_sources += tray_catalog_source
+
+# Shared networking + sound backends (lumen-common), also compiled into
+# lumen-panel. The Networking and Sound pages drive these live. proc_source
+# (LumenCommon.Proc) is required by them and was not otherwise linked here.
+settings_sources += proc_source
+settings_sources += network_backend_source
+settings_sources += sound_source
 
 libxml_settings_dep = dependency('libxml-2.0', required: false)
 settings_wayfire_enabled = libxml_settings_dep.found()

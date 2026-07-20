@@ -145,6 +145,25 @@ proc_source = files(
   'lumen-common/proc.vala',
 )
 
+# Networking backends (nmcli/bluetoothctl shell-out: WiFi + Bluetooth + Ethernet).
+# Global namespace, UI-free. Compiled into lumen-panel (tray) and lumen-settings
+# (Networking page). Depend on proc_source (LumenCommon.Proc) + gee_dep/json_dep.
+network_backend_source = files(
+  'lumen-common/nmcli.vala',
+  'lumen-common/wifi_service.vala',
+  'lumen-common/btctl.vala',
+  'lumen-common/bluetooth_service.vala',
+  'lumen-common/radio_state.vala',
+)
+
+# Sound backend (pactl/wpctl shell-out: sinks, sources, per-app streams, opt-in
+# input peak meter). Global namespace, UI-free. Compiled into lumen-panel (tray)
+# and lumen-settings (Sound page). Depends on proc_source (LumenCommon.Proc).
+sound_source = files(
+  'lumen-common/sound_pactl.vala',
+  'lumen-common/sound_service.vala',
+)
+
 # Shared DBus CLI helper (name_has_owner "is the daemon running?" check). Used by
 # lumen-osdctl and lumen-lockctl.
 dbus_cli_source = files(
@@ -175,7 +194,6 @@ panel_sources = files(
   'lumen-panel/src/theme.vala',
   'lumen-panel/src/panel_config.vala',
   'lumen-panel/src/panel_service.vala',
-  'lumen-panel/src/radio_state.vala',
   'lumen-panel/src/utils.vala',
   'lumen-panel/src/wl/toplevels.vala',
   'lumen-panel/src/widgets/tray_button.vala',
@@ -205,20 +223,14 @@ panel_sources = files(
   'lumen-panel/src/components/battery/battery_module.vala',
   'lumen-panel/src/components/battery/power_profile.vala',
   'lumen-panel/src/components/battery/power_profile_service.vala',
-  'lumen-panel/src/components/sound/pactl.vala',
-  'lumen-panel/src/components/sound/sound_service.vala',
   'lumen-panel/src/components/sound/sound.vala',
   'lumen-panel/src/components/sound/sound_module.vala',
   'lumen-panel/src/components/sound/sound_detail.vala',
   'lumen-panel/src/components/brightness/brightness_service.vala',
-  'lumen-panel/src/components/wifi/nmcli.vala',
-  'lumen-panel/src/components/wifi/wifi_service.vala',
   'lumen-panel/src/components/wifi/wifi.vala',
   'lumen-panel/src/components/wifi/wifirow.vala',
   'lumen-panel/src/components/wifi/wifi_module.vala',
   'lumen-panel/src/components/wifi/wifi_detail.vala',
-  'lumen-panel/src/components/bluetooth/btctl.vala',
-  'lumen-panel/src/components/bluetooth/bluetooth_service.vala',
   'lumen-panel/src/components/bluetooth/bluetooth.vala',
   'lumen-panel/src/components/bluetooth/bluetoothrow.vala',
   'lumen-panel/src/components/bluetooth/bluetooth_module.vala',
@@ -226,7 +238,7 @@ panel_sources = files(
 )
 
 executable('lumen-panel',
-  panel_sources + panel_peek_sources + panel_resources + lumen_common_sources + proc_source + tray_catalog_source,
+  panel_sources + panel_peek_sources + panel_resources + lumen_common_sources + proc_source + tray_catalog_source + network_backend_source + sound_source,
   vala_args: panel_vala_args,
   dependencies: panel_deps,
   link_args: ['-Wl,--no-as-needed'],

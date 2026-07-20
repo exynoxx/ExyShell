@@ -60,6 +60,8 @@ namespace LumenSettings {
             registry.add(new KeyboardPage(),      "Input");
             registry.add(new MousePage(),         "Input");
             registry.add(new TouchpadPage(),      "Input");
+            registry.add(new NetworkingPage(),    "Network");
+            registry.add(new SoundPage(),         "Network");
 #if WITH_WAYFIRE_CONFIG
             Wayfire.WayfirePages.register(registry);
 #endif
