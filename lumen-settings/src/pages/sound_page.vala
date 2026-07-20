@@ -46,6 +46,7 @@ namespace LumenSettings {
         Gtk.Scale   in_scale;
         Gtk.Label   in_label;
         Gtk.LevelBar? level_bar = null;
+        Gtk.ToggleButton? level_toggle = null;
         bool        in_dragging = false;
         string      sources_sig = "";
 
@@ -165,7 +166,11 @@ namespace LumenSettings {
             vrow.set_suffix(slider_box(in_mute_btn, in_scale, in_label));
             input_group.add_row(vrow);
 
-            // Level meter only when parec is present; gated on group visibility.
+            // Level meter only when parec is present. Opening the meter starts a
+            // real mic capture stream, which forces Bluetooth headsets from A2DP
+            // down to the HSP/HFP call profile. So it is strictly manual: the
+            // capture opens only while the user holds the Test toggle on, never
+            // just because the page is visible.
             if (service.meter_available()) {
                 level_bar = new Gtk.LevelBar.for_interval(0.0, 1.0) {
                     mode = Gtk.LevelBarMode.CONTINUOUS,
@@ -173,30 +178,40 @@ namespace LumenSettings {
                     width_request = 160,
                     valign = Gtk.Align.CENTER,
                 };
-                var lrow = new ActionRow("Input Level");
-                lrow.set_suffix(level_bar);
+                level_toggle = new Gtk.ToggleButton.with_label("Test") {
+                    valign = Gtk.Align.CENTER,
+                };
+                level_toggle.add_css_class("flat");
+                level_toggle.toggled.connect(() => {
+                    if (level_toggle.active)
+                        service.start_input_monitor();
+                    else
+                        service.stop_input_monitor();
+                });
+
+                var lbox = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 6);
+                lbox.append(level_toggle);
+                lbox.append(level_bar);
+
+                var lrow = new ActionRow("Input Level",
+                    "Opening the meter may switch Bluetooth headsets to call quality");
+                lrow.set_suffix(lbox);
                 input_group.add_row(lrow);
 
                 service.input_peak_changed.connect((peak) => {
                     if (level_bar != null) level_bar.value = peak;
                 });
 
-                input_group.map.connect(update_meter_state);
-                input_group.unmap.connect(update_meter_state);
+                // Safety only: if the group leaves the screen (page switched,
+                // window closed) while the meter is on, stop the capture so we
+                // never leave a Bluetooth headset stuck in the call profile.
+                input_group.unmap.connect(() => {
+                    if (level_toggle != null && level_toggle.active)
+                        level_toggle.active = false;
+                });
             }
 
             return input_group;
-        }
-
-        // Start the mic meter only while the Input group is actually on screen
-        // (unmapped when another Stack page is shown), so Settings does not hold
-        // a capture stream open the whole time it runs.
-        void update_meter_state() {
-            if (!service.meter_available()) return;
-            if (input_group.get_mapped())
-                service.start_input_monitor();
-            else
-                service.stop_input_monitor();
         }
 
         // ---------------- Applications ----------------
