@@ -163,9 +163,19 @@ public class WifiService : GLib.Object {
      * main loop; details_ready fires with both halves.
      */
     public void request_details() {
+        string conn = connected_ssid;
         new GLib.Thread<void>("wifi-details", () => {
             var wifi_det = nmcli.device_details(nmcli.get_wifi_device());
             var eth_det  = nmcli.device_details(ethernet_device);
+
+            // `nmcli device show` carries neither the security type nor the
+            // band/passphrase, so pull those from the live AP + saved profile.
+            string sec, band;
+            nmcli.active_ap(out sec, out band);
+            wifi_det.security = sec;
+            wifi_det.band     = band;
+            wifi_det.password = nmcli.connection_psk(conn);
+
             GLib.Idle.add(() => {
                 details_ready(wifi_det, eth_det);
                 return Source.REMOVE;

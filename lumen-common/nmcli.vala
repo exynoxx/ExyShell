@@ -41,6 +41,7 @@ public class NetDetails : GLib.Object {
     public string   mac      = "";
     public string   security = "";
     public string   band     = "";
+    public string   password = "";
 }
 
 public class NmcliClient : GLib.Object {
@@ -176,6 +177,55 @@ public class NmcliClient : GLib.Object {
         }
         d.dns = dns;
         return d;
+    }
+
+    /**
+     * BLOCKING — call from a background thread. Reads the security type and RF
+     * band of the currently associated access point from the scan list (the
+     * IN-USE `*` row). `nmcli device show` reports neither, so the band is
+     * derived from the AP's frequency: sub-3 GHz ⇒ 2.4, sub-5.925 GHz ⇒ 5,
+     * else 6. Both stay "" when nothing is connected.
+     */
+    public void active_ap(out string security, out string band) {
+        security = "";
+        band     = "";
+
+        string? out_str = LumenCommon.Proc.run_capture(new string[]{
+            "nmcli", "-t", "-f", "IN-USE,FREQ,SECURITY", "device", "wifi", "list"
+        });
+        if (out_str == null) return;
+
+        foreach (var line in out_str.split("\n")) {
+            var p = split_terse(line, 3);
+            if (p.length < 3 || p[0].strip() != "*") continue;
+
+            security = p[2].strip();
+
+            // FREQ arrives as e.g. "5640 MHz"; take the leading integer.
+            int mhz = 0;
+            if (int.try_parse(p[1].strip().split(" ")[0], out mhz) && mhz > 0) {
+                if      (mhz < 3000) band = "2.4 GHz";
+                else if (mhz < 5925) band = "5 GHz";
+                else                 band = "6 GHz";
+            }
+            return;
+        }
+    }
+
+    /**
+     * BLOCKING — call from a background thread. Returns the saved passphrase for
+     * a connection profile (`nmcli -s -g …psk`), or "" when the profile has no
+     * PSK (open/enterprise network) or the secret can't be read. `-s` is
+     * required for nmcli to emit secrets at all.
+     */
+    public string connection_psk(string name) {
+        if (name == "") return "";
+        string? out_str = LumenCommon.Proc.run_capture(new string[]{
+            "nmcli", "-s", "-g", "802-11-wireless-security.psk",
+            "connection", "show", "id", name
+        });
+        if (out_str == null) return "";
+        return out_str.strip();
     }
 
     public bool query_enabled() {

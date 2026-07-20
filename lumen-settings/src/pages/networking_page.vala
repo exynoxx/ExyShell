@@ -34,6 +34,9 @@ namespace LumenSettings {
         ActionRow wifi_mac_row;
         ActionRow wifi_sec_row;
         ActionRow wifi_band_row;
+        ActionRow wifi_pw_row;
+        Gtk.ToggleButton wifi_pw_reveal;
+        string    wifi_password = "";
 
         // Ethernet
         ActionRow eth_status_row;
@@ -312,14 +315,52 @@ namespace LumenSettings {
             wifi_mac_row  = new ActionRow("Hardware address");
             wifi_sec_row  = new ActionRow("Security");
             wifi_band_row = new ActionRow("Band");
+
+            // Password row: the passphrase is masked by default and revealed
+            // with the eye toggle; a copy button puts it on the clipboard. The
+            // whole row is hidden for open networks (or when NM won't yield the
+            // secret), so it only appears when there's an actual password.
+            wifi_pw_row = new ActionRow("Password", "");
+            wifi_pw_reveal = new Gtk.ToggleButton() {
+                icon_name = "view-reveal-symbolic",
+                tooltip_text = "Show password",
+                valign = Gtk.Align.CENTER,
+            };
+            wifi_pw_reveal.add_css_class("flat");
+            wifi_pw_reveal.toggled.connect(update_password_display);
+            var wifi_pw_copy = new Gtk.Button.from_icon_name("edit-copy-symbolic") {
+                tooltip_text = "Copy password",
+                valign = Gtk.Align.CENTER,
+            };
+            wifi_pw_copy.add_css_class("flat");
+            wifi_pw_copy.clicked.connect(() => {
+                if (wifi_password != "")
+                    root_box.get_clipboard().set_text(wifi_password);
+            });
+            var wifi_pw_suffix = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 4);
+            wifi_pw_suffix.append(wifi_pw_reveal);
+            wifi_pw_suffix.append(wifi_pw_copy);
+            wifi_pw_row.set_suffix(wifi_pw_suffix);
+
             wifi_details_group.add_row(wifi_ip_row);
             wifi_details_group.add_row(wifi_gw_row);
             wifi_details_group.add_row(wifi_dns_row);
             wifi_details_group.add_row(wifi_mac_row);
             wifi_details_group.add_row(wifi_sec_row);
             wifi_details_group.add_row(wifi_band_row);
+            wifi_details_group.add_row(wifi_pw_row);
             wifi_details_group.visible = false;
             root_box.append(wifi_details_group);
+        }
+
+        // Render the passphrase masked or plain per the reveal toggle. Called on
+        // toggle and whenever a fresh secret arrives.
+        void update_password_display() {
+            bool show = wifi_pw_reveal.active && wifi_password != "";
+            // Fixed-length mask: don't leak the passphrase length when hidden.
+            wifi_pw_row.subtitle = show ? wifi_password : "••••••••";
+            wifi_pw_reveal.tooltip_text = wifi_pw_reveal.active
+                ? "Hide password" : "Show password";
         }
 
         // ---- Ethernet ------------------------------------------------------
@@ -371,20 +412,18 @@ namespace LumenSettings {
             wifi_gw_row.subtitle   = or_dash(wifi_det.gateway);
             wifi_dns_row.subtitle  = or_dash(string.joinv(", ", wifi_det.dns));
             wifi_mac_row.subtitle  = or_dash(wifi_det.mac);
-            wifi_sec_row.subtitle  = or_dash(wifi.connected ? current_security() : "");
+            wifi_sec_row.subtitle  = or_dash(wifi_det.security);
             wifi_band_row.subtitle = or_dash(wifi_det.band);
+
+            wifi_password = wifi_det.password;
+            wifi_pw_reveal.active = false;           // re-mask on every refresh
+            wifi_pw_row.visible = wifi_password != "";
+            update_password_display();
 
             eth_ip_row.subtitle   = or_dash(eth_det.ip4);
             eth_gw_row.subtitle   = or_dash(eth_det.gateway);
             eth_dns_row.subtitle  = or_dash(string.joinv(", ", eth_det.dns));
             eth_mac_row.subtitle  = or_dash(eth_det.mac);
-        }
-
-        string current_security() {
-            foreach (var n in wifi.nets)
-                if (n.ssid == wifi.connected_ssid)
-                    return n.is_secured() ? n.security : "Open";
-            return "";
         }
 
         void update_conn_tracking() {
