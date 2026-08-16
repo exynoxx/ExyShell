@@ -402,6 +402,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
     wf::option_wrapper_t<int> edge_px_opt{"wayfire-curtain-peek/edge_px"};
     wf::option_wrapper_t<wf::color_t> backdrop_color_opt{"wayfire-curtain-peek/backdrop_color"};
     wf::option_wrapper_t<std::string> drawer_app_id_opt{"wayfire-curtain-peek/drawer_app_id"};
+    wf::option_wrapper_t<std::string> widget_app_id_opt{"wayfire-curtain-peek/widget_app_id"};
     wf::option_wrapper_t<wf::animation_description_t> duration_opt{"wayfire-curtain-peek/duration"};
     wf::option_wrapper_t<int> fold_count_opt{"wayfire-curtain-peek/fold_count"};
     wf::option_wrapper_t<double> fold_depth_opt{"wayfire-curtain-peek/fold_depth"};
@@ -423,6 +424,12 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
     // the curtain is closed and revealed only while it is open; cached so we can
     // toggle it even after we have disabled (and thus hidden) its node.
     wayfire_view desktop_view;
+
+    // The desktop widget layer (app-id == widget_app_id). It lives on BOTTOM
+    // too, so without this it would render on top of the revealed grid. It is
+    // the exact mirror of desktop_view: visible while idle, hidden while the
+    // reveal is open.
+    wayfire_view widget_view;
 
     // No grab (capabilities = 0): while open, the revealed desktop grid must
     // stay clickable, same rationale as wayfire-desktop-peek.
@@ -484,6 +491,11 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
         {
             desktop_view = nullptr;
         }
+
+        if (ev->view == widget_view)
+        {
+            widget_view = nullptr;
+        }
     };
 
     wf::effect_hook_t on_frame = [this] ()
@@ -533,9 +545,12 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
         {
             hard_reset();
         }
-        // Don't leave the desktop stuck hidden if the plugin is unloaded.
+        // Don't leave either BOTTOM-layer surface stuck hidden if the plugin
+        // is unloaded.
         set_desktop_visible(true);
+        set_widgets_visible(true);
         desktop_view = nullptr;
+        widget_view = nullptr;
     }
 
     // Entry points for the plugin-wide IPC handlers.
@@ -611,6 +626,11 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
         // 2. Reveal the (live, interactive) desktop grid. It lives on BOTTOM, so
         //    it is naturally below the OVERLAY screenshot added in step 5.
         set_desktop_visible(true);
+
+        // 2b. The widget layer shares the BOTTOM layer with the grid and would
+        //     otherwise render on top of it. Hide it for the duration of the
+        //     reveal; hard_reset() brings it back.
+        set_widgets_visible(false);
 
         // 2a. Hand keyboard focus to the revealed grid so the user can start
         //     typing into its search field straight away. Moving the seat off
@@ -736,6 +756,39 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
         }
     }
 
+    bool is_widget_view(wayfire_view view) const
+    {
+        return view && (view->get_app_id() == (std::string) widget_app_id_opt);
+    }
+
+    // Find the desktop widget layer on this output, if it is mapped.
+    wayfire_view find_widget_view()
+    {
+        for (auto& view : wf::collect_views_from_output(output,
+            {wf::scene::layer::BOTTOM}))
+        {
+            if (view && view->is_mapped() && is_widget_view(view))
+            {
+                return view;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void set_widgets_visible(bool visible)
+    {
+        if (!widget_view)
+        {
+            widget_view = find_widget_view();
+        }
+
+        if (widget_view)
+        {
+            wf::scene::set_node_enabled(widget_view->get_root_node(), visible);
+        }
+    }
+
     // Hide / show the live foreground layers (wallpaper, app windows, panel).
     // BOTTOM (the desktop grid + grey backdrop) and OVERLAY (the snapshot) are
     // left enabled.
@@ -804,6 +857,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
         // Curtain closed → desktop grid goes back to hidden. Hand keyboard
         // focus back to whatever real window should hold it now that the grid's
         // surface is no longer visible.
+        set_widgets_visible(true);
         set_desktop_visible(false);
         if (auto seat = wf::get_core().seat.get())
         {

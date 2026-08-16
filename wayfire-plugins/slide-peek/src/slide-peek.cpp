@@ -133,6 +133,7 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
     wf::option_wrapper_t<wf::activatorbinding_t> toggle_opt{"wayfire-slide-peek/toggle"};
     wf::option_wrapper_t<wf::activatorbinding_t> dismiss_opt{"wayfire-slide-peek/dismiss"};
     wf::option_wrapper_t<std::string> drawer_app_id_opt{"wayfire-slide-peek/drawer_app_id"};
+    wf::option_wrapper_t<std::string> widget_app_id_opt{"wayfire-slide-peek/widget_app_id"};
     wf::option_wrapper_t<std::string> direction_opt{"wayfire-slide-peek/direction"};
     wf::option_wrapper_t<wf::animation_description_t> duration_opt{"wayfire-slide-peek/duration"};
 
@@ -155,6 +156,12 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
     // slide is closed and revealed only while it is open; cached so we can
     // toggle it even after we have disabled (and thus hidden) its node.
     wayfire_view desktop_view;
+
+    // The desktop widget layer (app-id == widget_app_id). It lives on BOTTOM
+    // too, so without this it would render on top of the revealed grid. It is
+    // the exact mirror of desktop_view: visible while idle, hidden while the
+    // reveal is open.
+    wayfire_view widget_view;
 
     // Transformer that slides the live grid in from the offscreen edge.
     std::shared_ptr<wf::scene::view_2d_transformer_t> desktop_tr;
@@ -222,6 +229,11 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
             desktop_tr.reset();
             desktop_view = nullptr;
         }
+
+        if (ev->view == widget_view)
+        {
+            widget_view = nullptr;
+        }
     };
 
     wf::effect_hook_t on_frame = [this] ()
@@ -271,9 +283,12 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
         {
             hard_reset();
         }
-        // Don't leave the desktop stuck hidden if the plugin is unloaded.
+        // Don't leave either BOTTOM-layer surface stuck hidden if the plugin
+        // is unloaded.
         set_desktop_visible(true);
+        set_widgets_visible(true);
         desktop_view = nullptr;
+        widget_view = nullptr;
     }
 
     // Entry points for the plugin-wide IPC handlers.
@@ -352,6 +367,11 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
         // 2. Reveal the (live, interactive) desktop grid. It lives on BOTTOM,
         //    so it is naturally below the OVERLAY screenshot added in step 5.
         set_desktop_visible(true);
+
+        // 2b. The widget layer shares the BOTTOM layer with the grid and would
+        //     otherwise render on top of it. Hide it for the duration of the
+        //     reveal; hard_reset() brings it back.
+        set_widgets_visible(false);
 
         // 2a. Hand keyboard focus to the revealed grid so the user can start
         //     typing into its search field straight away.
@@ -483,6 +503,39 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
         }
     }
 
+    bool is_widget_view(wayfire_view view) const
+    {
+        return view && (view->get_app_id() == (std::string) widget_app_id_opt);
+    }
+
+    // Find the desktop widget layer on this output, if it is mapped.
+    wayfire_view find_widget_view()
+    {
+        for (auto& view : wf::collect_views_from_output(output,
+            {wf::scene::layer::BOTTOM}))
+        {
+            if (view && view->is_mapped() && is_widget_view(view))
+            {
+                return view;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void set_widgets_visible(bool visible)
+    {
+        if (!widget_view)
+        {
+            widget_view = find_widget_view();
+        }
+
+        if (widget_view)
+        {
+            wf::scene::set_node_enabled(widget_view->get_root_node(), visible);
+        }
+    }
+
     // Hide / show the live foreground layers (app windows + panel). BACKGROUND
     // (the live wallpaper) stays untouched, BOTTOM (the desktop grid) and
     // OVERLAY (the snapshot) are left enabled.
@@ -557,6 +610,7 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
         // Slide closed → desktop grid goes back to hidden. Hand keyboard focus
         // back to whatever real window should hold it now that the grid's
         // surface is no longer visible.
+        set_widgets_visible(true);
         set_desktop_visible(false);
         if (auto seat = wf::get_core().seat.get())
         {

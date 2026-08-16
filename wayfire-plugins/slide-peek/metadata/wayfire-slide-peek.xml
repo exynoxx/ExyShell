@@ -27,5 +27,11 @@
       <_long>App-id (layer-shell namespace) of the desktop grid surface. It is kept hidden while the slide is closed and revealed only while it is open.</_long>
       <default>lumen-drawer</default>
     </option>
+
+    <option name="widget_app_id" type="string">
+      <_short>Desktop widget layer app-id</_short>
+      <_long>App-id (layer-shell namespace) of the desktop widget layer. It shares the BOTTOM layer with the app drawer, so it is hidden for the duration of a reveal and restored when the reveal closes.</_long>
+      <default>lumen-desktop</default>
+    </option>
   </plugin>
 </wayfire>

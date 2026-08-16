@@ -350,6 +350,59 @@ executable('lumen-drawer',
   install: true,
 )
 
+# --- lumen-desktop ---
+# The desktop widget layer: a BOTTOM-layer surface per monitor hosting
+# persistent widgets above the wallpaper and below every app window.
+# Same link-order rule as lumen-panel/lumen-drawer: gtk4-layer-shell first.
+# No wlhooks and no Wayfire IPC — it is a pure layer-shell client.
+desktopwidgets_deps = [
+  gtk4_layer_shell_dep,
+  gtk4_dep,
+  gtk4_wayland_dep,
+  wayland_dep,
+  glib_dep,
+  gio_dep,
+  json_dep,
+  m_dep,
+]
+
+desktopwidgets_vala_args = [
+  '--vapidir=' + vapi_dir,
+  '--pkg=gtk4',
+  '--pkg=gtk4-layer-shell-0',
+  '--pkg=gtk4-wayland',
+  '--pkg=glib-2.0',
+  '--pkg=gio-2.0',
+  '--pkg=json-glib-1.0',
+]
+
+desktopwidgets_sources = files(
+  'lumen-desktop/src/main.vala',
+  'lumen-desktop/src/window.vala',
+  'lumen-desktop/src/desktop_config.vala',
+  'lumen-desktop/src/widget/widget_shape.vala',
+  'lumen-desktop/src/widget/widget_settings.vala',
+  'lumen-desktop/src/widget/desktop_widget.vala',
+  'lumen-desktop/src/widget/widget_registry.vala',
+  'lumen-desktop/src/widget/widget_host.vala',
+  'lumen-desktop/src/widgets/filebrowser/fs_model.vala',
+  'lumen-desktop/src/widgets/filebrowser/file_row.vala',
+  'lumen-desktop/src/widgets/filebrowser/file_column.vala',
+  'lumen-desktop/src/widgets/filebrowser/column_browser.vala',
+  'lumen-desktop/src/widgets/filebrowser/file_browser_widget.vala',
+)
+
+executable('lumen-desktop',
+  desktopwidgets_sources,
+  vala_args: desktopwidgets_vala_args,
+  dependencies: desktopwidgets_deps,
+  link_args: ['-Wl,--no-as-needed'],
+  install: true,
+)
+
+install_data('lumen-desktop/default-desktop.json',
+  install_dir: get_option('datadir') / 'lumen-desktop')
+
 # --- lumen-osdctl ---
 osdctl_deps = [glib_dep, gio_dep, m_dep]
 

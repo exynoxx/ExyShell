@@ -1,0 +1,15 @@
+{
+  "widgets": [
+    {
+      "type": "file-browser",
+      "shape": "rounded-rect",
+      "radius": 22,
+      "width": 900,
+      "height": 520,
+      "settings": {
+        "root": "~",
+        "show-hidden": false
+      }
+    }
+  ]
+}
