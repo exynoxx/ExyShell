@@ -382,6 +382,7 @@ desktopwidgets_sources = files(
   'lumen-desktop/src/desktop_config.vala',
   'lumen-desktop/src/widget/widget_shape.vala',
   'lumen-desktop/src/widget/widget_settings.vala',
+  'lumen-desktop/src/widget/chrome_buttons.vala',
   'lumen-desktop/src/widget/desktop_widget.vala',
   'lumen-desktop/src/widget/widget_registry.vala',
   'lumen-desktop/src/widget/widget_host.vala',

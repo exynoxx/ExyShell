@@ -44,6 +44,19 @@ namespace LumenDesktop {
         // Implementations must push exactly one clip node.
         public abstract void push_content_clip(Gtk.Snapshot s, int w, int h, float[] frame);
 
+        // The band of chrome a widget may draw its pin / close buttons in, in
+        // widget-local coordinates. It must lie inside the silhouette and
+        // outside the content opening, so the buttons sit *in* the frame
+        // rather than over the content. A band too small to hold a button
+        // simply means that widget shows none — see ChromeButtons.layout.
+        public virtual Cairo.RectangleInt chrome_rect(int w, int h, float border) {
+            return Cairo.RectangleInt() {
+                x = 0, y = 0,
+                width = w,
+                height = (int) (top_extra + border)
+            };
+        }
+
         // Rects covering the silhouette, in widget-local coordinates. They
         // feed the window's input region, so a shape that doesn't fill its
         // box (the folder's tab strip) must report the parts it does — the
@@ -132,6 +145,19 @@ namespace LumenDesktop {
             return rr;
         }
 
+        // Inset from the sides by half the corner radius: a button placed
+        // flush against the edge would have its top corner sliced off by the
+        // silhouette's curve, since the band is measured at the widget's full
+        // width but the outline is not there yet at the band's top edge.
+        public override Cairo.RectangleInt chrome_rect(int w, int h, float border) {
+            int inset = (int) (effective_radius(w, h) * 0.5f);
+            return Cairo.RectangleInt() {
+                x = inset, y = 0,
+                width = int.max(0, w - 2 * inset),
+                height = (int) (top_extra + border)
+            };
+        }
+
         public override void push_clip(Gtk.Snapshot s, int w, int h) {
             s.push_rounded_clip(rounded(w, h));
         }
@@ -210,6 +236,19 @@ namespace LumenDesktop {
 
         public override void push_content_clip(Gtk.Snapshot s, int w, int h, float[] frame) {
             s.push_rounded_clip(opening(w, h, frame));
+        }
+
+        // The tab, minus the slant: the one part of a folder's frame tall
+        // enough to hold a button. The slant is excluded so a glyph never
+        // straddles the sloped edge, and both ends are inset by half the
+        // corner radius so neither glyph is clipped by the tab's own curves.
+        public override Cairo.RectangleInt chrome_rect(int w, int h, float border) {
+            int inset = (int) (corner_radius(w, h) * 0.5f);
+            return Cairo.RectangleInt() {
+                x = inset, y = 0,
+                width = int.max(0, (int) tab_width(w, h) - 2 * inset),
+                height = (int) tab_height(h)
+            };
         }
 
         public override Cairo.RectangleInt[] hit_rects(int w, int h) {

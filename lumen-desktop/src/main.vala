@@ -13,6 +13,7 @@ namespace LumenDesktop {
             = new GLib.GenericArray<DesktopWindow>();
         private bool started = false;
         private bool hotplug_wired = false;
+        private bool removing = false;
 
         construct {
             application_id = "org.lumenshell.Desktop";
@@ -44,13 +45,36 @@ namespace LumenDesktop {
             var monitors = Gdk.Display.get_default().get_monitors();
             uint n = monitors.get_n_items();
             if (n == 0) {
-                wins.add(new DesktopWindow(this, null, DesktopConfig.widgets));
+                add_window_for(null);
                 return;
             }
             for (uint i = 0; i < n; i++) {
                 var mon = monitors.get_item(i) as Gdk.Monitor;
-                wins.add(new DesktopWindow(this, mon, DesktopConfig.widgets));
+                add_window_for(mon);
             }
+        }
+
+        private void add_window_for(Gdk.Monitor? monitor) {
+            var win = new DesktopWindow(this, monitor, DesktopConfig.widgets);
+            win.widget_removed.connect(remove_widget);
+            wins.add(win);
+        }
+
+        // Removing a widget is a config edit, so it has to reach every
+        // monitor's copy — hence a full reload and rebuild rather than
+        // dropping one child. Deferred to an idle callback because we are
+        // inside a signal emitted by the very window about to be destroyed.
+        private void remove_widget(WidgetSpec spec) {
+            if (removing) return;
+            removing = true;
+
+            DesktopConfig.remove_widget(spec);
+            GLib.Idle.add(() => {
+                DesktopConfig.load();
+                rebuild_windows();
+                removing = false;
+                return GLib.Source.REMOVE;
+            });
         }
 
         private void rebuild_windows() {

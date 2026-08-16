@@ -36,6 +36,11 @@ namespace LumenDesktop {
         private WidgetHost host;
         private Cairo.Region? last_region = null;
 
+        // A widget's close glyph was pressed on this output. Relayed to
+        // DesktopApp, which owns desktop.json and must drop the widget from
+        // every monitor, not just this one.
+        public signal void widget_removed(WidgetSpec spec);
+
         public DesktopWindow(Gtk.Application app, Gdk.Monitor? monitor, WidgetSpec[] specs) {
             Object(application: app);
 
@@ -62,9 +67,13 @@ namespace LumenDesktop {
             add_css_class("lumen-desktop-root");
             install_css();
 
-            host = new WidgetHost(specs);
+            // Widgets are dragged per output, so each host is keyed by the
+            // connector it is showing on.
+            var key = monitor != null ? monitor.get_connector() : null;
+            host = new WidgetHost(specs, key ?? "default");
             set_child(host);
 
+            host.widget_removed.connect((spec) => widget_removed(spec));
             host.layout_changed.connect(update_input_region);
             this.map.connect(update_input_region);
             notify["default-width"].connect(update_input_region);

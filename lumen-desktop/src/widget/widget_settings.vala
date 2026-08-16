@@ -24,6 +24,18 @@ namespace LumenDesktop {
             return values.contains(key);
         }
 
+        // For serialising the bag back out to desktop.json. Values come back
+        // as they were stored — strings — because that is all this bag ever
+        // knew about them.
+        public GLib.List<weak string> keys() {
+            return values.get_keys();
+        }
+
+        public string get_raw(string key) {
+            var v = values.lookup(key);
+            return v ?? "";
+        }
+
         public string get_string(string key, string fallback) {
             var v = values.lookup(key);
             return (v == null || v == "") ? fallback : v;
