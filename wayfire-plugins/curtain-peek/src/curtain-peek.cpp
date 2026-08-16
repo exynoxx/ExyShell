@@ -526,12 +526,23 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
         output->connect(&on_view_mapped);
         output->connect(&on_view_unmapped);
 
+        // Which surfaces we are looking for. Logged because a stale app-id in
+        // wayfire.ini is silent otherwise: the reveal simply does nothing, or
+        // (worse) grabs the wrong BOTTOM-layer surface and hides it forever.
+        curtain_log("app ids: drawer='%s' widget='%s'",
+            ((std::string) drawer_app_id_opt).c_str(),
+            ((std::string) widget_app_id_opt).c_str());
+
         // The desktop grid may already be mapped by the time we initialise.
         desktop_view = find_desktop_view();
         if (desktop_view)
         {
             set_desktop_visible(false);
         }
+
+        curtain_log("found on init: drawer=%s widget=%s",
+            desktop_view ? "yes" : "no",
+            find_widget_view() ? "yes" : "no");
     }
 
     void fini() override
