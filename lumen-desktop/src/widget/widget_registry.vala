@@ -32,7 +32,23 @@ namespace LumenDesktop {
                 warning("lumen-desktop: unknown widget type '%s'", spec.type_name);
                 return null;
             }
-            return e.factory(spec);
+            var w = e.factory(spec);
+            apply_chrome(w, spec);
+            return w;
+        }
+
+        // Chrome every widget type gets for free, so a subclass only ever has
+        // to supply content.
+        private static void apply_chrome(DesktopWidget w, WidgetSpec spec) {
+            w.border_width = (float) spec.border_width;
+
+            var c = Gdk.RGBA();
+            if (c.parse(spec.border_color)) {
+                w.border_color = c;
+            } else {
+                warning("lumen-desktop: unparseable border-color '%s', using white",
+                    spec.border_color);
+            }
         }
 
         private static void ensure() {

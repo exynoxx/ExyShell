@@ -73,13 +73,22 @@ namespace LumenDesktop {
 
         // The rectangles the window must make click-through-proof. Everything
         // outside them stays transparent to input so the wallpaper below keeps
-        // receiving clicks (Win+D peek dismissal, etc.).
+        // receiving clicks (Win+D peek dismissal, etc.). A widget contributes
+        // its shape's rects, not its bounding box, so the empty corner beside
+        // a folder tab stays click-through too.
         public Cairo.RectangleInt[] widget_rects() {
             Cairo.RectangleInt[] rects = {};
             int host_w = get_width();
             int host_h = get_height();
             if (host_w <= 0 || host_h <= 0) return rects;
-            foreach (var w in children) rects += place(w, host_w, host_h);
+            foreach (var w in children) {
+                var box = place(w, host_w, host_h);
+                foreach (var hit in w.shape.hit_rects(box.width, box.height)) {
+                    hit.x += box.x;
+                    hit.y += box.y;
+                    rects += hit;
+                }
+            }
             return rects;
         }
 

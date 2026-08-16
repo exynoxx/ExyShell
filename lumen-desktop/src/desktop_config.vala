@@ -8,10 +8,14 @@
 //     "widgets": [
 //       {
 //         "type": "file-browser",
-//         "shape": "rounded-rect",
+//         "shape": "folder",
 //         "radius": 22,
-//         "width": 900,
-//         "height": 520,
+//         "width": 630,
+//         "height": 364,
+//         "border-width": 5,
+//         "tab-height": 26,
+//         "tab-width": 0.34,
+//         "border-color": "#ffffff",
 //         "settings": { "root": "~", "show-hidden": false }
 //       }
 //     ]
@@ -27,16 +31,24 @@ namespace LumenDesktop {
     // for free placement.
     public class WidgetSpec : GLib.Object {
         public string type_name  { get; set; default = "file-browser"; }
-        public string shape_name { get; set; default = "rounded-rect"; }
+        public string shape_name { get; set; default = "folder"; }
         public double radius     { get; set; default = 22.0; }
-        public int width         { get; set; default = 900; }
-        public int height        { get; set; default = 520; }
+        public int width         { get; set; default = 630; }
+        public int height        { get; set; default = 364; }
         public int x             { get; set; default = -1; }   // -1 = centre
         public int y             { get; set; default = -1; }
+
+        // The white frame around the content, plus the folder tab that makes
+        // it heavier at the top. tab_ratio is a fraction of the widget width;
+        // border_color takes any spelling Gdk.RGBA.parse() accepts.
+        public double border_width { get; set; default = 5.0; }
+        public double tab_height   { get; set; default = 26.0; }
+        public double tab_ratio    { get; set; default = 0.34; }
+        public string border_color { get; set; default = "#ffffff"; }
         public WidgetSettings settings { get; set; default = new WidgetSettings(); }
 
         public WidgetShape make_shape() {
-            return WidgetShape.from_spec(shape_name, radius);
+            return WidgetShape.from_spec(shape_name, radius, tab_height, tab_ratio);
         }
     }
 
@@ -100,6 +112,15 @@ namespace LumenDesktop {
             if (o.has_member("height")) spec.height     = (int) o.get_int_member("height");
             if (o.has_member("x"))      spec.x          = (int) o.get_int_member("x");
             if (o.has_member("y"))      spec.y          = (int) o.get_int_member("y");
+
+            if (o.has_member("border-width"))
+                spec.border_width = o.get_double_member("border-width");
+            if (o.has_member("tab-height"))
+                spec.tab_height = o.get_double_member("tab-height");
+            if (o.has_member("tab-width"))
+                spec.tab_ratio = o.get_double_member("tab-width");
+            if (o.has_member("border-color"))
+                spec.border_color = o.get_string_member("border-color");
 
             if (o.has_member("settings")) {
                 var sn = o.get_member("settings");
