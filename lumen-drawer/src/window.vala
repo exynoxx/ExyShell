@@ -1,7 +1,7 @@
 using Gtk;
 
-private const string DESKTOP_CSS = """
-    window.lumen-desktop-root {
+private const string DRAWER_CSS = """
+    window.lumen-drawer-root {
         background: transparent;
         color: white;
     }
@@ -11,7 +11,7 @@ private const string DESKTOP_CSS = """
         margin-bottom: 30px;
     }
 
-    .desktop-search {
+    .drawer-search {
         min-width: 250px;
         min-height: 30px;
         background: alpha(white, 0.85);
@@ -22,23 +22,23 @@ private const string DESKTOP_CSS = """
         border-radius: 20px;
         padding: 2px 8px;
     }
-    .desktop-search:focus,
-    .desktop-search:focus-within {
+    .drawer-search:focus,
+    .drawer-search:focus-within {
         border: none;
         outline: none;
         box-shadow: none;
     }
-    .desktop-search > text,
-    .desktop-search > image {
+    .drawer-search > text,
+    .drawer-search > image {
         background: transparent;
         border: none;
         outline: none;
         box-shadow: none;
     }
-    .desktop-search > text {
+    .drawer-search > text {
         color: black;
     }
-    .desktop-search > text > placeholder {
+    .drawer-search > text > placeholder {
         color: alpha(black, 0.55);
     }
 
@@ -61,7 +61,7 @@ private const string DESKTOP_CSS = """
         font-size: 11pt;
     }
 
-    .desktop-hint {
+    .drawer-hint {
         color: alpha(white, 0.22);
         font-size: 13pt;
         text-shadow: 0 1px 2px alpha(black, 0.4);
@@ -99,7 +99,7 @@ private const string DESKTOP_CSS = """
     }
 """;
 
-public class DesktopWindow : Gtk.ApplicationWindow {
+public class DrawerWindow : Gtk.ApplicationWindow {
 
     private AppEntry[] apps;
     private SearchDb search_db;
@@ -110,11 +110,11 @@ public class DesktopWindow : Gtk.ApplicationWindow {
     private SearchResults results;
     private PageDots dots;
 
-    public DesktopWindow(Gtk.Application app, Gdk.Monitor? monitor = null) {
+    public DrawerWindow(Gtk.Application app, Gdk.Monitor? monitor = null) {
         Object(application: app);
 
         GtkLayerShell.init_for_window(this);
-        GtkLayerShell.set_namespace(this, "lumen-desktop");
+        GtkLayerShell.set_namespace(this, "lumen-drawer");
         if (monitor != null) GtkLayerShell.set_monitor(this, monitor);
         // BOTTOM (not BACKGROUND) so we stack ABOVE wf-shell's wf-background
         // wallpaper surface — wf-background also lives on BACKGROUND and
@@ -139,7 +139,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
         GtkLayerShell.set_keyboard_mode(this, GtkLayerShell.KeyboardMode.ON_DEMAND);
 
         decorated = false;
-        add_css_class("lumen-desktop-root");
+        add_css_class("lumen-drawer-root");
 
         load_apps();
         search_db = new SearchDb(apps);
@@ -153,7 +153,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
             sync_keyboard_mode();
         });
 
-        DesktopToplevels.instance.focus_changed.connect((any) => {
+        DrawerToplevels.instance.focus_changed.connect((any) => {
             sync_keyboard_mode();
         });
     }
@@ -168,7 +168,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
         // keep this window's search entry as the key target so that whenever the
         // compositor routes the keyboard to this output's grid, typing lands in
         // the search box rather than some other last-focused widget.
-        if (!DesktopToplevels.instance.any_focused) {
+        if (!DrawerToplevels.instance.any_focused) {
             search_entry.grab_focus();
         }
     }
@@ -184,14 +184,14 @@ public class DesktopWindow : Gtk.ApplicationWindow {
             // filtered/paginated state.
             entry.launched.connect(() => {
                 reset_view();
-                LumenDesktop.CurtainIpc.close();
+                LumenDrawer.CurtainIpc.close();
             });
             list.add(entry);
         }
         list.sort((a, b) => GLib.strcmp(a.name, b.name));
         apps = new AppEntry[list.size];
         for (int i = 0; i < list.size; i++) apps[i] = list[i];
-        stdout.printf("lumen-desktop: %d apps\n", apps.length);
+        stdout.printf("lumen-drawer: %d apps\n", apps.length);
     }
 
     private void reset_view() {
@@ -201,7 +201,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
         dots.set_visible(grid.page_count > 1);
     }
 
-    // Driven by DesktopApp's AppInfoMonitor when installed .desktop files change
+    // Driven by DrawerApp's AppInfoMonitor when installed .desktop files change
     // (dnf/flatpak install/remove). The grid is immutable after construction, so
     // we swap in a fresh PagedGrid; SearchDb must be rebuilt too because it (and
     // its AliasArray) hold *unowned* aliases of the old apps[] backing array.
@@ -230,7 +230,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
         search_row.set_halign(Gtk.Align.CENTER);
 
         search_entry = new Gtk.SearchEntry();
-        search_entry.add_css_class("desktop-search");
+        search_entry.add_css_class("drawer-search");
         search_entry.set_placeholder_text("Search");
         search_entry.set_size_request(320, -1);
         search_entry.set_hexpand(false);
@@ -270,7 +270,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
             valign = Gtk.Align.END,
             margin_bottom = 90,
         };
-        hint.add_css_class("desktop-hint");
+        hint.add_css_class("drawer-hint");
         overlay.add_overlay(hint);
 
         set_child(overlay);
@@ -281,7 +281,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
         if (css_installed) return;
         css_installed = true;
         var css = new Gtk.CssProvider();
-        css.load_from_string(DESKTOP_CSS);
+        css.load_from_string(DRAWER_CSS);
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(),
             css,
@@ -289,7 +289,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
     }
 
     private void install_key_controller() {
-        // CAPTURE phase: the search entry has focus the moment the desktop is
+        // CAPTURE phase: the search entry has focus the moment the drawer is
         // clicked, and it would otherwise swallow Left/Right for caret motion
         // before our handler ever sees them. Capturing first lets us claim
         // arrow keys for page navigation while still returning false for
@@ -310,7 +310,7 @@ public class DesktopWindow : Gtk.ApplicationWindow {
 
         switch (keyval) {
             case Gdk.Key.Escape:
-                LumenDesktop.CurtainIpc.close();
+                LumenDrawer.CurtainIpc.close();
                 return true;
             case Gdk.Key.Left:
                 if (!search_db.active && mods == 0) { grid.prev_page(); return true; }

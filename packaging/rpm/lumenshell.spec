@@ -99,7 +99,7 @@ package adds a "LumenShell" entry to the display manager's session menu.
 %{_bindir}/lumen-osd
 %{_bindir}/lumen-osdctl
 %{_bindir}/lumen-panel
-%{_bindir}/lumen-desktop
+%{_bindir}/lumen-drawer
 %{_bindir}/lumen-notifications
 %{_bindir}/lumen-session
 %{_bindir}/lumen-settings

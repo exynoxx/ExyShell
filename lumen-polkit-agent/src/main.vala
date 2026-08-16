@@ -10,7 +10,7 @@ using Gtk;
 // PolkitAgent.Listener for our login session and pops a password dialog
 // whenever polkitd asks for authentication.
 //
-// It is also what makes lumen-desktop's "Ctrl+click → run as administrator"
+// It is also what makes lumen-drawer's "Ctrl+click → run as administrator"
 // work: that path shells out to `pkexec`, whose org.freedesktop.policykit.exec
 // action routes straight through this agent.
 //

@@ -11,9 +11,9 @@
 // WAYFIRE_SOCKET). Without it — e.g. running a binary outside Wayfire — every
 // call is a silent no-op so a stand-alone test doesn't trip over a missing dep.
 //
-// Source-level reuse only (no shared .so): added to lumen-desktop (always) and
+// Source-level reuse only (no shared .so): added to lumen-drawer (always) and
 // lumen-panel (under with_panel_peek). Callers keep their own thin verb
-// wrappers — lumen-panel/src/peek_ipc.vala, lumen-desktop/src/curtain_ipc.vala.
+// wrappers — lumen-panel/src/peek_ipc.vala, lumen-drawer/src/curtain_ipc.vala.
 
 namespace LumenCommon {
 

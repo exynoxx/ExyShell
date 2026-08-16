@@ -56,7 +56,7 @@ inline void push_log(const char *fmt, ...)
 // Per-output plugin instance.
 //
 // On push, every mapped view across BACKGROUND / BOTTOM / WORKSPACE / TOP
-// (wallpaper, the lumen-desktop drawer, app windows, other layer-shell
+// (wallpaper, the lumen-drawer drawer, app windows, other layer-shell
 // surfaces) — except the panel itself (exclude_app_id) — gets a
 // view_2d_transformer_t whose translation_y animates uniformly to ±push_px.
 // This slides the WHOLE scene away from the panel's edge to free a strip the

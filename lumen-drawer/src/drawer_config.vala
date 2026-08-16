@@ -1,28 +1,28 @@
-// Reads the grid geometry that lumen-settings' Desktop page writes to
-// ~/.config/lumen-shell/desktop.ini ([desktop] section: grid.cols, grid.rows,
+// Reads the grid geometry that lumen-settings' Drawer page writes to
+// ~/.config/lumen-shell/drawer.ini ([drawer] section: grid.cols, grid.rows,
 // grid.margin). Loaded once at startup (main.vala) into the PagedGrid /
 // SearchResults globals. A missing file or key leaves the corresponding
 // default in place, so an unconfigured session keeps the historical layout.
 //
 // Minimal hand-rolled INI scan rather than GLib.KeyFile: the keys are dotted
 // ("grid.cols"), which KeyFile's key grammar does not officially permit.
-namespace LumenDesktop {
+namespace LumenDrawer {
 
-    public class DesktopConfig {
+    public class DrawerConfig {
         public static int cols   = 6;
         public static int rows   = 4;
         public static int margin = -1;   // -1 = unset; callers keep their own default
 
         public static void load() {
             var path = Path.build_filename(
-                Environment.get_user_config_dir(), "lumen-shell", "desktop.ini");
+                Environment.get_user_config_dir(), "lumen-shell", "drawer.ini");
             if (!FileUtils.test(path, FileTest.EXISTS)) return;
 
             string content;
             try {
                 FileUtils.get_contents(path, out content);
             } catch (Error e) {
-                warning("lumen-desktop: reading %s: %s", path, e.message);
+                warning("lumen-drawer: reading %s: %s", path, e.message);
                 return;
             }
 
@@ -34,7 +34,7 @@ namespace LumenDesktop {
                     section = line.substring(1, line.length - 2).strip();
                     continue;
                 }
-                if (section != "desktop") continue;
+                if (section != "drawer") continue;
                 int eq = line.index_of_char('=');
                 if (eq < 0) continue;
                 var key = line.substring(0, eq).strip();

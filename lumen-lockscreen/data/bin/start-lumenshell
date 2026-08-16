@@ -13,7 +13,7 @@
 #      user manager so any --user services started later inherit them.
 #   3. Execs Wayfire as the compositor. Wayfire's autostart plugin (see
 #      ../wayfire/lumenshell.ini.d/autostart.ini) is what actually spawns
-#      lumen-panel, lumen-desktop, lumen-osd, lumen-notifications, and
+#      lumen-panel, lumen-drawer, lumen-osd, lumen-notifications, and
 #      lumen-lockscreen.
 #
 # Install path (system-wide):

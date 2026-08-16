@@ -1,43 +1,43 @@
 // The window is created once at activate() and stays mapped for the lifetime
 // of the process — there is no hide/show lifecycle, so no hold() and no
 // command-line flag handling.
-public class DesktopApp : Gtk.Application {
+public class DrawerApp : Gtk.Application {
 
-    private GLib.GenericArray<DesktopWindow> wins = new GLib.GenericArray<DesktopWindow>();
+    private GLib.GenericArray<DrawerWindow> wins = new GLib.GenericArray<DrawerWindow>();
     private bool bound = false;
     private bool hotplug_wired = false;
     private AppInfoMonitor app_monitor;   // keep a ref so it isn't collected
     private uint refresh_source = 0;
 
     construct {
-        application_id = "dev.lumen.desktop";
+        application_id = "dev.lumen.drawer";
     }
 
     protected override void activate() {
         if (!bound) {
             // Bind foreign-toplevel before any window is shown so its
             // focus_changed handler sees the initial state on map.
-            DesktopToplevels.instance.bind();
+            DrawerToplevels.instance.bind();
             bound = true;
 
-            // Load grid geometry from desktop.ini before any window is built;
-            // lumen-settings' Desktop page writes cols/rows/margin there.
-            LumenDesktop.DesktopConfig.load();
-            GRID_COLS = LumenDesktop.DesktopConfig.cols;
-            GRID_ROWS = LumenDesktop.DesktopConfig.rows;
+            // Load grid geometry from drawer.ini before any window is built;
+            // lumen-settings' Drawer page writes cols/rows/margin there.
+            LumenDrawer.DrawerConfig.load();
+            GRID_COLS = LumenDrawer.DrawerConfig.cols;
+            GRID_ROWS = LumenDrawer.DrawerConfig.rows;
             PER_PAGE  = GRID_COLS * GRID_ROWS;
-            if (LumenDesktop.DesktopConfig.margin >= 0) {
+            if (LumenDrawer.DrawerConfig.margin >= 0) {
                 // A single configured value applies to all edges; left unset,
                 // the asymmetric historical insets (200/130) are preserved.
-                PAGE_MARGIN_X = LumenDesktop.DesktopConfig.margin;
-                PAGE_MARGIN_Y = LumenDesktop.DesktopConfig.margin;
+                PAGE_MARGIN_X = LumenDrawer.DrawerConfig.margin;
+                PAGE_MARGIN_Y = LumenDrawer.DrawerConfig.margin;
             }
 
             build_windows();
 
             // Start hidden behind a closed curtain. A no-op on a fresh session,
-            // but if lumen-desktop restarted while peeked this hides the grid.
-            LumenDesktop.CurtainIpc.close();
+            // but if lumen-drawer restarted while peeked this hides the grid.
+            LumenDrawer.CurtainIpc.close();
 
             if (!hotplug_wired) {
                 var monitors = Gdk.Display.get_default().get_monitors();
@@ -75,24 +75,24 @@ public class DesktopApp : Gtk.Application {
         var monitors = Gdk.Display.get_default().get_monitors();
         uint n = monitors.get_n_items();
         if (n == 0) {
-            wins.add(new DesktopWindow(this, null));
+            wins.add(new DrawerWindow(this, null));
             return;
         }
         for (uint i = 0; i < n; i++) {
             var mon = monitors.get_item(i) as Gdk.Monitor;
-            wins.add(new DesktopWindow(this, mon));
+            wins.add(new DrawerWindow(this, mon));
         }
     }
 
     void rebuild_windows() {
         for (int i = 0; i < wins.length; i++) wins.get(i).destroy();
-        wins = new GLib.GenericArray<DesktopWindow>();
+        wins = new GLib.GenericArray<DrawerWindow>();
         build_windows();
         for (int i = 0; i < wins.length; i++) wins.get(i).present();
     }
 }
 
 int main(string[] args) {
-    var app = new DesktopApp();
+    var app = new DrawerApp();
     return app.run(args);
 }

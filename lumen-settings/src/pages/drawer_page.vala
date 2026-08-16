@@ -2,13 +2,13 @@ using Gtk;
 
 namespace LumenSettings {
 
-    public class DesktopPage : GLib.Object, SettingsPage {
-        public string id        { owned get { return "desktop"; } }
-        public string title     { owned get { return "Desktop"; } }
+    public class DrawerPage : GLib.Object, SettingsPage {
+        public string id        { owned get { return "drawer"; } }
+        public string title     { owned get { return "Drawer"; } }
         public string icon_name { owned get { return "view-grid-symbolic"; } }
 
         IniStore store;
-        const string SECTION = "desktop";
+        const string SECTION = "drawer";
 
 #if WITH_WAYFIRE_CONFIG
         IniStore wf_store;
@@ -18,7 +18,7 @@ namespace LumenSettings {
 #endif
 
         public Gtk.Widget build() {
-            store = new IniStore(Paths.desktop_ini());
+            store = new IniStore(Paths.drawer_ini());
 
             var box = new Gtk.Box(Gtk.Orientation.VERTICAL, 18) {
                 margin_top = 18, margin_bottom = 18,
@@ -74,7 +74,7 @@ namespace LumenSettings {
             return box;
         }
 
-        public override string? restart_target() { return "lumen-desktop"; }
+        public override string? restart_target() { return "lumen-drawer"; }
 
 #if WITH_WAYFIRE_CONFIG
         bool plugin_enabled(string name) {

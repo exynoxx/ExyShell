@@ -83,7 +83,7 @@ void window_list_set_activated(toplevel_window_t *w, bool activated) {
     // The window just lost activation. If no other window is still activated,
     // the compositor has left every toplevel unfocused — e.g. "show desktop"
     // (Super+D) minimised them all. Emit the reserved id 0 ("no window")
-    // sentinel so consumers can drop focus state (lumen-desktop clears its
+    // sentinel so consumers can drop focus state (lumen-drawer clears its
     // blur, lumen-panel clears the active underline). When another window is
     // still activated this is just a focus switch, whose new-window activation
     // event arrives separately, so we stay quiet.

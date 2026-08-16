@@ -132,7 +132,7 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
 {
     wf::option_wrapper_t<wf::activatorbinding_t> toggle_opt{"wayfire-slide-peek/toggle"};
     wf::option_wrapper_t<wf::activatorbinding_t> dismiss_opt{"wayfire-slide-peek/dismiss"};
-    wf::option_wrapper_t<std::string> desktop_app_id_opt{"wayfire-slide-peek/desktop_app_id"};
+    wf::option_wrapper_t<std::string> drawer_app_id_opt{"wayfire-slide-peek/drawer_app_id"};
     wf::option_wrapper_t<std::string> direction_opt{"wayfire-slide-peek/direction"};
     wf::option_wrapper_t<wf::animation_description_t> duration_opt{"wayfire-slide-peek/duration"};
 
@@ -151,7 +151,7 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
     int H = 0;
     int slide_sign = +1;
 
-    // The desktop grid view (app-id == desktop_app_id). Kept hidden while the
+    // The desktop grid view (app-id == drawer_app_id). Kept hidden while the
     // slide is closed and revealed only while it is open; cached so we can
     // toggle it even after we have disabled (and thus hidden) its node.
     wayfire_view desktop_view;
@@ -425,7 +425,7 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
 
     bool is_desktop_view(wayfire_view view) const
     {
-        return view && (view->get_app_id() == (std::string) desktop_app_id_opt);
+        return view && (view->get_app_id() == (std::string) drawer_app_id_opt);
     }
 
     // Find the desktop grid (the BOTTOM-layer view whose app-id matches the
@@ -574,7 +574,7 @@ class wayfire_slide_peek_t : public wf::per_output_plugin_instance_t
 
 // ---------------------------------------------------------------------------
 // Plugin wrapper: per-output instances + plugin-wide IPC surface, identical in
-// shape to wayfire-curtain-peek so lumen-desktop/lumen-panel can drive it.
+// shape to wayfire-curtain-peek so lumen-drawer/lumen-panel can drive it.
 // ---------------------------------------------------------------------------
 class wayfire_slide_peek_plugin_t :
     public wf::per_output_plugin_t<wayfire_slide_peek_t>

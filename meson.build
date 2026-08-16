@@ -294,12 +294,12 @@ install_data(
   install_dir: get_option('datadir') / 'lumen-notifications',
 )
 
-# --- lumen-desktop ---
+# --- lumen-drawer ---
 # Independent dep set: no drawkit, no wlhooks, no GLES.
 # Reuses gtk4_dep and gtk4_layer_shell_dep from lumen-osd block above.
 # UnixSocketAddress for the Wayfire IPC client lives in gio-unix-2.0.
 gio_unix_dep = dependency('gio-unix-2.0')
-desktop_deps = [
+drawer_deps = [
   # Same link-order rule as lumen-panel: gtk4-layer-shell must come before
   # gtk4/wayland-client/wlhooks for layer-shell init to actually take effect.
   gtk4_layer_shell_dep,
@@ -314,7 +314,7 @@ desktop_deps = [
   m_dep,
 ]
 
-desktop_vala_args = [
+drawer_vala_args = [
   '--vapidir=' + vapi_dir,
   '--pkg=gtk4',
   '--pkg=gtk4-layer-shell-0',
@@ -326,26 +326,26 @@ desktop_vala_args = [
   '--pkg=libwlhooks',
 ]
 
-desktop_sources = files(
+drawer_sources = files(
   'lumen-common/wayfire_ipc.vala',
-  'lumen-desktop/src/main.vala',
-  'lumen-desktop/src/desktop_config.vala',
-  'lumen-desktop/src/window.vala',
-  'lumen-desktop/src/appentry.vala',
-  'lumen-desktop/src/searchdb.vala',
-  'lumen-desktop/src/curtain_ipc.vala',
-  'lumen-desktop/src/wl/toplevels.vala',
-  'lumen-desktop/src/components/apptile.vala',
-  'lumen-desktop/src/components/pagedgrid.vala',
-  'lumen-desktop/src/components/searchresults.vala',
-  'lumen-desktop/src/components/pagedots.vala',
-  'lumen-desktop/src/utils/aliasarray.vala',
+  'lumen-drawer/src/main.vala',
+  'lumen-drawer/src/drawer_config.vala',
+  'lumen-drawer/src/window.vala',
+  'lumen-drawer/src/appentry.vala',
+  'lumen-drawer/src/searchdb.vala',
+  'lumen-drawer/src/curtain_ipc.vala',
+  'lumen-drawer/src/wl/toplevels.vala',
+  'lumen-drawer/src/components/apptile.vala',
+  'lumen-drawer/src/components/pagedgrid.vala',
+  'lumen-drawer/src/components/searchresults.vala',
+  'lumen-drawer/src/components/pagedots.vala',
+  'lumen-drawer/src/utils/aliasarray.vala',
 )
 
-executable('lumen-desktop',
-  desktop_sources,
-  vala_args: desktop_vala_args,
-  dependencies: desktop_deps,
+executable('lumen-drawer',
+  drawer_sources,
+  vala_args: drawer_vala_args,
+  dependencies: drawer_deps,
   link_args: ['-Wl,--no-as-needed'],
   install: true,
 )
@@ -412,7 +412,7 @@ subdir('lumen-settings')
 # Gated behind `with_polkit_agent` (auto). Uses libpolkit-agent-1 +
 # libpolkit-gobject-1: the agent registers a PolkitAgent.Listener for the login
 # session and pops a password dialog whenever polkitd requests authentication
-# (privileged actions, and lumen-desktop's Ctrl+click "run as administrator",
+# (privileged actions, and lumen-drawer's Ctrl+click "run as administrator",
 # which goes through `pkexec`). The Vala bindings (polkit-agent-1.vapi /
 # polkit-gobject-1.vapi) ship with Vala; only the -devel .pc files are a build
 # prereq. Auto-skipped when either dep is missing so the rest of the tree builds.

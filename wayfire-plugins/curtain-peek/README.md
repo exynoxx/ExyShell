@@ -3,7 +3,7 @@
 A Wayfire plugin that freezes the current screen, splits that snapshot down a
 vertical seam at screen centre, and slides the two halves apart — left half off
 the left edge, right half off the right edge, like a pair of double doors opening.
-Behind the splitting snapshot it reveals the live `lumen-desktop` app grid sitting
+Behind the splitting snapshot it reveals the live `lumen-drawer` app grid sitting
 on a flat GNOME-Shell-like grey backdrop (`backdrop_color`). Toggling again closes
 the doors.
 
@@ -69,7 +69,7 @@ ninja -C build install
 
 Add `wayfire-curtain-peek` to the `plugins` list in `~/.config/wayfire.ini`'s
 `[core]` section, then restart Wayfire (or reload via WCM). For the reveal to
-show the app grid, run `lumen-desktop` (it lives on the BOTTOM layer).
+show the app grid, run `lumen-drawer` (it lives on the BOTTOM layer).
 
 Default binding: `<super> KEY_S`. Reconfigure under
 `[wayfire-curtain-peek] toggle = ...` or through Wayfire Config Manager.
@@ -82,16 +82,16 @@ Options:
   open (default `0` = halves slide completely off; raise it to leave a grabbable
   sliver).
 - `duration` — animation length and easing (default `300ms circle`).
-- `backdrop_color` — flat colour revealed behind the `lumen-desktop` grid once
+- `backdrop_color` — flat colour revealed behind the `lumen-drawer` grid once
   the wallpaper splits away (default `#242424FF`, a GNOME-Shell-like grey).
-- `desktop_app_id` — app-id (layer-shell namespace) of the desktop grid surface
-  to keep fixed and reveal (default `lumen-desktop`).
+- `drawer_app_id` — app-id (layer-shell namespace) of the desktop grid surface
+  to keep fixed and reveal (default `lumen-drawer`).
 
 ## Triggering from outside
 
 Besides the activator binding, the plugin registers Wayfire IPC methods
 `wayfire-curtain-peek/{toggle,start,stop}` (requires Wayfire's `ipc` plugin).
-These accept the same length-prefixed JSON frames that `lumen-desktop`'s
+These accept the same length-prefixed JSON frames that `lumen-drawer`'s
 `peek_ipc.vala` already speaks for `wayfire-desktop-peek/*`. You can also
 synthesize the bound key with `wtype` / `ydotool`.
 
@@ -101,7 +101,7 @@ synthesize the bound key with `wtype` / `ydotool`.
   texture — no per-view transformers, so it covers any content uniformly and
   pixel-perfectly (the desktop grid is excluded only by being hidden at capture
   time).
-- The desktop grid (app-id `desktop_app_id`, on BOTTOM) is kept **hidden** (its
+- The desktop grid (app-id `drawer_app_id`, on BOTTOM) is kept **hidden** (its
   scene node disabled) whenever the curtain is closed, and is enabled only for the
   duration of a peek. The plugin catches it via the `view-mapped` signal so it is
   hidden from the moment it maps, and re-enables it on `fini()` so unloading the

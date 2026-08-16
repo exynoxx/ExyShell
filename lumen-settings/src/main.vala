@@ -52,7 +52,7 @@ namespace LumenSettings {
             registry.add(new WallpaperPage(),     "LumenShell");
             registry.add(new DisplayPage(),       "LumenShell");
             registry.add(new PanelPage(),         "LumenShell");
-            registry.add(new DesktopPage(),       "LumenShell");
+            registry.add(new DrawerPage(),        "LumenShell");
             registry.add(new PowerPage(),         "LumenShell");
             registry.add(new OsdPage(),           "LumenShell");
             registry.add(new NotificationsPage(), "LumenShell");

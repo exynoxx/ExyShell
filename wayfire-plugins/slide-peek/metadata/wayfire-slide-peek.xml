@@ -2,7 +2,7 @@
 <wayfire>
   <plugin name="wayfire-slide-peek">
     <_short>Slide Peek</_short>
-    <_long>Slide the foreground (windows and panel) off one screen edge while the lumen-desktop grid slides in from the opposite edge, over the stationary wallpaper.</_long>
+    <_long>Slide the foreground (windows and panel) off one screen edge while the lumen-drawer grid slides in from the opposite edge, over the stationary wallpaper.</_long>
     <category>Desktop</category>
     <option name="toggle" type="activator">
       <_short>Toggle slide</_short>
@@ -22,10 +22,10 @@
       <_long>Which edge the desktop grid enters from. "top" slides the grid down from the top while the foreground exits off the bottom; "bottom" slides it up from the bottom while the foreground exits off the top.</_long>
       <default>top</default>
     </option>
-    <option name="desktop_app_id" type="string">
+    <option name="drawer_app_id" type="string">
       <_short>Desktop grid app-id</_short>
       <_long>App-id (layer-shell namespace) of the desktop grid surface. It is kept hidden while the slide is closed and revealed only while it is open.</_long>
-      <default>lumen-desktop</default>
+      <default>lumen-drawer</default>
     </option>
   </plugin>
 </wayfire>

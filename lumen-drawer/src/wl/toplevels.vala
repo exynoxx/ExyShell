@@ -1,12 +1,12 @@
-// Minimal foreign-toplevel watcher for lumen-desktop. We don't need the full
+// Minimal foreign-toplevel watcher for lumen-drawer. We don't need the full
 // per-window metadata that lumen-panel's ToplevelStore exposes — only the
-// derived question "is some normal app window currently focused?". The desktop
+// derived question "is some normal app window currently focused?". The drawer
 // uses it to keep keyboard focus on its search entry when no window is focused.
 //
 // Bound to GTK's existing wl_display via wlhooks (same pattern as the panel),
 // so there's no second Wayland connection.
 
-public class DesktopToplevels : GLib.Object {
+public class DrawerToplevels : GLib.Object {
 
     // Fires on every meaningful focus event — both transitions of
     // `any_focused` AND focus moves between two real windows (id changes
@@ -19,22 +19,22 @@ public class DesktopToplevels : GLib.Object {
         new GLib.HashTable<uint, bool>(GLib.direct_hash, GLib.direct_equal);
     private uint focused_id = 0;
 
-    private static DesktopToplevels? _instance = null;
-    public static DesktopToplevels instance {
-        get { return _instance ?? (_instance = new DesktopToplevels()); }
+    private static DrawerToplevels? _instance = null;
+    public static DrawerToplevels instance {
+        get { return _instance ?? (_instance = new DrawerToplevels()); }
     }
 
     public bool bind() {
         var gdk = Gdk.Display.get_default();
         if (!(gdk is Gdk.Wayland.Display)) {
-            GLib.stderr.printf("DesktopToplevels: not running on Wayland\n");
+            GLib.stderr.printf("DrawerToplevels: not running on Wayland\n");
             return false;
         }
         unowned Wl.Display wl = ((Gdk.Wayland.Display) gdk).get_wl_display();
 
         int rc = WLHooks.init_toplevel_with_display(wl);
         if (rc != 0) {
-            GLib.stderr.printf("DesktopToplevels: init_toplevel_with_display failed (%d)\n", rc);
+            GLib.stderr.printf("DrawerToplevels: init_toplevel_with_display failed (%d)\n", rc);
             return false;
         }
 

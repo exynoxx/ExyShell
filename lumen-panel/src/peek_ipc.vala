@@ -5,14 +5,14 @@
 // entirely and never talks to Wayfire.
 //
 // The socket framing lives in lumen-common/wayfire_ipc.vala (shared with
-// lumen-desktop); this file is just the panel's verbs.
+// lumen-drawer); this file is just the panel's verbs.
 #if PANEL_PEEK
 public class PeekIpc : GLib.Object {
 
-    // Toggle the app-drawer reveal (lumen-desktop). Only one of curtain-peek /
+    // Toggle the app-drawer reveal (lumen-drawer). Only one of curtain-peek /
     // slide-peek is ever loaded, so the toggle for the inactive one is a
     // harmless no-op (its IPC method isn't registered) — same pattern as
-    // lumen-desktop's CurtainIpc.close(). Used by the optional launcher button.
+    // lumen-drawer's CurtainIpc.close(). Used by the optional launcher button.
     public static bool app_drawer () {
         bool a = LumenCommon.WayfireIpc.send_method("wayfire-curtain-peek/toggle");
         bool b = LumenCommon.WayfireIpc.send_method("wayfire-slide-peek/toggle");

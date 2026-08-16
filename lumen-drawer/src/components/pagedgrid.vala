@@ -1,6 +1,6 @@
 // Grid geometry. These are mutable globals, not constants: main() overwrites
-// them once at startup from ~/.config/lumen-shell/desktop.ini (see
-// DesktopConfig) before any window is built. The initializers below are the
+// them once at startup from ~/.config/lumen-shell/drawer.ini (see
+// DrawerConfig) before any window is built. The initializers below are the
 // fallback layout used when the file or a key is absent.
 public int GRID_COLS = 6;
 public int GRID_ROWS = 4;

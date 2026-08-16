@@ -401,7 +401,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
     wf::option_wrapper_t<double> split_ratio_opt{"wayfire-curtain-peek/split_ratio"};
     wf::option_wrapper_t<int> edge_px_opt{"wayfire-curtain-peek/edge_px"};
     wf::option_wrapper_t<wf::color_t> backdrop_color_opt{"wayfire-curtain-peek/backdrop_color"};
-    wf::option_wrapper_t<std::string> desktop_app_id_opt{"wayfire-curtain-peek/desktop_app_id"};
+    wf::option_wrapper_t<std::string> drawer_app_id_opt{"wayfire-curtain-peek/drawer_app_id"};
     wf::option_wrapper_t<wf::animation_description_t> duration_opt{"wayfire-curtain-peek/duration"};
     wf::option_wrapper_t<int> fold_count_opt{"wayfire-curtain-peek/fold_count"};
     wf::option_wrapper_t<double> fold_depth_opt{"wayfire-curtain-peek/fold_depth"};
@@ -419,7 +419,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
     // Grey fill drawn behind the desktop grid.
     std::shared_ptr<curtain_backdrop_node_t> backdrop;
 
-    // The desktop grid view (app-id == desktop_app_id). It is kept hidden while
+    // The desktop grid view (app-id == drawer_app_id). It is kept hidden while
     // the curtain is closed and revealed only while it is open; cached so we can
     // toggle it even after we have disabled (and thus hidden) its node.
     wayfire_view desktop_view;
@@ -614,7 +614,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
 
         // 2a. Hand keyboard focus to the revealed grid so the user can start
         //     typing into its search field straight away. Moving the seat off
-        //     the previously-focused toplevel also makes lumen-desktop's
+        //     the previously-focused toplevel also makes lumen-drawer's
         //     foreign-toplevel watcher fire (no toplevel focused), which is
         //     what drives its client-side search_entry.grab_focus().
         focus_desktop();
@@ -678,7 +678,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
 
     bool is_desktop_view(wayfire_view view) const
     {
-        return view && (view->get_app_id() == (std::string) desktop_app_id_opt);
+        return view && (view->get_app_id() == (std::string) drawer_app_id_opt);
     }
 
     // Find the desktop grid (the BOTTOM-layer view whose app-id matches the
@@ -821,7 +821,7 @@ class wayfire_curtain_peek_t : public wf::per_output_plugin_instance_t
 
 // ---------------------------------------------------------------------------
 // Plugin wrapper: per-output instances + plugin-wide IPC surface, identical in
-// shape to wayfire-desktop-peek so lumen-desktop/lumen-panel can drive it.
+// shape to wayfire-desktop-peek so lumen-drawer/lumen-panel can drive it.
 // ---------------------------------------------------------------------------
 class wayfire_curtain_peek_plugin_t :
     public wf::per_output_plugin_t<wayfire_curtain_peek_t>
