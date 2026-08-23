@@ -7,31 +7,34 @@ public class Backends {
         public bool   muted;
     }
 
+    // Every setter runs through run_capture rather than spawn_detached: the
+    // query that follows must observe the new value, and only a waited-on
+    // process guarantees that ordering.
+    private static void set_sync(string[] argv) {
+        LumenCommon.Proc.run_capture(argv);
+    }
+
     public static State output_volume_raise(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-sink-volume", "@DEFAULT_SINK@", "+%d%%".printf(step) });
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-sink-mute", "@DEFAULT_SINK@", "0" });
+        set_sync(new string[]{ "pactl", "set-sink-volume", "@DEFAULT_SINK@", "+%d%%".printf(step) });
+        set_sync(new string[]{ "pactl", "set-sink-mute", "@DEFAULT_SINK@", "0" });
         return query_sink();
     }
 
     public static State output_volume_lower(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-sink-volume", "@DEFAULT_SINK@", "-%d%%".printf(step) });
+        set_sync(new string[]{ "pactl", "set-sink-volume", "@DEFAULT_SINK@", "-%d%%".printf(step) });
         return query_sink();
     }
 
     public static State output_volume_mute_toggle() {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle" });
+        set_sync(new string[]{ "pactl", "set-sink-mute", "@DEFAULT_SINK@", "toggle" });
         return query_sink();
     }
 
     public static State query_sink() {
         string? vol = LumenCommon.Proc.run_capture(
-            new string[]{ "env", "LC_ALL=C", "pactl", "get-sink-volume", "@DEFAULT_SINK@" });
+            new string[]{ "pactl", "get-sink-volume", "@DEFAULT_SINK@" });
         string? mute = LumenCommon.Proc.run_capture(
-            new string[]{ "env", "LC_ALL=C", "pactl", "get-sink-mute", "@DEFAULT_SINK@" });
+            new string[]{ "pactl", "get-sink-mute", "@DEFAULT_SINK@" });
         return State() {
             value = parse_percent(vol ?? ""),
             muted = (mute ?? "").down().contains("yes")
@@ -39,30 +42,26 @@ public class Backends {
     }
 
     public static State input_volume_raise(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-source-volume", "@DEFAULT_SOURCE@", "+%d%%".printf(step) });
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-source-mute", "@DEFAULT_SOURCE@", "0" });
+        set_sync(new string[]{ "pactl", "set-source-volume", "@DEFAULT_SOURCE@", "+%d%%".printf(step) });
+        set_sync(new string[]{ "pactl", "set-source-mute", "@DEFAULT_SOURCE@", "0" });
         return query_source();
     }
 
     public static State input_volume_lower(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-source-volume", "@DEFAULT_SOURCE@", "-%d%%".printf(step) });
+        set_sync(new string[]{ "pactl", "set-source-volume", "@DEFAULT_SOURCE@", "-%d%%".printf(step) });
         return query_source();
     }
 
     public static State input_volume_mute_toggle() {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "pactl", "set-source-mute", "@DEFAULT_SOURCE@", "toggle" });
+        set_sync(new string[]{ "pactl", "set-source-mute", "@DEFAULT_SOURCE@", "toggle" });
         return query_source();
     }
 
     public static State query_source() {
         string? vol = LumenCommon.Proc.run_capture(
-            new string[]{ "env", "LC_ALL=C", "pactl", "get-source-volume", "@DEFAULT_SOURCE@" });
+            new string[]{ "pactl", "get-source-volume", "@DEFAULT_SOURCE@" });
         string? mute = LumenCommon.Proc.run_capture(
-            new string[]{ "env", "LC_ALL=C", "pactl", "get-source-mute", "@DEFAULT_SOURCE@" });
+            new string[]{ "pactl", "get-source-mute", "@DEFAULT_SOURCE@" });
         return State() {
             value = parse_percent(vol ?? ""),
             muted = (mute ?? "").down().contains("yes")
@@ -83,23 +82,19 @@ public class Backends {
     }
 
     public static State brightness_raise(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "brightnessctl", "set", "%d%%+".printf(step) });
+        set_sync(new string[]{ "brightnessctl", "set", "%d%%+".printf(step) });
         return query_brightness(null);
     }
     public static State brightness_lower(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "brightnessctl", "set", "%d%%-".printf(step) });
+        set_sync(new string[]{ "brightnessctl", "set", "%d%%-".printf(step) });
         return query_brightness(null);
     }
     public static State kbd_brightness_raise(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "brightnessctl", "--device=*::kbd_backlight", "set", "%d%%+".printf(step) });
+        set_sync(new string[]{ "brightnessctl", "--device=*::kbd_backlight", "set", "%d%%+".printf(step) });
         return query_brightness("*::kbd_backlight");
     }
     public static State kbd_brightness_lower(int step) {
-        LumenCommon.Proc.spawn_detached(
-            new string[]{ "brightnessctl", "--device=*::kbd_backlight", "set", "%d%%-".printf(step) });
+        set_sync(new string[]{ "brightnessctl", "--device=*::kbd_backlight", "set", "%d%%-".printf(step) });
         return query_brightness("*::kbd_backlight");
     }
 

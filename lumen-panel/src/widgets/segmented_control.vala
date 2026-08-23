@@ -37,8 +37,6 @@ public class SegmentedControl : Gtk.Widget {
         add_controller(motion);
     }
 
-    public int selected { get { return _selected; } }
-
     public void set_segments (string[] labels) {
         _labels = labels;
         if (_selected >= labels.length) _selected = -1;
@@ -83,45 +81,25 @@ public class SegmentedControl : Gtk.Widget {
         int h = get_height();
         if (w <= 0 || h <= 0) return;
 
-        var track_rect = Graphene.Rect();
-        track_rect.init(0, 0, w, h);
-        var track_rr = Gsk.RoundedRect();
-        track_rr.init_from_rect(track_rect, 10);
-        s.push_rounded_clip(track_rr);
-        s.append_color(track_col, track_rect);
-        s.pop();
+        Utils.fill_rounded(s, 0, 0, w, h, 10, track_col);
 
         float seg_w = (float) w / n;
 
         for (int i = 0; i < n; i++) {
             float sx = i * seg_w;
+            bool selected = i == _selected;
 
-            if (i == _selected || (i == _hovered && i != _selected)) {
-                var rect = Graphene.Rect();
-                rect.init(sx + INSET, INSET, seg_w - INSET * 2, h - INSET * 2);
-                var rr = Gsk.RoundedRect();
-                rr.init_from_rect(rect, 8);
-                s.push_rounded_clip(rr);
-                s.append_color(i == _selected ? sel_bg : hov_bg, rect);
-                s.pop();
+            if (selected || i == _hovered) {
+                Utils.fill_rounded(s, sx + INSET, INSET, seg_w - INSET * 2, h - INSET * 2,
+                                   8, selected ? sel_bg : hov_bg);
             }
 
-            var layout = create_pango_layout(_labels[i]);
-            var attrs = new Pango.AttrList();
-            attrs.insert(Pango.AttrSize.new_absolute(12 * Pango.SCALE));
-            attrs.insert(Pango.attr_weight_new(
-                i == _selected ? Pango.Weight.SEMIBOLD : Pango.Weight.NORMAL));
-            layout.set_attributes(attrs);
-
+            var layout = Utils.text_layout(this, _labels[i], 12,
+                selected ? Pango.Weight.SEMIBOLD : Pango.Weight.NORMAL);
             int tw, th;
             layout.get_pixel_size(out tw, out th);
-
-            var pt = Graphene.Point();
-            pt.init(sx + (seg_w - tw) / 2, (h - th) / 2);
-            s.save();
-            s.translate(pt);
-            s.append_layout(layout, i == _selected ? sel_fg : norm_fg);
-            s.restore();
+            Utils.draw_layout(s, layout, sx + (seg_w - tw) / 2, (h - th) / 2,
+                              selected ? sel_fg : norm_fg);
         }
     }
 }

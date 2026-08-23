@@ -1,18 +1,20 @@
 using GLib;
-using Gee;
 
 public class SearchDb {
     public bool active;
     public int size;
 
     private unowned AppEntry[] all_apps;
-    public Utils.AliasArray<AppEntry> filtered;
+    // Fixed-capacity result buffer: the grid can only show one page of tiles,
+    // so indexing stops there and the array is never reallocated per
+    // keystroke. Only the first `size` slots are meaningful.
+    public AppEntry[] filtered;
 
     private string last_query = "";
 
     public SearchDb(AppEntry[] apps) {
         this.all_apps = apps;
-        filtered = new Utils.AliasArray<AppEntry>(apps, PER_PAGE);
+        filtered = new AppEntry[LumenDrawer.DrawerConfig.per_page];
     }
 
     public void set_query(string query) {
@@ -34,13 +36,14 @@ public class SearchDb {
         // Pass 1: prefix matches. has_prefix is a cheap memcmp on the head
         // of the name, so re-running it in pass 2 is faster than allocating
         // a bool[all_apps.length] tracker per keystroke.
+        int cap = filtered.length;
         size = 0;
-        for (int i = 0; i < all_apps.length && size < PER_PAGE; i++) {
+        for (int i = 0; i < all_apps.length && size < cap; i++) {
             if (all_apps[i].name.has_prefix(search_lc)) {
-                filtered.alias_index(size++, i);
+                filtered[size++] = all_apps[i];
             }
         }
-        if (size >= PER_PAGE) return;
+        if (size >= cap) return;
 
         var pattern = new StringBuilder.sized(2 * search_lc.length + 2);
         pattern.append_c('*');
@@ -50,10 +53,10 @@ public class SearchDb {
         }
         var q = new PatternSpec(pattern.str);
 
-        for (int i = 0; i < all_apps.length && size < PER_PAGE; i++) {
+        for (int i = 0; i < all_apps.length && size < cap; i++) {
             unowned string name = all_apps[i].name;
             if (!name.has_prefix(search_lc) && q.match_string(name)) {
-                filtered.alias_index(size++, i);
+                filtered[size++] = all_apps[i];
             }
         }
     }

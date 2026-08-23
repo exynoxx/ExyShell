@@ -3,7 +3,7 @@ using GLib;
 public class BtDevice : GLib.Object {
     public string mac;        // AA:BB:CC:DD:EE:FF
     public string name;       // friendly name (falls back to mac)
-    public string dev_icon;   // bluez "Icon:" field — audio-card, input-mouse, phone, …
+    public string dev_icon;   // bluez "Icon" property — audio-card, input-mouse, phone, …
     public bool   paired;
     public bool   connected;
 
@@ -17,8 +17,8 @@ public class BtDevice : GLib.Object {
 }
 
 /**
- * Extended per-device info from `bluetoothctl info` — everything BtDevice holds
- * plus pairing/trust/battery detail for the settings device-detail expansion.
+ * Extended per-device info — everything BtDevice holds plus pairing/trust/
+ * battery detail for the settings device-detail expansion.
  */
 public class BtDeviceDetails : GLib.Object {
     public string mac          = "";
@@ -34,108 +34,157 @@ public class BtDeviceDetails : GLib.Object {
 }
 
 /**
- * bluetoothctl accepts one-shot subcommands non-interactively, so reads use
- * LumenCommon.Proc.run_capture (blocking) and fire-and-forget actions use
- * LumenCommon.Proc.spawn_detached.
+ * BlueZ client, split by direction:
+ *
+ *   READS go over DBus. One ObjectManager.GetManagedObjects call on org.bluez
+ *   returns every adapter and device with all its properties — the whole list
+ *   in a single round trip, where bluetoothctl needs one `info <mac>` fork per
+ *   device on top of `devices`.
+ *
+ *   WRITES stay on bluetoothctl. Pairing over DBus requires registering an
+ *   org.bluez.Agent1 to answer passkey/confirmation requests, which is a lot
+ *   more machinery than the one-shot shell-out.
+ *
+ * BlueZ also pushes changes, so `changed` fires on InterfacesAdded/Removed and
+ * on any Adapter1/Device1/Battery1 property change — callers can react instead
+ * of polling.
  */
 public class BtctlClient : GLib.Object {
 
-    private string field_value(string line) {
-        int idx = line.index_of_char(':');
-        if (idx < 0) return "";
-        return line.substring(idx + 1).strip();
+    /** Emitted on the main loop whenever BlueZ reports an adapter/device change. */
+    public signal void changed();
+
+    const string BLUEZ         = "org.bluez";
+    const string OBJMGR_IFACE  = "org.freedesktop.DBus.ObjectManager";
+    const string PROPS_IFACE   = "org.freedesktop.DBus.Properties";
+    const string ADAPTER_IFACE = "org.bluez.Adapter1";
+    const string DEVICE_IFACE  = "org.bluez.Device1";
+    const string BATTERY_IFACE = "org.bluez.Battery1";
+
+    DBusProxy? objmgr = null;
+
+    public BtctlClient() {
+        try {
+            objmgr = new DBusProxy.for_bus_sync(
+                BusType.SYSTEM, DBusProxyFlags.DO_NOT_LOAD_PROPERTIES, null,
+                BLUEZ, "/", OBJMGR_IFACE, null);
+        } catch (Error e) {
+            warning("btctl: cannot reach BlueZ ObjectManager: %s", e.message);
+            return;
+        }
+
+        objmgr.g_signal.connect((sender, signal_name, parameters) => {
+            if (signal_name == "InterfacesAdded" || signal_name == "InterfacesRemoved")
+                changed();
+        });
+
+        var conn = objmgr.get_connection();
+        foreach (var iface in new string[]{ ADAPTER_IFACE, DEVICE_IFACE, BATTERY_IFACE }) {
+            conn.signal_subscribe(BLUEZ, PROPS_IFACE, "PropertiesChanged", null, iface,
+                                  DBusSignalFlags.NONE,
+                                  (c, s, path, i, sig, parameters) => { changed(); });
+        }
+    }
+
+    // ---- reads (DBus) -------------------------------------------------------
+
+    // path -> interface -> properties, for every object BlueZ exposes.
+    Variant? managed_objects() {
+        if (objmgr == null) return null;
+        try {
+            var reply = objmgr.call_sync("GetManagedObjects", null,
+                                         DBusCallFlags.NONE, 3000, null);
+            return reply.get_child_value(0);
+        } catch (Error e) {
+            return null;
+        }
+    }
+
+    static string str_prop(Variant props, string key) {
+        var v = props.lookup_value(key, VariantType.STRING);
+        return v == null ? "" : v.get_string();
+    }
+
+    static bool bool_prop(Variant props, string key) {
+        var v = props.lookup_value(key, VariantType.BOOLEAN);
+        return v != null && v.get_boolean();
+    }
+
+    // `ifaces` is one object's a{sa{sv}}; null when it isn't a device.
+    static BtDeviceDetails? parse_device(Variant ifaces) {
+        var props = ifaces.lookup_value(DEVICE_IFACE, new VariantType("a{sv}"));
+        if (props == null) return null;
+
+        var d = new BtDeviceDetails();
+        d.mac          = str_prop(props, "Address");
+        d.name         = str_prop(props, "Name");
+        d.dev_icon     = str_prop(props, "Icon");
+        d.address_type = str_prop(props, "AddressType");
+        d.paired       = bool_prop(props, "Paired");
+        d.bonded       = bool_prop(props, "Bonded");
+        d.trusted      = bool_prop(props, "Trusted");
+        d.connected    = bool_prop(props, "Connected");
+
+        var rssi = props.lookup_value("RSSI", VariantType.INT16);
+        if (rssi != null) d.rssi = "%d".printf(rssi.get_int16());
+
+        // Battery level lives on a sibling interface of the same object.
+        var batt = ifaces.lookup_value(BATTERY_IFACE, new VariantType("a{sv}"));
+        if (batt != null) {
+            var pct = batt.lookup_value("Percentage", VariantType.BYTE);
+            if (pct != null) d.battery = pct.get_byte();
+        }
+
+        if (d.name == "") d.name = d.mac;
+        return d;
     }
 
     public bool query_powered() {
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{ "bluetoothctl", "show" });
-        if (out_str == null) return false;
+        var objects = managed_objects();
+        if (objects == null) return false;
 
-        foreach (var line in out_str.split("\n")) {
-            var t = line.strip();
-            if (t.has_prefix("Powered:")) return field_value(t) == "yes";
+        for (size_t i = 0; i < objects.n_children(); i++) {
+            var ifaces = objects.get_child_value(i).get_child_value(1);
+            var props  = ifaces.lookup_value(ADAPTER_IFACE, new VariantType("a{sv}"));
+            if (props != null) return bool_prop(props, "Powered");
         }
         return false;
     }
 
     public BtDevice[] fetch_devices() {
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{ "bluetoothctl", "devices" });
-        if (out_str == null) return {};
-
         BtDevice[] result = {};
-        var seen = new GLib.HashTable<string, bool>(str_hash, str_equal);
+        var objects = managed_objects();
+        if (objects == null) return result;
 
-        foreach (var line in out_str.split("\n")) {
-            // "Device AA:BB:CC:DD:EE:FF Friendly Name"
-            var t = line.strip();
-            if (!t.has_prefix("Device ")) continue;
-            string rest = t.substring(7).strip();
-            int sp = rest.index_of_char(' ');
-            string mac  = sp < 0 ? rest : rest.substring(0, sp);
-            if (mac == "" || seen.contains(mac)) continue;
-            seen.insert(mac, true);
-            result += info(mac);
+        for (size_t i = 0; i < objects.n_children(); i++) {
+            var d = parse_device(objects.get_child_value(i).get_child_value(1));
+            if (d != null)
+                result += new BtDevice(d.mac, d.name, d.dev_icon, d.paired, d.connected);
         }
         return result;
     }
 
     public BtDevice info(string mac) {
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{ "bluetoothctl", "info", mac });
-        if (out_str == null) return new BtDevice(mac, mac, "", false, false);
-
-        string name      = mac;
-        string dev_icon  = "";
-        bool   paired    = false;
-        bool   connected = false;
-
-        foreach (var line in out_str.split("\n")) {
-            var t = line.strip();
-            if      (t.has_prefix("Name:"))      name      = field_value(t);
-            else if (t.has_prefix("Icon:"))      dev_icon  = field_value(t);
-            else if (t.has_prefix("Paired:"))    paired    = field_value(t) == "yes";
-            else if (t.has_prefix("Connected:")) connected = field_value(t) == "yes";
-        }
-        if (name == "") name = mac;
-        return new BtDevice(mac, name, dev_icon, paired, connected);
+        var d = device_details(mac);
+        return new BtDevice(d.mac, d.name, d.dev_icon, d.paired, d.connected);
     }
 
-    /**
-     * Full parse of `bluetoothctl info <mac>` — same command as info() but also
-     * reads AddressType/Bonded/Trusted/RSSI and the Battery Percentage line
-     * ("Battery Percentage: 0x64 (100)" → 100). Blocking; call off the main loop.
-     */
     public BtDeviceDetails device_details(string mac) {
-        var d = new BtDeviceDetails();
-        d.mac  = mac;
-        d.name = mac;
-
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{ "bluetoothctl", "info", mac });
-        if (out_str == null) return d;
-
-        foreach (var line in out_str.split("\n")) {
-            var t = line.strip();
-            if      (t.has_prefix("Name:"))         d.name         = field_value(t);
-            else if (t.has_prefix("Icon:"))         d.dev_icon     = field_value(t);
-            else if (t.has_prefix("AddressType:"))  d.address_type = field_value(t);
-            else if (t.has_prefix("Paired:"))       d.paired       = field_value(t) == "yes";
-            else if (t.has_prefix("Bonded:"))       d.bonded       = field_value(t) == "yes";
-            else if (t.has_prefix("Trusted:"))      d.trusted      = field_value(t) == "yes";
-            else if (t.has_prefix("Connected:"))    d.connected    = field_value(t) == "yes";
-            else if (t.has_prefix("RSSI:"))         d.rssi         = field_value(t);
-            else if (t.has_prefix("Battery Percentage:")) {
-                // "0x64 (100)" — take the parenthesized decimal.
-                var v = field_value(t);
-                int lp = v.index_of_char('(');
-                int rp = v.index_of_char(')');
-                if (lp >= 0 && rp > lp) {
-                    int pct = 0;
-                    if (int.try_parse(v.substring(lp + 1, rp - lp - 1).strip(), out pct))
-                        d.battery = pct;
-                }
+        var objects = managed_objects();
+        if (objects != null) {
+            for (size_t i = 0; i < objects.n_children(); i++) {
+                var d = parse_device(objects.get_child_value(i).get_child_value(1));
+                if (d != null && d.mac.up() == mac.up()) return d;
             }
         }
-        if (d.name == "") d.name = mac;
-        return d;
+
+        var missing = new BtDeviceDetails();
+        missing.mac  = mac;
+        missing.name = mac;
+        return missing;
     }
+
+    // ---- writes (bluetoothctl one-shot subcommands) -------------------------
 
     public void scan(uint secs) {
         LumenCommon.Proc.run_capture(new string[]{

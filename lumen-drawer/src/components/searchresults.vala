@@ -8,16 +8,16 @@ public class SearchResults : Gtk.Box {
         add_css_class("search-results");
 
         // Mirror the main-page layout: full-bleed page with the same edge
-        // margins, a homogeneous 6x4 Grid inside. Tiles occupy fixed cell
+        // margins, a homogeneous Grid inside. Tiles occupy fixed cell
         // positions so the layout stays stable as results come and go.
         set_hexpand(true);
         set_vexpand(true);
         set_halign(Gtk.Align.FILL);
         set_valign(Gtk.Align.FILL);
-        margin_start  = PAGE_MARGIN_X;
-        margin_end    = PAGE_MARGIN_X;
-        margin_top    = PAGE_MARGIN_Y;
-        margin_bottom = PAGE_MARGIN_Y;
+        margin_start  = LumenDrawer.DrawerConfig.margin_x;
+        margin_end    = LumenDrawer.DrawerConfig.margin_x;
+        margin_top    = LumenDrawer.DrawerConfig.margin_y;
+        margin_bottom = LumenDrawer.DrawerConfig.margin_y;
 
         var grid = new Gtk.Grid() {
             halign             = Gtk.Align.FILL,
@@ -29,24 +29,25 @@ public class SearchResults : Gtk.Box {
         };
         grid.add_css_class("page");
 
-        tiles = new AppTile[PER_PAGE];
-        for (int i = 0; i < PER_PAGE; i++) {
+        int per_page = LumenDrawer.DrawerConfig.per_page;
+        int cols     = LumenDrawer.DrawerConfig.cols;
+
+        tiles = new AppTile[per_page];
+        for (int i = 0; i < per_page; i++) {
             tiles[i] = new AppTile();
             // Reserve the cell visually-empty until bound. Opacity 0 + not
             // sensitive keeps the allocation but hides icon/label and
             // prevents stray clicks.
             tiles[i].set_opacity(0);
             tiles[i].set_sensitive(false);
-            int row = i / GRID_COLS;
-            int col = i % GRID_COLS;
-            grid.attach(tiles[i], col, row, 1, 1);
+            grid.attach(tiles[i], i % cols, i / cols, 1, 1);
         }
         append(grid);
         active_count = 0;
     }
 
-    public void update(Utils.AliasArray<AppEntry> apps, int size) {
-        int new_count = int.min(size, PER_PAGE);
+    public void update(AppEntry[] apps, int size) {
+        int new_count = int.min(size, tiles.length);
         for (int i = 0; i < new_count; i++) {
             tiles[i].bind(apps[i]);
             if (i >= active_count) {

@@ -17,7 +17,7 @@ public class RadioState {
     static bool?  bt_enabled     = null;
 
     static string path () {
-        return Environment.get_user_config_dir() + "/lumen-shell/radio-state.json";
+        return LumenCommon.Paths.radio_state_json();
     }
 
     // Fail-soft parse, mirroring PanelConfig: a missing or unparseable file leaves

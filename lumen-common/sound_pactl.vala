@@ -44,10 +44,10 @@ public class PactlClient : GLib.Object {
     public const string METER_STREAM_NAME = "lumen-settings-meter";
 
     public string query_default_sink() {
-        var out_str = run_pactl_sync("get-default-sink").strip();
+        var out_str = run_pactl_sync({ "get-default-sink" }).strip();
         if (out_str != "") return out_str;
 
-        out_str = run_pactl_sync("info");
+        out_str = run_pactl_sync({ "info" });
         foreach (var line in out_str.split("\n")) {
             var l = line.strip();
             if (l.has_prefix("Default Sink:")) {
@@ -59,9 +59,9 @@ public class PactlClient : GLib.Object {
 
     public SinkInfo[] query_sinks() {
         SinkInfo[] result = {};
-        var detailed  = run_pactl_sync("list sinks");
+        var detailed  = run_pactl_sync({ "list", "sinks" });
         var desc_map  = parse_sink_descriptions(detailed);
-        var out_str   = run_pactl_sync("list short sinks");
+        var out_str   = run_pactl_sync({ "list", "short", "sinks" });
 
         foreach (var line in out_str.split("\n")) {
             var l = line.strip();
@@ -81,20 +81,20 @@ public class PactlClient : GLib.Object {
     }
 
     public int query_volume_percent() {
-        var out_str = run_pactl_sync("get-sink-volume @DEFAULT_SINK@");
+        var out_str = run_pactl_sync({ "get-sink-volume", "@DEFAULT_SINK@" });
         int pct = first_percent(out_str);
         if (pct >= 0) return pct;
 
-        out_str = run_cmd_sync("wpctl get-volume @DEFAULT_AUDIO_SINK@");
+        out_str = run_wpctl_sync("@DEFAULT_AUDIO_SINK@");
         return parse_wpctl_percent(out_str);
     }
 
     public bool query_muted() {
-        var out_str = run_pactl_sync("get-sink-mute @DEFAULT_SINK@").down();
+        var out_str = run_pactl_sync({ "get-sink-mute", "@DEFAULT_SINK@" }).down();
         if (out_str.contains("yes")) return true;
         if (out_str.contains("no"))  return false;
 
-        out_str = run_cmd_sync("wpctl get-volume @DEFAULT_AUDIO_SINK@").down();
+        out_str = run_wpctl_sync("@DEFAULT_AUDIO_SINK@").down();
         return out_str.contains("muted");
     }
 
@@ -125,10 +125,10 @@ public class PactlClient : GLib.Object {
     // ---- Input (source) queries + writes, mirroring the sink API ----
 
     public string query_default_source() {
-        var out_str = run_pactl_sync("get-default-source").strip();
+        var out_str = run_pactl_sync({ "get-default-source" }).strip();
         if (out_str != "") return out_str;
 
-        out_str = run_pactl_sync("info");
+        out_str = run_pactl_sync({ "info" });
         foreach (var line in out_str.split("\n")) {
             var l = line.strip();
             if (l.has_prefix("Default Source:")) {
@@ -140,9 +140,9 @@ public class PactlClient : GLib.Object {
 
     public SourceInfo[] query_sources() {
         SourceInfo[] result = {};
-        var detailed = run_pactl_sync("list sources");
+        var detailed = run_pactl_sync({ "list", "sources" });
         var desc_map = parse_sink_descriptions(detailed);
-        var out_str  = run_pactl_sync("list short sources");
+        var out_str  = run_pactl_sync({ "list", "short", "sources" });
 
         foreach (var line in out_str.split("\n")) {
             var l = line.strip();
@@ -168,20 +168,20 @@ public class PactlClient : GLib.Object {
     }
 
     public int query_input_volume_percent() {
-        var out_str = run_pactl_sync("get-source-volume @DEFAULT_SOURCE@");
+        var out_str = run_pactl_sync({ "get-source-volume", "@DEFAULT_SOURCE@" });
         int pct = first_percent(out_str);
         if (pct >= 0) return pct;
 
-        out_str = run_cmd_sync("wpctl get-volume @DEFAULT_AUDIO_SOURCE@");
+        out_str = run_wpctl_sync("@DEFAULT_AUDIO_SOURCE@");
         return parse_wpctl_percent(out_str);
     }
 
     public bool query_input_muted() {
-        var out_str = run_pactl_sync("get-source-mute @DEFAULT_SOURCE@").down();
+        var out_str = run_pactl_sync({ "get-source-mute", "@DEFAULT_SOURCE@" }).down();
         if (out_str.contains("yes")) return true;
         if (out_str.contains("no"))  return false;
 
-        out_str = run_cmd_sync("wpctl get-volume @DEFAULT_AUDIO_SOURCE@").down();
+        out_str = run_wpctl_sync("@DEFAULT_AUDIO_SOURCE@").down();
         return out_str.contains("muted");
     }
 
@@ -240,7 +240,7 @@ public class PactlClient : GLib.Object {
 
     public StreamInfo[] query_sink_inputs() {
         StreamInfo[] result = {};
-        var text = run_pactl_sync("list sink-inputs");
+        var text = run_pactl_sync({ "list", "sink-inputs" });
 
         // Split on the block marker; the element before the first marker is
         // header junk (no valid index) and is skipped.
@@ -318,48 +318,46 @@ public class PactlClient : GLib.Object {
         return v;
     }
 
-    private string run_cmd_sync(string cmd) {
-        string out_str = "";
-        try {
-            Process.spawn_command_line_sync(cmd, out out_str, null, null);
-        } catch (SpawnError e) {
-            return "";
-        }
-        return out_str;
+    // Everything below parses pactl/wpctl output by its English field prefixes
+    // ("Description:", "Volume:", "Mute:"), so the locale must be pinned.
+    private const string[] C_LOCALE = { "LC_ALL=C" };
+
+    private string run_pactl_sync(string[] args) {
+        string[] argv = { "pactl" };
+        foreach (var a in args) argv += a;
+        return LumenCommon.Proc.run_capture(argv, C_LOCALE) ?? "";
     }
 
-    private string run_pactl_sync(string args) {
-        return run_cmd_sync("env LC_ALL=C pactl " + args);
+    private string run_wpctl_sync(string target) {
+        return LumenCommon.Proc.run_capture(
+            new string[] { "wpctl", "get-volume", target }, C_LOCALE) ?? "";
     }
 
+    // First "NN%" in the text — pactl prints volumes as
+    // "front-left: 45874 /  70% / -9.35 dB". -1 when there is none.
     private int first_percent(string text) {
-        try {
-            var re = new Regex("([0-9]{1,3})%");
-            MatchInfo info;
-            if (re.match(text, 0, out info)) {
-                var s = info.fetch(1);
-                int v = 0;
-                if (int.try_parse(s, out v))
-                    return int.max(0, int.min(100, v));
-            }
-        } catch (RegexError e) {}
+        for (int pct = text.index_of_char('%'); pct > 0;
+             pct = text.index_of_char('%', pct + 1)) {
+            int start = pct;
+            while (start > 0 && text[start - 1].isdigit()) start--;
+            if (start < pct)
+                return int.max(0, int.min(100, int.parse(text.substring(start, pct - start))));
+        }
         return -1;
     }
 
+    // wpctl prints "Volume: 0.70" (plus " [MUTED]" when muted). double.try_parse
+    // is g_ascii_strtod-backed, so the decimal point stays '.' in any locale.
     private int parse_wpctl_percent(string text) {
-        try {
-            var re = new Regex("([0-9]+(?:\\.[0-9]+)?)");
-            MatchInfo info;
-            if (re.match(text, 0, out info)) {
-                var s = info.fetch(1);
-                double v = 0;
-                if (double.try_parse(s, out v)) {
-                    int pct = (int)(v * 100.0);
-                    return int.max(0, int.min(100, pct));
-                }
-            }
-        } catch (RegexError e) {}
-        return 0;
+        int i = 0;
+        while (i < text.length && !text[i].isdigit()) i++;
+        int start = i;
+        while (i < text.length && (text[i].isdigit() || text[i] == '.')) i++;
+        if (start == i) return 0;
+
+        double v = 0;
+        if (!double.try_parse(text.substring(start, i - start), out v)) return 0;
+        return int.max(0, int.min(100, (int)(v * 100.0)));
     }
 
     private GLib.HashTable<string, string> parse_sink_descriptions(string text) {
@@ -369,7 +367,7 @@ public class PactlClient : GLib.Object {
 
         foreach (var raw in text.split("\n")) {
             string line = raw.strip();
-            if (line.has_prefix("Name:") || line.has_prefix("Navn:")) {
+            if (line.has_prefix("Name:")) {
                 if (current_name != "" && current_desc != "")
                     map.insert(current_name, current_desc);
                 int sep = line.index_of(":");
@@ -377,7 +375,7 @@ public class PactlClient : GLib.Object {
                 current_desc = "";
                 continue;
             }
-            if (line.has_prefix("Description:") || line.has_prefix("Beskrivelse:")) {
+            if (line.has_prefix("Description:")) {
                 int sep = line.index_of(":");
                 current_desc = sep >= 0 ? line.substring(sep + 1).strip() : "";
                 continue;

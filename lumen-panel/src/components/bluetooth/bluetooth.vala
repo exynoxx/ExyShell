@@ -6,8 +6,8 @@ public class BluetoothTray : GLib.Object, ITrayApplet, IControlModule {
     BluetoothModule module_tile;
     BluetoothDetail detail;
 
-    public BluetoothTray () {
-        service = new BluetoothService ();
+    public BluetoothTray (BluetoothService service) {
+        this.service = service;
         icon = new TrayButton ("bluetooth-off");
         module_tile = new BluetoothModule (service);
         detail = new BluetoothDetail (service);

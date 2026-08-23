@@ -10,28 +10,22 @@ using Gtk;
  *   - Super up     commit the highlighted mode
  *
  * Detecting the Super release is the whole reason for the grab — Wayfire's
- * command bindings only fire on press. The actual wlr-randr switch is delegated
- * to `lumen-osdctl --display-mode <key>` (keeping all display logic in the Vala
- * DisplayCtl); applying it makes lumen-osdctl call back into our show() with the
- * confirmation chip, which replaces the selector. */
+ * command bindings only fire on press. The actual layout switch is delegated to
+ * `lumen-osdctl --display-mode <key>`, which owns DisplayCtl; applying it makes
+ * lumen-osdctl call back into our show() with the confirmation chip, which
+ * replaces the selector. */
 public class Picker : Object {
 
-    // Mirrors lumen-osdctl's DisplayCtl.Mode (icons/labels) and SELECTOR_MODES
-    // order. Three stable entries — duplicated across the process boundary the
-    // same way the old plugin held its own copy.
-    private const string[] KEYS   = { "internal", "extend", "external", "abort" };
-    private const string[] ICONS  = {
-        "video-single-display-symbolic",
-        "video-joined-displays-symbolic",
-        "video-display-symbolic",
-        "window-close-symbolic",
+    /* Tile order. The first three are real modes and take their key, icon and
+     * label from DisplayCtl.Mode, which is the single owner of all three; the
+     * trailing tile is a dismiss affordance with no mode behind it. */
+    private const DisplayCtl.Mode[] MODES = {
+        DisplayCtl.Mode.INTERNAL_ONLY,
+        DisplayCtl.Mode.EXTEND,
+        DisplayCtl.Mode.EXTERNAL_ONLY,
     };
-    private const string[] LABELS = {
-        "Built-in display",
-        "Extend",
-        "External display",
-        "",
-    };
+    private const int ABORT_INDEX = 3;
+    private const int TILE_COUNT  = 4;
 
     // Safety net: if key activity stops for this long (a missed Super-release,
     // or the user wandering off), cancel rather than hold the keyboard grab
@@ -97,23 +91,32 @@ public class Picker : Object {
     }
 
     private void refresh() {
-        window.selector.set_items(ICONS, LABELS, index);
+        var icons  = new string[TILE_COUNT];
+        var labels = new string[TILE_COUNT];
+        for (int i = 0; i < MODES.length; i++) {
+            icons[i]  = MODES[i].icon();
+            labels[i] = MODES[i].label();
+        }
+        icons[ABORT_INDEX]  = "window-close-symbolic";
+        labels[ABORT_INDEX] = "";
+
+        window.selector.set_items(icons, labels, index);
         window.show_selector_view();
     }
 
     private void advance() {
-        move_to((index + 1) % KEYS.length);
+        move_to((index + 1) % TILE_COUNT);
     }
 
     private void move_to(int i) {
-        index      = i.clamp(0, KEYS.length - 1);
+        index      = i.clamp(0, TILE_COUNT - 1);
         user_moved = true;
         refresh();
         arm_dismiss();
     }
 
     private void choose(int i) {
-        index      = i.clamp(0, KEYS.length - 1);
+        index      = i.clamp(0, TILE_COUNT - 1);
         user_moved = true;
         commit();
     }
@@ -121,7 +124,7 @@ public class Picker : Object {
     private void commit() {
         if (!_active) return;
         // The trailing "abort" tile dismisses without applying anything.
-        if (KEYS[index] == "abort") { cancel(); return; }
+        if (index == ABORT_INDEX) { cancel(); return; }
         _active    = false;
         last_index = index;
         cancel_dismiss();
@@ -132,7 +135,11 @@ public class Picker : Object {
         // than leaving the selector stuck on screen.
         window.set_visible(false);
 
-        spawn({ "lumen-osdctl", "--display-mode", KEYS[index] });
+        /* Applied out-of-process on purpose: DisplayCtl.apply() blocks on
+         * Wayland roundtrips until the compositor finishes the modeset, and
+         * this daemon must not stall its main loop on that. lumen-osdctl links
+         * the same DisplayCtl, so there is no second implementation. */
+        LumenCommon.Proc.spawn_detached({ "lumen-osdctl", "--display-mode", MODES[index].key() });
     }
 
     private void cancel() {
@@ -166,10 +173,10 @@ public class Picker : Object {
                 cancel();
                 return true;
             case Gdk.Key.Left:
-                move_to((index - 1 + KEYS.length) % KEYS.length);
+                move_to((index - 1 + TILE_COUNT) % TILE_COUNT);
                 return true;
             case Gdk.Key.Right:
-                move_to((index + 1) % KEYS.length);
+                move_to((index + 1) % TILE_COUNT);
                 return true;
             case Gdk.Key.Return:
             case Gdk.Key.KP_Enter:
@@ -200,6 +207,8 @@ public class Picker : Object {
         return false;
     }
 
+    // Raw Subprocess rather than LumenCommon.Proc: this must not block the UI
+    // thread while the picker is up, and Proc only offers a synchronous capture.
     private void seed_current_mode() {
         try {
             var sp = new Subprocess(SubprocessFlags.STDOUT_PIPE,
@@ -209,9 +218,10 @@ public class Picker : Object {
                     string outp;
                     sp.communicate_utf8_async.end(res, out outp, null);
                     if (!_active || user_moved || outp == null) return;
-                    string key = outp.strip();
-                    for (int i = 0; i < KEYS.length; i++) {
-                        if (KEYS[i] == key) { index = i; refresh(); break; }
+                    var live = DisplayCtl.Mode.parse(outp.strip());
+                    if (live == null) return;
+                    for (int i = 0; i < MODES.length; i++) {
+                        if (MODES[i] == live) { index = i; refresh(); break; }
                     }
                 } catch (Error e) {
                     // Best-effort: keep the provisional highlight.
@@ -219,14 +229,6 @@ public class Picker : Object {
             });
         } catch (Error e) {
             // lumen-osdctl missing / unspawnable: keep the provisional highlight.
-        }
-    }
-
-    private static void spawn(string[] argv) {
-        try {
-            new Subprocess.newv(argv, SubprocessFlags.NONE);
-        } catch (Error e) {
-            warning("lumen-osd: failed to run %s: %s", argv[0], e.message);
         }
     }
 }

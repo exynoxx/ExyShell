@@ -6,8 +6,8 @@ public class WifiTray : GLib.Object, ITrayApplet, IControlModule {
     WifiModule module_tile;
     WifiDetail detail;
 
-    public WifiTray () {
-        service = new WifiService ();
+    public WifiTray (WifiService service) {
+        this.service = service;
         icon = new TrayButton ("nowifi");
         module_tile = new WifiModule (service);
         detail = new WifiDetail (service);

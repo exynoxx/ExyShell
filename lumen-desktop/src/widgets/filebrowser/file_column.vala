@@ -2,6 +2,12 @@
 //
 // Owns its own scroll area; the browser strip scrolls horizontally between
 // columns, each column scrolls vertically within itself.
+//
+// Backed by Gtk.ListView over a Gtk.SingleSelection, so rows are recycled
+// rather than materialised per directory entry, and selection lookups are
+// O(1). ColumnBrowser stays the sole keyboard authority — the list and its
+// rows are deliberately non-focusable so Up/Down/Left/Right keep arriving at
+// the browser's key controller instead of being eaten by a focused list.
 
 namespace LumenDesktop {
 
@@ -13,34 +19,73 @@ namespace LumenDesktop {
         public bool show_hidden { get; construct; }
 
         // Emitted when the user moves the selection (click or arrow key).
-        // `entry` is null when the column is cleared.
         public signal void selection_changed(FsEntry? entry);
         // Emitted on Enter / double-click, i.e. "act on this".
         public signal void activated(FsEntry entry);
+        // A click landed in this column. Selecting already re-targets the
+        // browser's arrow keys; this covers re-clicking the current row, which
+        // changes no selection but should still move the keyboard here.
+        public signal void clicked();
 
         private Gtk.ScrolledWindow scroller;
-        private Gtk.Box rows_box;
-        private GLib.List<FileRow> rows = new GLib.List<FileRow>();
-        private FileRow? selected_row = null;
-        private Gtk.Label? placeholder = null;
+        private Gtk.ListView list;
+        private GLib.ListStore store = new GLib.ListStore(typeof(FsEntry));
+        private Gtk.SingleSelection selection;
 
         public FileColumn(GLib.File dir, bool show_hidden) {
             Object(dir: dir, show_hidden: show_hidden);
 
             set_layout_manager(new Gtk.BinLayout());
 
-            rows_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 0) {
+            selection = new Gtk.SingleSelection(store) {
+                autoselect = false,
+                can_unselect = true,
+            };
+            selection.notify["selected"].connect(on_selection_changed);
+
+            var factory = new Gtk.SignalListItemFactory();
+            factory.setup.connect((obj) => {
+                var item = (Gtk.ListItem) obj;
+                var row = new FileRow();
+                item.child = row;
+                item.focusable = false;
+                item.bind_property("selected", row, "selected",
+                                   GLib.BindingFlags.SYNC_CREATE);
+            });
+            factory.bind.connect((obj) => {
+                var item = (Gtk.ListItem) obj;
+                ((FileRow) item.child).entry = (FsEntry) item.item;
+            });
+            factory.unbind.connect((obj) => {
+                ((FileRow) ((Gtk.ListItem) obj).child).entry = null;
+            });
+
+            list = new Gtk.ListView(selection, factory) {
+                focusable = false,
                 margin_top = 6, margin_bottom = 6,
             };
+            list.add_css_class("fb-list");
+            // single_click_activate stays off: a click selects (which opens a
+            // directory's column), and only a double-click activates — the
+            // Finder split between "reveal" and "launch".
+            list.activate.connect(on_activate);
+
             scroller = new Gtk.ScrolledWindow() {
                 hscrollbar_policy = Gtk.PolicyType.NEVER,
                 vscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
-                child = rows_box,
+                child = list,
                 hexpand = false,
                 vexpand = true,
             };
             scroller.set_size_request(WIDTH, -1);
             scroller.set_parent(this);
+
+            // CAPTURE so the list still receives the press and does its own
+            // selecting; this only observes.
+            var click = new Gtk.GestureClick();
+            click.set_propagation_phase(Gtk.PropagationPhase.CAPTURE);
+            click.pressed.connect(() => clicked());
+            add_controller(click);
 
             load.begin();
         }
@@ -78,94 +123,57 @@ namespace LumenDesktop {
                 return;
             }
 
-            foreach (var entry in entries) {
-                var row = new FileRow(entry);
-                wire_row(row);
-                rows_box.append(row);
-                rows.append(row);
-            }
+            foreach (var entry in entries) store.append(entry);
         }
 
         // Errors and empty folders read the same way: a dim inline line, never
         // a dialog and never a crash.
         private void show_placeholder(string text) {
-            placeholder = new Gtk.Label(text) {
+            var placeholder = new Gtk.Label(text) {
                 wrap = true,
                 justify = Gtk.Justification.CENTER,
                 margin_start = 10, margin_end = 10, margin_top = 10,
+                valign = Gtk.Align.START,
                 xalign = 0.5f,
             };
             placeholder.add_css_class("fb-empty");
-            rows_box.append(placeholder);
+            scroller.set_child(placeholder);
         }
 
-        private void wire_row(FileRow row) {
-            var click = new Gtk.GestureClick();
-            click.pressed.connect((n_press, x, y) => {
-                select_row(row, true);
-                // Directories open a column on the first click (Finder-style);
-                // files need a double-click to launch.
-                if (n_press >= 2 && !row.entry.is_dir) activated(row.entry);
-            });
-            row.add_controller(click);
-        }
-
-        private void select_row(FileRow? row, bool notify_change) {
-            if (selected_row == row) {
-                if (notify_change && row != null) selection_changed(row.entry);
-                return;
+        private void on_selection_changed() {
+            var entry = selection.selected_item as FsEntry;
+            if (entry != null) {
+                list.scroll_to(selection.selected, Gtk.ListScrollFlags.NONE, null);
             }
-            if (selected_row != null) selected_row.selected = false;
-            selected_row = row;
-            if (selected_row != null) {
-                selected_row.selected = true;
-                scroll_into_view(selected_row);
-            }
-            if (notify_change) selection_changed(row == null ? null : row.entry);
+            selection_changed(entry);
         }
 
-        private void scroll_into_view(FileRow row) {
-            var adj = scroller.get_vadjustment();
-            if (adj == null) return;
-            // Allocation is only meaningful once laid out; defer a tick.
-            GLib.Idle.add(() => {
-                Gtk.Allocation alloc;
-                row.get_allocation(out alloc);
-                double y = alloc.y;
-                double h = alloc.height;
-                if (y < adj.value) adj.value = y;
-                else if (y + h > adj.value + adj.page_size) adj.value = y + h - adj.page_size;
-                return GLib.Source.REMOVE;
-            });
+        private void on_activate(uint position) {
+            var entry = store.get_item(position) as FsEntry;
+            if (entry != null) activated(entry);
         }
 
         // --- keyboard navigation, driven by ColumnBrowser ---
 
         public bool move_selection(int delta) {
-            uint n = rows.length();
+            uint n = store.get_n_items();
             if (n == 0) return false;
-            int idx = selected_row == null ? -1 : (int) rows.index(selected_row);
+            uint cur = selection.selected;
+            int idx = (cur == Gtk.INVALID_LIST_POSITION) ? -1 : (int) cur;
             int next = idx < 0 ? (delta > 0 ? 0 : (int) n - 1) : idx + delta;
             next = int.max(0, int.min(next, (int) n - 1));
             if (next == idx) return true;
-            select_row(rows.nth_data(next), true);
+            selection.selected = next;
             return true;
         }
 
         public void select_first_if_empty() {
-            if (selected_row == null) move_selection(1);
-        }
-
-        public FsEntry? selected_entry() {
-            return selected_row == null ? null : selected_row.entry;
+            if (selection.selected == Gtk.INVALID_LIST_POSITION) move_selection(1);
         }
 
         public void activate_selected() {
-            if (selected_row != null) activated(selected_row.entry);
-        }
-
-        public void clear_selection() {
-            select_row(null, false);
+            var entry = selection.selected_item as FsEntry;
+            if (entry != null) activated(entry);
         }
     }
 }

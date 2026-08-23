@@ -85,59 +85,75 @@ public class NmcliClient : GLib.Object {
         return parts;
     }
 
-    public string query_connected() {
+    private class DevRow : GLib.Object {
+        public string device;
+        public string dev_type;
+        public string state;
+        public string connection;
+    }
+
+    private GLib.Mutex              table_lock  = GLib.Mutex();
+    private GenericArray<DevRow>?   table_cache = null;
+    private int64                   table_us    = 0;
+
+    // WifiService asks all four device questions back-to-back on every poll, so
+    // the one `nmcli device` listing they share is cached briefly — one spawn
+    // per poll instead of four. The TTL is far shorter than the 4 s poll, so a
+    // state change is never held for more than one pass.
+    private const int64 TABLE_TTL_US = 1000000;
+
+    private GenericArray<DevRow> device_table() {
+        table_lock.lock();
+        var cached = table_cache;
+        bool fresh = cached != null && GLib.get_monotonic_time() - table_us < TABLE_TTL_US;
+        table_lock.unlock();
+        if (fresh) return cached;
+
+        var rows = new GenericArray<DevRow>();
         string? out_str = LumenCommon.Proc.run_capture(new string[]{
             "nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"
         });
-        if (out_str == null) return "";
-
-        foreach (var line in out_str.split("\n")) {
-            var p = split_terse(line, 4);
-            if (p.length >= 4 && p[1] == "wifi" && p[2] == "connected")
-                return p[3];
+        if (out_str != null) {
+            foreach (var line in out_str.split("\n")) {
+                var p = split_terse(line, 4);
+                if (p.length < 4) continue;
+                var r = new DevRow();
+                r.device     = p[0];
+                r.dev_type   = p[1];
+                r.state      = p[2];
+                r.connection = p[3];
+                rows.add(r);
+            }
         }
+
+        table_lock.lock();
+        table_cache = rows;
+        table_us    = GLib.get_monotonic_time();
+        table_lock.unlock();
+        return rows;
+    }
+
+    public string query_connected() {
+        foreach (var r in device_table())
+            if (r.dev_type == "wifi" && r.state == "connected") return r.connection;
         return "";
     }
 
     public bool query_ethernet_connected() {
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{
-            "nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"
-        });
-        if (out_str == null) return false;
-
-        foreach (var line in out_str.split("\n")) {
-            var p = split_terse(line, 3);
-            if (p.length >= 3 && p[1] == "ethernet" && p[2] == "connected")
-                return true;
-        }
+        foreach (var r in device_table())
+            if (r.dev_type == "ethernet" && r.state == "connected") return true;
         return false;
     }
 
     public string get_wifi_device() {
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{
-            "nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"
-        });
-        if (out_str == null) return "";
-
-        foreach (var line in out_str.split("\n")) {
-            var p = split_terse(line, 3);
-            if (p.length >= 3 && p[1] == "wifi")
-                return p[0];
-        }
+        foreach (var r in device_table())
+            if (r.dev_type == "wifi") return r.device;
         return "";
     }
 
     public string get_ethernet_device() {
-        string? out_str = LumenCommon.Proc.run_capture(new string[]{
-            "nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"
-        });
-        if (out_str == null) return "";
-
-        foreach (var line in out_str.split("\n")) {
-            var p = split_terse(line, 3);
-            if (p.length >= 3 && p[1] == "ethernet")
-                return p[0];
-        }
+        foreach (var r in device_table())
+            if (r.dev_type == "ethernet") return r.device;
         return "";
     }
 
@@ -243,7 +259,7 @@ public class NmcliClient : GLib.Object {
         LumenCommon.Proc.run_capture(new string[] { "nmcli", "radio", "wifi", on ? "on" : "off" });
     }
 
-    /** Blocking. */
+    /** Fire-and-forget: ask NetworkManager to re-probe the air. */
     public void rescan() {
         LumenCommon.Proc.spawn_detached(new string[] { "nmcli", "device", "wifi", "rescan" });
     }
@@ -257,14 +273,41 @@ public class NmcliClient : GLib.Object {
      * several seconds while NetworkManager negotiates the association.
      */
     public WifiConnectResult connect(string ssid, string password, bool from_saved) {
-        string[] argv;
         if (from_saved)
-            argv = new string[] { "nmcli", "connection", "up", "id", ssid };
-        else if (password == "")
-            argv = new string[] { "nmcli", "device", "wifi", "connect", ssid };
-        else
-            argv = new string[] { "nmcli", "device", "wifi", "connect", ssid, "password", password };
+            return run_connect(new string[] { "nmcli", "connection", "up", "id", ssid });
+        if (password == "")
+            return run_connect(new string[] { "nmcli", "device", "wifi", "connect", ssid });
+        return run_connect(new string[] {
+            "nmcli", "device", "wifi", "connect", ssid, "password", password
+        });
+    }
 
+    /**
+     * Connect to a hidden SSID (not present in scan results). Mirrors connect()
+     * but adds `hidden yes` so NetworkManager probes the SSID directly. Blocking
+     * — call from a background thread.
+     */
+    public WifiConnectResult connect_hidden(string ssid, string password) {
+        if (password == "")
+            return run_connect(new string[] {
+                "nmcli", "device", "wifi", "connect", ssid, "hidden", "yes"
+            });
+        return run_connect(new string[] {
+            "nmcli", "device", "wifi", "connect", ssid, "password", password, "hidden", "yes"
+        });
+    }
+
+    /**
+     * Run one nmcli connect variant to completion and classify the outcome.
+     *
+     * NOTE: the passphrase is an argv element, so it is readable in
+     * /proc/<pid>/cmdline for the duration of the association. `nmcli device
+     * wifi connect` offers no passwd-file option (only `connection up` does),
+     * and `--ask` reads its prompts from stdin but gives no guarantee about
+     * which prompt a piped line answers, so there is no reliable stdin route
+     * for the create-and-activate path.
+     */
+    private WifiConnectResult run_connect(string[] argv) {
         string std_out = "", std_err = "";
         int status = -1;
         try {
@@ -292,43 +335,7 @@ public class NmcliClient : GLib.Object {
         return WifiConnectResult.FAILED;
     }
 
-    /**
-     * Connect to a hidden SSID (not present in scan results). Mirrors connect()
-     * but adds `hidden yes` so NetworkManager probes the SSID directly. Blocking
-     * — call from a background thread.
-     */
-    public WifiConnectResult connect_hidden(string ssid, string password) {
-        string[] argv;
-        if (password == "")
-            argv = new string[] { "nmcli", "device", "wifi", "connect", ssid, "hidden", "yes" };
-        else
-            argv = new string[] { "nmcli", "device", "wifi", "connect", ssid, "password", password, "hidden", "yes" };
-
-        string std_out = "", std_err = "";
-        int status = -1;
-        try {
-            Process.spawn_sync(null, argv, null, SpawnFlags.SEARCH_PATH,
-                null, out std_out, out std_err, out status);
-        } catch (SpawnError e) {
-            return WifiConnectResult.FAILED;
-        }
-
-        bool ok = false;
-        try { ok = Process.check_wait_status(status); } catch (Error e) { ok = false; }
-        if (ok) return WifiConnectResult.SUCCESS;
-
-        string err = (std_err + " " + std_out).down();
-        if (err.contains("secrets were required")
-            || err.contains("no secrets")
-            || err.contains("802-11-wireless-security")
-            || err.contains("802.1x")
-            || err.contains("authentication")
-            || err.contains("password"))
-            return WifiConnectResult.BAD_PASSWORD;
-        return WifiConnectResult.FAILED;
-    }
-
-    /** Fire-and-forget: bring the ethernet device up or down. */
+    /** Resolves the ethernet device (blocking), then brings it up or down. */
     public void set_ethernet_enabled(bool on) {
         string dev = get_ethernet_device();
         if (dev == "") return;

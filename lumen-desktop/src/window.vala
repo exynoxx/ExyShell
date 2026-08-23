@@ -27,6 +27,14 @@ window.lumen-desktop-root {
     color: alpha(#ffffff, 0.45);
     font-size: 13px;
 }
+/* FileRow draws its own selection highlight, so the list and its rows must
+   contribute no background of their own. */
+.fb-list,
+.fb-list > row,
+.fb-list > row:selected {
+    background: none;
+    padding: 0;
+}
 """;
 
 namespace LumenDesktop {

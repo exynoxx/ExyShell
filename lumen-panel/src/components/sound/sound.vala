@@ -6,8 +6,8 @@ public class SoundTray : GLib.Object, ITrayApplet, IControlModule {
     SoundModule module_tile;
     SoundDetail detail;
 
-    public SoundTray () {
-        service = new SoundService ();
+    public SoundTray (SoundService service) {
+        this.service = service;
         icon = new TrayButton ("sound-max");
         module_tile = new SoundModule (service);
         detail = new SoundDetail (service);

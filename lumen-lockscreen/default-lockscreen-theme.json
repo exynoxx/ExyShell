@@ -1,5 +1,4 @@
 {
-    "lockscreen.background":           "#101218ff",
     "lockscreen.background-image":     "",
     "lockscreen.text":                 "#ffffffff",
     "lockscreen.muted-text":           "#ffffffbf",
@@ -11,7 +10,6 @@
     "lockscreen.clock-font-size":      96,
     "lockscreen.date-font-size":       18,
     "lockscreen.avatar-size":          256,
-    "lockscreen.corner-radius":        16,
     "lockscreen.blur-radius":          12,
     "lockscreen.idle-timeout-ms":      300000,
     "lockscreen.failure-backoff-ms":   3000,

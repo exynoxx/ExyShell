@@ -1,3 +1,4 @@
+using LumenCommon;
 namespace LumenSettings {
 
     /* Tiny dotted-key JSON store. Values are stored as strings (or int64); the

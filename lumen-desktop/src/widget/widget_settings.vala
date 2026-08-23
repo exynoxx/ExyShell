@@ -7,7 +7,7 @@
 // because DesktopConfig hands the bag straight to the widget factory.
 //
 // Values are stored as strings and coerced on read, so a config that writes
-// 22 or "22" for an int both work.
+// true or "true" for a bool both work.
 
 namespace LumenDesktop {
 
@@ -18,10 +18,6 @@ namespace LumenDesktop {
 
         public void put(string key, string value) {
             values.insert(key, value);
-        }
-
-        public bool has(string key) {
-            return values.contains(key);
         }
 
         // For serialising the bag back out to desktop.json. Values come back
@@ -46,22 +42,6 @@ namespace LumenDesktop {
         // them in a shell.
         public string get_path(string key, string fallback) {
             return expand_path(get_string(key, fallback));
-        }
-
-        public int get_int(string key, int fallback) {
-            var v = values.lookup(key);
-            if (v == null) return fallback;
-            int parsed;
-            return int.try_parse(v.strip(), out parsed) ? parsed : fallback;
-        }
-
-        public double get_double(string key, double fallback) {
-            var v = values.lookup(key);
-            if (v == null) return fallback;
-            double parsed;
-            // Always parse with the C locale: config files are machine-facing
-            // and use '.' regardless of the user's LC_NUMERIC.
-            return double.try_parse(v.strip(), out parsed) ? parsed : fallback;
         }
 
         public bool get_bool(string key, bool fallback) {

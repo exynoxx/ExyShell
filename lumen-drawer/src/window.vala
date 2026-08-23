@@ -174,7 +174,7 @@ public class DrawerWindow : Gtk.ApplicationWindow {
     }
 
     private void load_apps() {
-        var list = new Gee.ArrayList<AppEntry>();
+        var list = new GenericArray<AppEntry>();
         foreach (var info in AppInfo.get_all()) {
             if (!info.should_show()) continue;
             var entry = new AppEntry(info);
@@ -189,8 +189,8 @@ public class DrawerWindow : Gtk.ApplicationWindow {
             list.add(entry);
         }
         list.sort((a, b) => GLib.strcmp(a.name, b.name));
-        apps = new AppEntry[list.size];
-        for (int i = 0; i < list.size; i++) apps[i] = list[i];
+        apps = new AppEntry[list.length];
+        for (int i = 0; i < list.length; i++) apps[i] = list[i];
         stdout.printf("lumen-drawer: %d apps\n", apps.length);
     }
 
@@ -203,8 +203,8 @@ public class DrawerWindow : Gtk.ApplicationWindow {
 
     // Driven by DrawerApp's AppInfoMonitor when installed .desktop files change
     // (dnf/flatpak install/remove). The grid is immutable after construction, so
-    // we swap in a fresh PagedGrid; SearchDb must be rebuilt too because it (and
-    // its AliasArray) hold *unowned* aliases of the old apps[] backing array.
+    // we swap in a fresh PagedGrid; SearchDb must be rebuilt too because it holds
+    // an *unowned* alias of the old apps[] backing array.
     public void reload() {
         load_apps();
         search_db = new SearchDb(apps);
@@ -302,7 +302,6 @@ public class DrawerWindow : Gtk.ApplicationWindow {
     }
 
     private bool on_key_pressed(uint keyval, uint keycode, Gdk.ModifierType state) {
-        stderr.printf("[DBG] on_key_pressed keyval=%u search_active=%s\n", keyval, search_db.active.to_string());
         var mods = state & (Gdk.ModifierType.CONTROL_MASK
                           | Gdk.ModifierType.ALT_MASK
                           | Gdk.ModifierType.SHIFT_MASK

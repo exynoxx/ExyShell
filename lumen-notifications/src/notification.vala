@@ -23,12 +23,4 @@ public class Notification : Object {
     public Notification(uint32 id) {
         this.id = id;
     }
-
-    public Gdk.RGBA accent_color() {
-        switch (urgency) {
-            case Urgency.LOW:      return Theme.urgency_low;
-            case Urgency.CRITICAL: return Theme.urgency_critical;
-            default:               return Theme.urgency_normal;
-        }
-    }
 }

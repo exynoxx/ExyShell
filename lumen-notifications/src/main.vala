@@ -10,11 +10,10 @@ public class NotifApp : Gtk.Application {
     private bool                 activated = false;
     public  string               bus_name = "org.freedesktop.Notifications";
     public  string               bus_path = "/org/freedesktop/Notifications";
-    public  bool                 test_mode = false;
 
     public NotifApp() {
         Object(
-            application_id: "co.ibexa.LumenNotifications",
+            application_id: "org.lumenshell.Notifications",
             flags: ApplicationFlags.NON_UNIQUE
         );
     }
@@ -38,14 +37,13 @@ public class NotifApp : Gtk.Application {
         wire_signals();
         own_bus_name();
         hold();
-
-        if (test_mode) new NotifSelfTest(service).run();
     }
 
     private void wire_signals() {
         manager.notification_added.connect((n) => {
-            stderr.printf("lumen-notifications: notification_added id=%u app=%s summary=%s\n",
-                          n.id, n.app_name, n.summary);
+            // Content is user data — debug only, never on by default.
+            debug("notification_added id=%u app=%s summary=%s",
+                  n.id, n.app_name, n.summary);
             var b = window.stack.add_banner(n);
             wire_banner(b, n.id);
             window.set_visible(true);
@@ -118,9 +116,7 @@ public static int main(string[] args) {
     var app = new NotifApp();
     string[] gtk_args = { args[0] };
     for (int i = 1; i < args.length; i++) {
-        if (args[i] == "--test") {
-            app.test_mode = true;
-        } else if (args[i] == "--bus-name" && i + 1 < args.length) {
+        if (args[i] == "--bus-name" && i + 1 < args.length) {
             app.bus_name = args[i + 1];
             i++;
         } else if (args[i] == "--bus-path" && i + 1 < args.length) {

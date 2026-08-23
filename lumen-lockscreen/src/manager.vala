@@ -1,4 +1,5 @@
 using Gtk;
+using LumenCommon;
 
 // LockManager — the lock state machine. Owns the GtkSessionLock instance, one
 // LockWindow per output, the PAM auth orchestration, and the logind bridge.
@@ -36,7 +37,6 @@ public class LockManager : GLib.Object {
 
         DiagLog.log("manager: idle_timeout_ms=%d", Theme.idle_timeout_ms);
 
-        // Bind ext-idle-notify-v1 on GTK's wl_display for idle auto-lock.
         init_wlhooks();
 
         // Idle auto-lock. Arm immediately; disarm while locked so it can't
@@ -60,7 +60,7 @@ public class LockManager : GLib.Object {
         logind.prepare_for_sleep.connect((starting) => {
             DiagLog.log("trigger: PrepareForSleep starting=%s", starting.to_string());
             if (starting) {
-                lock_now_immediate();   // no transition — screen is powering off
+                lock_now();
                 // Lock request is in flight; let the kernel proceed to sleep.
                 logind.release_delay_inhibitor();
             } else {
@@ -70,13 +70,12 @@ public class LockManager : GLib.Object {
         });
     }
 
-    // ---- lock --------------------------------------------------------------
-
+    // Bind ext-idle-notify-v1 (idle auto-lock) on GTK's own wl_display, so the
+    // GDK main loop dispatches the idled/resumed events.
     private void init_wlhooks() {
         var gdk = Gdk.Display.get_default();
         if (gdk is Gdk.Wayland.Display) {
             unowned Wl.Display wl = ((Gdk.Wayland.Display) gdk).get_wl_display();
-            // Bind ext-idle-notify-v1 (idle auto-lock) on GTK's wl_display.
             if (WLHooks.idle_notify_init(wl) == 0) {
                 DiagLog.log("wlhooks: idle_notify_init ok");
                 return;
@@ -84,6 +83,8 @@ public class LockManager : GLib.Object {
         }
         warning("lumen-lockscreen: wlhooks init failed; idle auto-lock disabled");
     }
+
+    // ---- lock --------------------------------------------------------------
 
     // Lock the session. Used by every trigger (Win+L/DBus, logind Lock, idle,
     // PrepareForSleep). The lock surfaces simply appear — there is no pre-lock
@@ -104,11 +105,6 @@ public class LockManager : GLib.Object {
         }
 
         begin_lock();
-    }
-
-    // Kept for the PrepareForSleep path; identical to lock_now (no transition).
-    public void lock_now_immediate() {
-        lock_now();
     }
 
     private void begin_lock() {

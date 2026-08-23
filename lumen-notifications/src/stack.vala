@@ -1,14 +1,13 @@
 using Gtk;
 
 /**
- *   - `by_id` maps id → Banner only for *active* (not-yet-leaving) banners.
- *     A banner whose leave animation is running has already been removed
- *     from this map so it does not get included in `cascade_dismiss` or
- *     trigger another close.
+ * `by_id` maps id → Banner only for *active* (not-yet-leaving) banners. A
+ * banner whose leave transition is running has already been removed from this
+ * map so it cannot be picked up by `cascade_dismiss` or closed a second time.
  *
- *   - Removal flow: `dismiss_banner(id)` starts the leave animation; on
- *     `leave_finished` the widget is removed from the box and `empty()` /
- *     `count_changed()` fire as needed.
+ * Each banner lives inside its own Gtk.Revealer, which owns the leave
+ * animation: `dismiss_banner` un-reveals it and the widget is dropped once
+ * `child-revealed` goes false.
  */
 public class BannerStack : Gtk.Box {
 
@@ -27,10 +26,28 @@ public class BannerStack : Gtk.Box {
 
     public Banner add_banner(Notification n) {
         var banner = new Banner(n);
+        var rev = new Gtk.Revealer();
+        rev.set_transition_type(transition_type());
+        rev.set_transition_duration(transition_ms());
+        rev.set_child(banner);
+        // Reveal before the revealer is mapped so the banner appears at once —
+        // GtkRevealer only animates a change made while it is mapped.
+        rev.set_reveal_child(true);
+
         by_id.insert(n.id, banner);
-        append(banner);
+        append(rev);
         count_changed(active_count());
         return banner;
+    }
+
+    private static Gtk.RevealerTransitionType transition_type() {
+        return Theme.dismiss_style == DismissStyle.FADE
+               ? Gtk.RevealerTransitionType.CROSSFADE
+               : Gtk.RevealerTransitionType.SLIDE_RIGHT;
+    }
+
+    private static uint transition_ms() {
+        return Theme.fade_out_ms > 0 ? (uint) Theme.fade_out_ms : 200;
     }
 
     public Banner? get_banner(uint32 id) {
@@ -46,11 +63,18 @@ public class BannerStack : Gtk.Box {
         by_id.remove(id);
         count_changed(active_count());
 
-        b.leave_finished.connect(() => {
-            remove(b);
+        var rev = b.get_parent() as Gtk.Revealer;
+        if (rev == null) {                     // never happens; don't strand empty()
+            if (by_id.size() == 0) empty();
+            return;
+        }
+        b.set_sensitive(false);   // no clicks or actions once the leave starts
+        ((!) rev).notify["child-revealed"].connect(() => {
+            if (((!) rev).child_revealed) return;
+            remove((!) rev);
             if (by_id.size() == 0) empty();
         });
-        b.begin_leave(Theme.dismiss_style);
+        ((!) rev).set_reveal_child(false);
     }
 
     public int active_count() {
@@ -62,8 +86,9 @@ public class BannerStack : Gtk.Box {
         uint32[] ids = {};
         Gtk.Widget? child = get_first_child();
         while (child != null) {
-            var b = child as Banner;
-            if (b != null && by_id.contains(b.id)) ids += b.id;
+            var rev = child as Gtk.Revealer;
+            var b = (rev != null) ? ((!) rev).get_child() as Banner : null;
+            if (b != null && by_id.contains(((!) b).id)) ids += ((!) b).id;
             child = ((!) child).get_next_sibling();
         }
         if (ids.length == 0) return;

@@ -1,76 +1,152 @@
+using LumenCommon;
 using Gtk;
 
 namespace LumenSettings {
 
-    /* Thin wrapper over the `[input]` section of ~/.config/wayfire.ini, with
-     * row-builder helpers so the Keyboard/Mouse/Touchpad pages don't each
-     * repeat the read-fallback / write / save boilerplate.
+    /* Store-bound row builders.
      *
-     * Every write reloads the backing file first: all three input pages (plus
-     * the Panel and Desktop pages) build their stores at startup from the SAME
-     * wayfire.ini snapshot, so a stale snapshot would clobber a sibling page's
-     * edits on save. reload() re-reads the file, then we re-set the single key.
+     * Every settings page follows the same shape: read a key with a fallback,
+     * build a row seeded with it, write the key back and save on change. This
+     * is that pattern, once, over the two config formats lumen-settings writes
+     * — dotted-key JSON (JsonRows) and one section of an INI file (IniRows).
      *
-     * Doubles are formatted locale-independently (g_ascii_formatd) — the box
-     * may run a comma-decimal locale (da_DK) and wayfire.ini must use '.'. */
-    public class InputSection : GLib.Object {
-        public const string SECTION = "input";
-        IniStore store;
+     * (The file is named for InputSection, which was the first user; it now
+     * serves every page.) */
+    public abstract class SettingsRows : GLib.Object {
 
-        public InputSection() {
-            store = new IniStore(Paths.wayfire_ini());
-        }
-
-        public string? get_str(string key) {
-            return store.get_value(SECTION, key);
-        }
-
-        public void put(string key, string value) {
-            store.reload();
-            store.set_value(SECTION, key, value);
-            store.save();
-        }
+        protected abstract string? read_string(string key);
+        protected abstract void    write_string(string key, string value);
+        protected abstract int64   read_int(string key, int64 dflt);
+        protected abstract void    write_int(string key, int64 value);
+        protected abstract bool    read_bool(string key, bool dflt);
+        protected abstract void    write_bool(string key, bool value);
 
         public SwitchRow bool_row(string key, string label, bool dflt,
                                   string subtitle = "") {
-            bool initial = parse_bool(store.get_value(SECTION, key), dflt);
-            var row = new SwitchRow(label, subtitle, initial);
-            row.toggled.connect((active) => put(key, active ? "true" : "false"));
+            var row = new SwitchRow(label, subtitle, read_bool(key, dflt));
+            row.toggled.connect((on) => write_bool(key, on));
             return row;
         }
 
-        public SpinRow double_row(string key, string label, double min, double max,
-                                  double step, double dflt, int precision,
-                                  string subtitle = "") {
-            double initial = parse_double(store.get_value(SECTION, key), dflt);
-            var row = new SpinRow(label, min, max, step, initial, precision, subtitle);
-            row.value_changed.connect((v) => put(key, fmt_double(v, precision)));
-            return row;
-        }
-
+        // `scale` is stored units per displayed unit, for keys whose file
+        // representation differs from what the user types (idle-timeout-ms is
+        // stored in ms and shown in seconds). `dflt` is in stored units;
+        // min/max/step are in displayed units.
         public SpinRow int_row(string key, string label, double min, double max,
-                               double step, int64 dflt, string subtitle = "") {
-            int64 initial = parse_int(store.get_value(SECTION, key), dflt);
-            var row = new SpinRow(label, min, max, step, (double) initial, 0, subtitle);
-            row.value_changed.connect((v) => put(key, "%lld".printf((int64) v)));
+                               double step, int64 dflt, string subtitle = "",
+                               int64 scale = 1) {
+            double initial = (double) read_int(key, dflt) / (double) scale;
+            var row = new SpinRow(label, min, max, step, initial, 0, subtitle);
+            row.value_changed.connect((v) => write_int(key, (int64) (v * scale)));
             return row;
         }
 
         public ComboRow combo_row(string key, string label, string[] labels,
                                   string[] values, string dflt,
                                   string subtitle = "") {
-            var initial = store.get_value(SECTION, key) ?? dflt;
-            var row = new ComboRow(label, labels, values, initial, subtitle);
-            row.value_changed.connect((v) => put(key, v));
+            var row = new ComboRow(label, labels, values,
+                                   read_string(key) ?? dflt, subtitle);
+            row.value_changed.connect((v) => write_string(key, v));
             return row;
         }
 
-        static bool parse_bool(string? s, bool dflt) {
+        public ColorRow color_row(string key, string label, string dflt,
+                                  string subtitle = "") {
+            var row = new ColorRow(label, read_string(key) ?? dflt, subtitle);
+            row.value_changed.connect((hex) => write_string(key, hex));
+            return row;
+        }
+    }
+
+    /* Rows bound to dotted keys in a JSON config. Values keep their JSON type
+     * (int stays a number) — the runtime binaries' theme loaders are typed. */
+    public class JsonRows : SettingsRows {
+        JsonStore store;
+
+        public JsonRows(JsonStore store) {
+            this.store = store;
+        }
+
+        protected override string? read_string(string key) {
+            return store.get_string(key);
+        }
+        protected override void write_string(string key, string value) {
+            store.set_string(key, value);
+            store.save();
+        }
+        protected override int64 read_int(string key, int64 dflt) {
+            return store.get_int(key, dflt);
+        }
+        protected override void write_int(string key, int64 value) {
+            store.set_int(key, value);
+            store.save();
+        }
+        protected override bool read_bool(string key, bool dflt) {
+            return store.get_bool(key, dflt);
+        }
+        protected override void write_bool(string key, bool value) {
+            store.set_bool(key, value);
+            store.save();
+        }
+    }
+
+    /* Rows bound to one section of an INI config.
+     *
+     * Every write reloads the backing file first: several pages build stores
+     * over the SAME wayfire.ini at startup, so a stale snapshot would clobber a
+     * sibling page's edits on save. */
+    public class IniRows : SettingsRows {
+        protected IniStore store;
+        protected string section;
+
+        public IniRows(string path, string section) {
+            store = new IniStore(path);
+            this.section = section;
+        }
+
+        public string? get_str(string key) {
+            return store.get_value(section, key);
+        }
+
+        public void put(string key, string value) {
+            store.reload();
+            store.set_value(section, key, value);
+            store.save();
+        }
+
+        public SpinRow double_row(string key, string label, double min, double max,
+                                  double step, double dflt, int precision,
+                                  string subtitle = "") {
+            double initial = parse_double(get_str(key), dflt);
+            var row = new SpinRow(label, min, max, step, initial, precision, subtitle);
+            row.value_changed.connect((v) => put(key, fmt_double(v, precision)));
+            return row;
+        }
+
+        protected override string? read_string(string key) { return get_str(key); }
+        protected override void write_string(string key, string value) {
+            put(key, value);
+        }
+        protected override int64 read_int(string key, int64 dflt) {
+            var s = get_str(key);
             if (s == null) return dflt;
-            var t = s.strip().down();
-            if (t == "true" || t == "1" || t == "yes" || t == "on")  return true;
-            if (t == "false" || t == "0" || t == "no" || t == "off") return false;
-            return dflt;
+            int64 v;
+            return int64.try_parse(s.strip(), out v) ? v : dflt;
+        }
+        protected override void write_int(string key, int64 value) {
+            put(key, "%lld".printf(value));
+        }
+        protected override bool read_bool(string key, bool dflt) {
+            var s = get_str(key);
+            if (s == null) return dflt;
+            switch (s.strip().down()) {
+                case "true":  case "1": case "yes": case "on":  return true;
+                case "false": case "0": case "no":  case "off": return false;
+                default: return dflt;
+            }
+        }
+        protected override void write_bool(string key, bool value) {
+            put(key, value ? "true" : "false");
         }
 
         static double parse_double(string? s, double dflt) {
@@ -80,20 +156,19 @@ namespace LumenSettings {
             return double.try_parse(s.strip(), out d) ? d : dflt;
         }
 
-        static int64 parse_int(string? s, int64 dflt) {
-            if (s == null) return dflt;
-            int64 v;
-            return int64.try_parse(s.strip(), out v) ? v : dflt;
-        }
-
-        // Locale-independent "%.<precision>f" — wayfire.ini decimals must use
-        // '.' regardless of LC_NUMERIC.
+        // Locale-independent "%.<precision>f" — INI decimals must use '.'
+        // regardless of LC_NUMERIC (the box may run da_DK).
         static string fmt_double(double v, int precision) {
-            // double.format == g_ascii_formatd: always '.' for the decimal point.
             char[] buf = new char[double.DTOSTR_BUF_SIZE];
-            string fmt = "%%.%df".printf(precision);
-            string result = v.format(buf, fmt);
-            return result;
+            return v.format(buf, "%%.%df".printf(precision));
+        }
+    }
+
+    /* The `[input]` section of ~/.config/wayfire.ini — Keyboard, Mouse and
+     * Touchpad all edit it. */
+    public class InputSection : IniRows {
+        public InputSection() {
+            base(Paths.wayfire_ini(), "input");
         }
     }
 }

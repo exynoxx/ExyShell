@@ -55,6 +55,7 @@ namespace LumenDesktop {
             int index = (int) columns.length();
 
             col.selection_changed.connect((entry) => on_selection(index, entry));
+            col.clicked.connect(() => focused_column = index);
             col.activated.connect((entry) => {
                 if (!entry.is_dir) FsModel.launch_default(entry.file);
             });

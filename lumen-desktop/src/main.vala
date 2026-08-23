@@ -12,7 +12,6 @@ namespace LumenDesktop {
         private GLib.GenericArray<DesktopWindow> wins
             = new GLib.GenericArray<DesktopWindow>();
         private bool started = false;
-        private bool hotplug_wired = false;
         private bool removing = false;
 
         construct {
@@ -28,11 +27,8 @@ namespace LumenDesktop {
 
                 build_windows();
 
-                if (!hotplug_wired) {
-                    var monitors = Gdk.Display.get_default().get_monitors();
-                    monitors.items_changed.connect((p, r, a) => rebuild_windows());
-                    hotplug_wired = true;
-                }
+                var monitors = Gdk.Display.get_default().get_monitors();
+                monitors.items_changed.connect((p, r, a) => rebuild_windows());
             }
             for (int i = 0; i < wins.length; i++) wins.get(i).present();
         }

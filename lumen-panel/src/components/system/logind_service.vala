@@ -33,7 +33,7 @@ public class LogindService : GLib.Object {
     }
 
     bool lock_on_suspend_enabled() {
-        var p = Environment.get_user_config_dir() + "/lumen-shell/power.ini";
+        var p = LumenCommon.Paths.power_ini();
         string? v = null;
         if (FileUtils.test(p, FileTest.EXISTS)) {
             var kf = new KeyFile();
@@ -52,14 +52,7 @@ public class LogindService : GLib.Object {
     void request_lock() {
         try {
             var conn = Bus.get_sync(BusType.SESSION, null);
-            var r = conn.call_sync(
-                "org.freedesktop.DBus", "/org/freedesktop/DBus",
-                "org.freedesktop.DBus", "NameHasOwner",
-                new Variant("(s)", LOCK_NAME), new VariantType("(b)"),
-                DBusCallFlags.NONE, 800, null);
-            bool owned = false;
-            r.get("(b)", out owned);
-            if (!owned) {
+            if (!LumenCommon.DbusCli.name_has_owner(conn, LOCK_NAME)) {
                 debug("lock-on-suspend: %s not present; skipping", LOCK_NAME);
                 return;
             }

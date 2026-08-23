@@ -5,46 +5,53 @@ using Gtk;
 // 3-arc Wi-Fi glyph. The card clips the rounded corners, so the row just paints
 // a full-width selection fill and a hairline separator inset to the text.
 // Everything is GSK (rounded clips, path stroke/fill) — GPU-rasterized.
-public class WifiRow : Gtk.Widget {
+public class WifiRow : Gtk.Widget, CcRow {
 
-    public const int ROW_H     = 44;
-    public const int ROW_H_SUB = 54;   // taller when a status subtitle is shown
+    public const int ROW_H = 44;
     const int PAD      = 16;
     const int NAME_X   = PAD + 26;   // text starts past the checkmark column
     const int ARC_W    = 24;
     const int LOCK_W   = 13;
     const int GAP      = 10;
 
-    public string ssid         { get; private set; }
-    public int    signal_pct   { get; private set; }
-    public bool   is_secured   { get; private set; }
-    public bool   is_connected { get; set; }
-    public bool   selected     { get; set; }
-    public bool   show_separator { get; set; default = true; }
-    // A short status line under the SSID ("Connected"). Empty ⇒ single-line row.
-    public string subtitle     { get; private set; default = ""; }
+    public string ssid       { get; private set; }
+    public int    signal_pct { get; private set; }
+    public bool   is_secured { get; private set; }
+
+    public string key { get { return ssid; } }
 
     public signal void activated ();
 
+    // Draw-affecting state: custom snapshot() means nothing repaints on its own.
+    bool _is_connected = false;
+    bool _selected = false;
+    bool _show_separator = true;
     bool hovered = false;
 
-    static Gdk.RGBA sel_fill = Utils.rgba (0.039f, 0.518f, 1.0f, 0.18f);
-    static Gdk.RGBA hov_fill = Utils.rgba (1f, 1f, 1f, 0.06f);
-    static Gdk.RGBA name_fg  = Utils.rgba (1f, 1f, 1f, 1f);
-    // #34C759 — mirrors CcStyle.green, but kept local: CcStyle is never
-    // instantiated so its static colour fields stay zero (transparent) at
-    // runtime. WifiRow IS instantiated, so its own statics initialize.
-    static Gdk.RGBA conn_fg  = Utils.rgba (0.204f, 0.780f, 0.349f, 1f);
-    static Gdk.RGBA lock_fg  = Utils.rgba (0.921f, 0.921f, 0.960f, 0.45f);
-    static Gdk.RGBA sep_fg   = Utils.rgba (1f, 1f, 1f, 0.10f);
+    public bool is_connected {
+        get { return _is_connected; }
+        set { if (_is_connected == value) return; _is_connected = value; queue_draw (); }
+    }
+
+    public bool selected {
+        get { return _selected; }
+        set { if (_selected == value) return; _selected = value; queue_draw (); }
+    }
+
+    public bool show_separator {
+        get { return _show_separator; }
+        set { if (_show_separator == value) return; _show_separator = value; queue_draw (); }
+    }
+
+    static Gdk.RGBA lock_fg = Utils.rgba (0.921f, 0.921f, 0.960f, 0.45f);
 
     public WifiRow (WifiNet net, bool is_connected) {
         this.ssid = net.ssid;
         this.signal_pct = net.signal;
         this.is_secured = net.is_secured ();
-        this.is_connected = is_connected;
+        this._is_connected = is_connected;
 
-        height_request = subtitle != "" ? ROW_H_SUB : ROW_H;
+        height_request = ROW_H;
         hexpand = true;
 
         var click = new Gtk.GestureClick () { button = Gdk.BUTTON_PRIMARY };
@@ -66,84 +73,35 @@ public class WifiRow : Gtk.Widget {
                                   out int min_baseline, out int nat_baseline) {
         min_baseline = -1; nat_baseline = -1;
         if (orientation == Gtk.Orientation.HORIZONTAL) { min = 220; nat = 480; }
-        else { min = nat = subtitle != "" ? ROW_H_SUB : ROW_H; }
+        else                                           { min = nat = ROW_H; }
     }
 
     public override void snapshot (Gtk.Snapshot s) {
         int w = get_width ();
         int h = get_height ();
 
-        if (selected || hovered) {
-            var rect = Graphene.Rect ();
-            rect.init (0, 0, w, h);
-            s.append_color (selected ? sel_fill : hov_fill, rect);
-        }
+        if (_selected || hovered)
+            Utils.fill_rounded (s, 0, 0, w, h, 0,
+                                _selected ? CcStyle.row_selected : CcStyle.row_hover);
 
-        // Leading checkmark for the connected network.
-        if (is_connected) {
-            var check = create_pango_layout ("✓");
-            var ca = new Pango.AttrList ();
-            ca.insert (Pango.AttrSize.new_absolute (15 * Pango.SCALE));
-            ca.insert (Pango.attr_weight_new (Pango.Weight.BOLD));
-            check.set_attributes (ca);
+        if (_is_connected) {
+            var check = Utils.text_layout (this, "✓", 15, Pango.Weight.BOLD);
             int cw, ch;
             check.get_pixel_size (out cw, out ch);
-            var cp = Graphene.Point ();
-            cp.init (PAD - 2, (h - ch) / 2);
-            s.save (); s.translate (cp);
-            s.append_layout (check, conn_fg);
-            s.restore ();
+            Utils.draw_layout (s, check, PAD - 2, (h - ch) / 2, CcStyle.green);
         }
 
-        // SSID (and optional status subtitle stacked beneath it).
-        var layout = create_pango_layout (ssid);
-        var attrs = new Pango.AttrList ();
-        attrs.insert (Pango.AttrSize.new_absolute (15 * Pango.SCALE));
-        attrs.insert (Pango.attr_weight_new (Pango.Weight.MEDIUM));
-        layout.set_attributes (attrs);
-
+        var layout = Utils.text_layout (this, ssid, 15, Pango.Weight.MEDIUM);
         int right_reserve = PAD + ARC_W + GAP + (is_secured ? LOCK_W + GAP : 0);
-        int text_w = (w - NAME_X - right_reserve) * Pango.SCALE;
-        layout.set_width (text_w);
+        layout.set_width ((w - NAME_X - right_reserve) * Pango.SCALE);
         layout.set_ellipsize (Pango.EllipsizeMode.END);
         int tw, th;
         layout.get_pixel_size (out tw, out th);
+        Utils.draw_layout (s, layout, NAME_X, (h - th) / 2,
+                           _is_connected ? CcStyle.green : CcStyle.label);
 
-        Pango.Layout? sub_layout = null;
-        int sh = 0;
-        if (subtitle != "") {
-            sub_layout = create_pango_layout (subtitle);
-            var sattrs = new Pango.AttrList ();
-            sattrs.insert (Pango.AttrSize.new_absolute (12 * Pango.SCALE));
-            sattrs.insert (Pango.attr_weight_new (Pango.Weight.MEDIUM));
-            sub_layout.set_attributes (sattrs);
-            sub_layout.set_width (text_w);
-            sub_layout.set_ellipsize (Pango.EllipsizeMode.END);
-            int sw;
-            sub_layout.get_pixel_size (out sw, out sh);
-        }
-
-        const int LINE_GAP = 1;
-        int block_h = th + (sub_layout != null ? LINE_GAP + sh : 0);
-        int block_y = (h - block_h) / 2;
-
-        var pt = Graphene.Point ();
-        pt.init (NAME_X, block_y);
-        s.save (); s.translate (pt);
-        s.append_layout (layout, is_connected ? conn_fg : name_fg);
-        s.restore ();
-
-        if (sub_layout != null) {
-            var sp = Graphene.Point ();
-            sp.init (NAME_X, block_y + th + LINE_GAP);
-            s.save (); s.translate (sp);
-            s.append_layout (sub_layout, CcStyle.accent);
-            s.restore ();
-        }
-
-        // Trailing glyphs.
         float arc_cx = w - PAD - ARC_W / 2.0f;
-        WifiArc.draw (s, arc_cx, h / 2.0f + 6, signal_pct, name_fg);
+        WifiArc.draw (s, arc_cx, h / 2.0f + 6, signal_pct, CcStyle.label);
 
         if (is_secured) {
             float lock_x = w - PAD - ARC_W - GAP - LOCK_W;
@@ -151,11 +109,8 @@ public class WifiRow : Gtk.Widget {
         }
 
         // Hairline separator inset to the text column.
-        if (show_separator) {
-            var sep = Graphene.Rect ();
-            sep.init (NAME_X, h - 1, w - PAD - NAME_X, 1);
-            s.append_color (sep_fg, sep);
-        }
+        if (_show_separator)
+            Utils.fill_rounded (s, NAME_X, h - 1, w - PAD - NAME_X, 1, 0, CcStyle.separator);
     }
 
     // Minimal padlock: rounded body + a stroked shackle, all GSK.
@@ -163,13 +118,7 @@ public class WifiRow : Gtk.Widget {
         float bh = sz * 0.60f;
         float by = y + sz - bh;
 
-        var body = Graphene.Rect ();
-        body.init (x, by, sz, bh);
-        var rr = Gsk.RoundedRect ();
-        rr.init_from_rect (body, sz * 0.18f);
-        s.push_rounded_clip (rr);
-        s.append_color (c, body);
-        s.pop ();
+        Utils.fill_rounded (s, x, by, sz, bh, sz * 0.18f, c);
 
         float sr = sz * 0.30f;
         float scx = x + sz / 2.0f;

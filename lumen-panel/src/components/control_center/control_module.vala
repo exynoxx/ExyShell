@@ -18,19 +18,30 @@ public interface IControlModule : GLib.Object {
 
 // Shared Apple-dark tokens for the code-drawn widgets (CSS @define-color can't
 // reach Gsk/Cairo draw paths). Mirrors the .cc-* values in style.css.
+//
+// These MUST stay `const`: a `static` field initialized from a function call is
+// emitted into class_init, and nothing ever instantiates CcStyle — the type is
+// never registered, class_init never runs, and every colour reads back as
+// transparent. A struct constant is initialized at file scope instead.
 public class CcStyle {
-    public static Gdk.RGBA accent      = Utils.rgba(0.039f, 0.518f, 1.0f,  1f);   // #0A84FF
-    public static Gdk.RGBA green       = Utils.rgba(0.204f, 0.780f, 0.349f, 1f);  // #34C759
-    public static Gdk.RGBA label       = Utils.rgba(1f, 1f, 1f, 1f);
-    public static Gdk.RGBA label2      = Utils.rgba(0.921f, 0.921f, 0.960f, 0.60f);
-    public static Gdk.RGBA label3      = Utils.rgba(0.921f, 0.921f, 0.960f, 0.30f);
-    public static Gdk.RGBA separator   = Utils.rgba(1f, 1f, 1f, 0.10f);
-    public static Gdk.RGBA fill_hover  = Utils.rgba(1f, 1f, 1f, 0.08f);
-    public static Gdk.RGBA danger      = Utils.rgba(1.0f, 0.271f, 0.227f, 1f);    // #FF453A
+    public const Gdk.RGBA accent       = { 0.039f, 0.518f, 1.0f,   1f };    // #0A84FF
+    public const Gdk.RGBA green        = { 0.204f, 0.780f, 0.349f, 1f };    // #34C759
+    public const Gdk.RGBA label        = { 1f, 1f, 1f, 1f };
+    public const Gdk.RGBA separator    = { 1f, 1f, 1f, 0.10f };
+    public const Gdk.RGBA row_selected = { 0.039f, 0.518f, 1.0f, 0.18f };
+    public const Gdk.RGBA row_hover    = { 1f, 1f, 1f, 0.06f };
 
     public static string icon (string name) {
         return "/dev/lumen/panel/icons/" + name + ".svg";
     }
+}
+
+// A selectable cell inside a CcListDetail list. `key` is whatever identity
+// survives a background rescan (SSID, MAC) so the selection can be restored
+// after the rows are rebuilt from scratch.
+public interface CcRow : Gtk.Widget {
+    public abstract string key      { get; }
+    public abstract bool   selected { get; set; }
 }
 
 // A detail view the ControlCenter slides to. Carries a back affordance so the
@@ -68,6 +79,117 @@ public abstract class CcDetail : Gtk.Box {
             h.append (trailing);
         }
         return h;
+    }
+}
+
+// A CcDetail whose body is a scrollable list of CcRows behind a radio switch:
+// the Wi-Fi and Bluetooth screens. Owns the shared chrome — header switch,
+// ⟲/spinner swap, scroll region, empty-state label — and the selection, which
+// is tracked by row key so it survives the row rebuild a background scan
+// triggers. Subclasses supply only the row construction.
+public abstract class CcListDetail : CcDetail {
+
+    protected Gtk.Switch  power_switch;
+    protected Gtk.Button  refresh_btn;
+    protected Gtk.Spinner spinner;
+
+    // The body column; subclasses append their cards into it in display order.
+    protected Gtk.Box            content;
+    protected Gtk.ScrolledWindow list_scroll;
+    protected Gtk.Label          empty_label;
+
+    protected Gee.ArrayList<CcRow> rows = new Gee.ArrayList<CcRow> ();
+    protected string selected_key = "";
+
+    // Guards the switch's notify handler while we mirror the service state onto
+    // it, so syncing doesn't read back as a user toggle.
+    bool syncing_power = false;
+
+    protected abstract void power_requested (bool on);
+    protected abstract void refresh_requested ();
+
+    protected CcListDetail (string title, string css_class) {
+        base ();
+        add_css_class (css_class);
+
+        var trailing = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
+            valign = Gtk.Align.CENTER,
+        };
+
+        spinner = new Gtk.Spinner () { valign = Gtk.Align.CENTER, visible = false };
+        trailing.append (spinner);
+
+        refresh_btn = new Gtk.Button () { valign = Gtk.Align.CENTER };
+        refresh_btn.add_css_class ("cc-icon-btn");
+        refresh_btn.set_child (new Gtk.Label ("⟲"));
+        refresh_btn.clicked.connect (() => refresh_requested ());
+        trailing.append (refresh_btn);
+
+        power_switch = new Gtk.Switch () { valign = Gtk.Align.CENTER };
+        power_switch.add_css_class ("lumen-switch");
+        power_switch.notify["active"].connect (() => {
+            if (syncing_power) return;
+            power_requested (power_switch.active);
+        });
+        trailing.append (power_switch);
+
+        append (make_header (title, trailing));
+
+        content = new Gtk.Box (Gtk.Orientation.VERTICAL, 8) {
+            margin_start = 14, margin_end = 14, margin_bottom = 14, vexpand = true,
+        };
+        append (content);
+
+        empty_label = new Gtk.Label ("") {
+            halign = Gtk.Align.CENTER, valign = Gtk.Align.CENTER,
+            vexpand = true, can_target = false, visible = false,
+        };
+        empty_label.add_css_class ("cc-empty");
+    }
+
+    protected Gtk.ScrolledWindow make_list_scroll (Gtk.Widget child) {
+        list_scroll = new Gtk.ScrolledWindow () {
+            child = child,
+            hscrollbar_policy = Gtk.PolicyType.NEVER,
+            vscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
+            vexpand = true,
+            min_content_height = 240,
+            max_content_height = 380,
+            propagate_natural_height = true,
+        };
+        list_scroll.add_css_class ("cc-scroll");
+        return list_scroll;
+    }
+
+    protected void sync_header (bool powered, bool scanning) {
+        if (power_switch.active != powered) {
+            syncing_power = true;
+            power_switch.active = powered;
+            syncing_power = false;
+        }
+        refresh_btn.sensitive = powered;
+        refresh_btn.visible   = !scanning;
+        spinner.visible       = scanning;
+        spinner.spinning      = scanning;
+    }
+
+    protected void set_empty (string msg) {
+        empty_label.label   = msg;
+        empty_label.visible = msg != "";
+    }
+
+    protected void select_key (string key) {
+        selected_key = key;
+        foreach (var r in rows) r.selected = (r.key == key);
+    }
+
+    protected void clear_selection () {
+        select_key ("");
+    }
+
+    protected bool has_key (string key) {
+        foreach (var r in rows) if (r.key == key) return true;
+        return false;
     }
 }
 

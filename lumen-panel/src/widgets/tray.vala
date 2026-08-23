@@ -177,12 +177,8 @@ public class TrayBar : Gtk.Box {
             float x = full_w - bw;
             float y = PanelConfig.at_top ? 0.0f : full_h - bh;
 
-            var rect = Graphene.Rect ().init (x, y, bw, bh);
-            var rr = Gsk.RoundedRect ();
-            rr.init_from_rect (rect, BOX_RADIUS);
-            s.push_rounded_clip (rr);
-            s.append_color (Theme.color ("tray.background", "rgba(17,20,31,0.97)"), rect);
-            s.pop ();
+            Utils.fill_rounded (s, x, y, bw, bh, BOX_RADIUS,
+                                Theme.color ("tray.background", "rgba(17,20,31,0.97)"));
         }
         base.snapshot (s);
     }

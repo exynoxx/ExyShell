@@ -1,5 +1,10 @@
 using Gtk;
 
+[DBus (name = "org.lumenshell.Lock1")]
+interface LockProxy : GLib.Object {
+    public abstract void Lock () throws DBusError, IOError;
+}
+
 // Power actions, folded into the Control Center overview as a row of round
 // buttons (no separate page). Keeps its tray icon in the compact bar; clicking
 // it opens the overview where these live.
@@ -38,17 +43,15 @@ public class ExitTray : GLib.Object, ITrayApplet, IControlModule {
 
     // Ask lumen-lockscreen to lock over DBus; no-op if the daemon isn't running.
     void lock_session () {
-        Bus.get.begin (BusType.SESSION, null, (obj, res) => {
-            try {
-                var conn = Bus.get.end (res);
-                conn.call.begin (
-                    "org.lumenshell.Lock", "/org/lumenshell/Lock",
-                    "org.lumenshell.Lock1", "Lock", null, null,
-                    DBusCallFlags.NONE, 1000, null);
-            } catch (Error e) {
-                warning ("lumen-panel: lock request failed: %s", e.message);
-            }
-        });
+        Bus.get_proxy.begin<LockProxy> (
+            BusType.SESSION, "org.lumenshell.Lock", "/org/lumenshell/Lock",
+            DBusProxyFlags.DO_NOT_AUTO_START, null, (obj, res) => {
+                try {
+                    Bus.get_proxy.end<LockProxy> (res).Lock ();
+                } catch (Error e) {
+                    warning ("lumen-panel: lock request failed: %s", e.message);
+                }
+            });
     }
 
     delegate void ActionFunc ();

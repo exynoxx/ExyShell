@@ -21,6 +21,14 @@ public class App : GLib.Object {
     SniWatcher sni_watcher;                  // SNI registry singleton, shared by every SysTray
     TrayRegistry registry;                   // id → applet factory
     LogindService logind_service;
+
+    // One instance each, shared by every panel's applets — see activate().
+    WifiService         wifi_service;
+    BluetoothService    bluetooth_service;
+    SoundService        sound_service;
+    BatteryService      battery_service;
+    PowerProfileService power_profile_service;
+
     GLib.GenericArray<PanelWindow> windows = new GLib.GenericArray<PanelWindow>();
     bool hotplug_wired = false;
 
@@ -40,16 +48,27 @@ public class App : GLib.Object {
         sni_watcher = new SniWatcher();
         sni_watcher.start();
 
+        // Same reasoning for the hardware-backed services: each one runs its own
+        // subprocess/D-Bus poll loop, and the Wi-Fi and Bluetooth constructors
+        // additionally re-apply the saved RadioState. With tray-on-all-monitors
+        // the applet factory runs once per output, so a per-applet instance
+        // would multiply both the polling and that startup write by the monitor
+        // count. Build them once; every applet reads the same state.
+        wifi_service          = new WifiService();
+        bluetooth_service     = new BluetoothService();
+        sound_service         = new SoundService();
+        battery_service       = new BatteryService();
+        power_profile_service = new PowerProfileService();
+
         // Build the applet registry once. Each factory creates a fresh applet
-        // (its own widgets + service instances) so the same id can be realized
-        // on multiple panels. Exit's factory closes over the logind bridge;
-        // systray's closes over the shared SNI watcher.
+        // (its own widgets) so the same id can be realized on multiple panels,
+        // closing over the shared services above.
         registry = new TrayRegistry();
         registry.register("systray",   () => new SysTray(sni_watcher));
-        registry.register("wifi",      () => new WifiTray());
-        registry.register("bluetooth", () => new BluetoothTray());
-        registry.register("battery",   () => new BatteryTray());
-        registry.register("sound",     () => new SoundTray());
+        registry.register("wifi",      () => new WifiTray(wifi_service));
+        registry.register("bluetooth", () => new BluetoothTray(bluetooth_service));
+        registry.register("battery",   () => new BatteryTray(battery_service, power_profile_service));
+        registry.register("sound",     () => new SoundTray(sound_service));
         registry.register("clock",     () => new Clock());
         registry.register("exit",      () => new ExitTray(logind_service.bridge));
 
@@ -75,10 +94,8 @@ public class App : GLib.Object {
     }
 
     // Build a tray area from the user's configured order. Every panel gets the
-    // full set of configured applets — including the SNI system tray, whose
-    // widgets all share the one watcher. Each applet owns its own service
-    // instance (and SysTray its own SniItem widgets), so duplicating across
-    // monitors is safe.
+    // full set of configured applets; each applet owns only its own widgets and
+    // reads the shared services, so duplicating across monitors is safe.
     TrayBar make_tray () {
         var t = new TrayBar();
         foreach (var id in PanelConfig.tray_enabled_order()) {

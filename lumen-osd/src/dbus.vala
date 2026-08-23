@@ -44,20 +44,6 @@ public class OsdService : Object {
         picker.step();
     }
 
-    // Win+P selector. Stays up (no auto-hide) until the next show()/show_selector
-    // replaces it or hide() tears it down — the wayfire-display-switch plugin
-    // owns its lifetime (one call per Super+P tap, hidden on key release/apply).
-    public void show_selector(string[]                     icons,
-                              string[]                     labels,
-                              int                          selected,
-                              HashTable<string, Variant>   opts) throws DBusError, IOError {
-        cancel_hide();
-        group.hide_mirrors();
-        group.primary.selector.set_items(icons, labels, selected);
-        group.primary.show_selector_view();
-        group.primary.set_visible(true);
-    }
-
     public void hide() throws DBusError, IOError {
         cancel_hide();
         do_hide();

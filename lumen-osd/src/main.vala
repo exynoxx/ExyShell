@@ -7,7 +7,6 @@ public class OsdApp : Gtk.Application {
     private StateWatcher watcher;
     private uint         owner_id = 0;
     private bool         activated = false;
-    public  bool         test_mode = false;
 
     public OsdApp() {
         Object(
@@ -37,8 +36,6 @@ public class OsdApp : Gtk.Application {
 
         // Keep the application alive even with no visible window.
         hold();
-
-        if (test_mode) new OsdSelfTest(this, group.primary).run();
     }
 
     private void own_bus_name() {
@@ -73,14 +70,5 @@ public class OsdApp : Gtk.Application {
 }
 
 public static int main(string[] args) {
-    var app = new OsdApp();
-    string[] gtk_args = { args[0] };
-    for (int i = 1; i < args.length; i++) {
-        if (args[i] == "--test") {
-            app.test_mode = true;
-        } else {
-            gtk_args += args[i];
-        }
-    }
-    return app.run(gtk_args);
+    return new OsdApp().run(args);
 }

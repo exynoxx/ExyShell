@@ -2,6 +2,9 @@ using Gtk;
 
 namespace LumenSettings {
 
+    /* The page list. Metrics and hover/selection styling come from Adwaita's
+     * `navigation-sidebar` style class; the enclosing NavigationSplitView owns
+     * the column width. */
     public class Sidebar : Gtk.Box {
         public signal void page_selected(string id);
 
@@ -11,20 +14,6 @@ namespace LumenSettings {
         public Sidebar(PageRegistry r) {
             Object(orientation: Gtk.Orientation.VERTICAL, spacing: 0);
             registry = r;
-            add_css_class("lumen-settings-sidebar");
-            set_size_request(300, -1);
-            // The inner ListBox sets hexpand=true (so rows fill the column).
-            // Without this, that flag propagates up and the root HBox treats the
-            // sidebar as an expanding child, splitting all slack with the content
-            // pane and bloating the column to ~1/3 of the window. Pin it off so
-            // the sidebar takes only its natural (content) width.
-            set_hexpand(false);
-
-            var scroller = new Gtk.ScrolledWindow() {
-                hscrollbar_policy = Gtk.PolicyType.NEVER,
-                vscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
-                vexpand = true,
-            };
 
             list = new Gtk.ListBox() {
                 selection_mode = Gtk.SelectionMode.SINGLE,
@@ -33,8 +22,12 @@ namespace LumenSettings {
             list.add_css_class("navigation-sidebar");
             list.set_header_func(update_header);
 
-            scroller.set_child(list);
-            append(scroller);
+            append(new Gtk.ScrolledWindow() {
+                hscrollbar_policy = Gtk.PolicyType.NEVER,
+                vscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
+                vexpand = true,
+                child = list,
+            });
 
             list.row_selected.connect((row) => {
                 if (row == null) return;
@@ -78,8 +71,8 @@ namespace LumenSettings {
             list.invalidate_headers();
         }
 
-        // GNOME-style: groups are split with a thin full-width separator,
-        // no uppercase header label.
+        // Groups are split with a thin full-width separator, no uppercase
+        // header label.
         void update_header(Gtk.ListBoxRow row, Gtk.ListBoxRow? before) {
             var section = row.get_data<string>("section") ?? "";
             var prev    = (before != null) ? (before.get_data<string>("section") ?? "") : "__none__";
@@ -87,39 +80,28 @@ namespace LumenSettings {
                 row.set_header(null);
                 return;
             }
-            var sep = new Gtk.Separator(Gtk.Orientation.HORIZONTAL) {
+            row.set_header(new Gtk.Separator(Gtk.Orientation.HORIZONTAL) {
                 margin_top = 6, margin_bottom = 6,
-            };
-            sep.add_css_class("lumen-sidebar-group-sep");
-            row.set_header(sep);
+            });
         }
 
         Gtk.ListBoxRow make_row(SettingsPage page) {
             var row = new Gtk.ListBoxRow();
             row.set_data<string>("page-id", page.id);
-            row.add_css_class("lumen-settings-sidebar-row");
 
-            var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12) {
-                margin_start = 6, margin_end = 6,
-                margin_top = 6, margin_bottom = 6,
-            };
+            var box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12);
 
-            var icon = new Gtk.Image.from_icon_name(page.icon_name) {
+            box.append(new Gtk.Image.from_icon_name(page.icon_name) {
                 pixel_size = 16,
                 halign = Gtk.Align.CENTER,
                 valign = Gtk.Align.CENTER,
-            };
-            icon.add_css_class("lumen-sidebar-icon");
-
-            var label = new Gtk.Label(page.title) {
+            });
+            box.append(new Gtk.Label(page.title) {
                 xalign = 0, hexpand = true,
                 ellipsize = Pango.EllipsizeMode.END,
                 tooltip_text = page.title,
-            };
-            label.add_css_class("lumen-sidebar-row-label");
+            });
 
-            box.append(icon);
-            box.append(label);
             row.set_child(box);
             return row;
         }

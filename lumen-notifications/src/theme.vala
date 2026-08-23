@@ -29,12 +29,7 @@ public class Theme {
     public static Gdk.RGBA action_bg;
     public static Gdk.RGBA action_bg_hover;
     public static Gdk.RGBA action_text;
-    public static int     action_radius    = 8;
     public static int     clear_all_radius = 6;
-
-    public static Gdk.RGBA urgency_low;
-    public static Gdk.RGBA urgency_normal;
-    public static Gdk.RGBA urgency_critical;
 
     public static int radius        = 12;
     public static int padding       = 14;
@@ -44,8 +39,8 @@ public class Theme {
     public static int margin_top    = 16;
     public static int margin_right  = 16;
 
+    // Duration of a banner's leave transition (BannerStack's Gtk.Revealer).
     public static int fade_out_ms   = 800;
-    public static int slide_px      = 24;
 
     public static int expire_default_ms = 5000;
 
@@ -61,9 +56,6 @@ public class Theme {
         action_bg        = rgba(1.00f, 1.00f, 1.00f, 0.08f);
         action_bg_hover  = rgba(1.00f, 1.00f, 1.00f, 0.16f);
         action_text      = rgba(1.00f, 1.00f, 1.00f, 1.00f);
-        urgency_low      = rgba(0.36f, 0.55f, 0.94f, 1.00f);
-        urgency_normal   = rgba(0.98f, 0.66f, 0.20f, 1.00f);
-        urgency_critical = rgba(0.88f, 0.35f, 0.30f, 1.00f);
     }
 
     public static void load() {
@@ -102,10 +94,6 @@ public class Theme {
             else warning("lumen-notifications: unknown dismiss.style: %s", val);
             return;
         }
-        if (!val.has_prefix("#")) {
-            warning("lumen-notifications: unknown theme key: %s", key);
-            return;
-        }
         var c = Gdk.RGBA();
         if (!c.parse(val)) {
             warning("lumen-notifications: invalid color for %s: %s", key, val);
@@ -119,9 +107,6 @@ public class Theme {
             case "action.background":        action_bg        = c; break;
             case "action.background-hover":  action_bg_hover  = c; break;
             case "action.text":              action_text      = c; break;
-            case "urgency.low.accent":       urgency_low      = c; break;
-            case "urgency.normal.accent":    urgency_normal   = c; break;
-            case "urgency.critical.accent":  urgency_critical = c; break;
             default:
                 warning("lumen-notifications: unknown theme key: %s", key);
                 break;
@@ -137,10 +122,8 @@ public class Theme {
             case "banner.gap":            gap               = v; break;
             case "banner.margin.top":     margin_top        = v; break;
             case "banner.margin.right":   margin_right      = v; break;
-            case "action.radius":         action_radius     = v; break;
             case "clear-all.radius":      clear_all_radius  = v; break;
             case "animation.fade-out-ms": fade_out_ms       = v; break;
-            case "animation.slide-px":    slide_px          = v; break;
             case "expire.default-ms":     expire_default_ms = v; break;
             case "dismiss.cascade-ms":    cascade_ms        = v; break;
             case "clear-all.threshold":   clear_threshold   = v; break;

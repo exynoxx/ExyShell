@@ -54,7 +54,6 @@ settings_vala_args = [
 
 settings_sources = files(
   'src/main.vala',
-  'src/diaglog.vala',
   'src/window.vala',
   'src/sidebar.vala',
   'src/page.vala',
@@ -71,7 +70,6 @@ settings_sources = files(
   'src/widgets/binding_row.vala',
   'src/widgets/display_arranger.vala',
   'src/widgets/reorder_list.vala',
-  'src/stores/paths.vala',
   'src/stores/json_store.vala',
   'src/stores/ini_store.vala',
   'src/stores/output_manager.vala',
@@ -108,6 +106,12 @@ settings_sources += proc_source
 settings_sources += network_backend_source
 settings_sources += sound_source
 
+# Shared path resolver + diagnostic log (lumen-common). Paths is the single
+# source of truth for the config filenames this app writes and the runtime
+# binaries read.
+settings_sources += paths_source
+settings_sources += diaglog_source
+
 libxml_settings_dep = dependency('libxml-2.0', required: false)
 settings_wayfire_enabled = libxml_settings_dep.found()
 
@@ -125,6 +129,7 @@ endif
 executable('lumen-settings',
   settings_sources + settings_resources,
   vala_args: settings_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: settings_deps,
   install: true,
 )

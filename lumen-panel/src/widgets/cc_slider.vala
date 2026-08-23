@@ -28,8 +28,6 @@ public class CcSlider : Gtk.Widget {
         add_controller (drag);
     }
 
-    public int get_value () { return _value; }
-
     public void set_value (int v) {
         v = v.clamp (0, 100);
         if (v == _value) return;
@@ -61,28 +59,13 @@ public class CcSlider : Gtk.Widget {
         float ty = (H - TH) / 2.0f;
         float radius = TH / 2.0f;
 
-        // track
-        var tr = Graphene.Rect ();
-        tr.init (0, ty, w, TH);
-        var trr = Gsk.RoundedRect ();
-        trr.init_from_rect (tr, radius);
-        s.push_rounded_clip (trr);
-        s.append_color (track_col, tr);
-        s.pop ();
+        Utils.fill_rounded (s, 0, ty, w, TH, radius, track_col);
 
         // knob center travels between the inset ends
         float kx = TH / 2.0f + (float) (_value / 100.0 * (w - TH));
 
         // fill up to the knob
-        if (kx > 0) {
-            var fr = Graphene.Rect ();
-            fr.init (0, ty, kx, TH);
-            var frr = Gsk.RoundedRect ();
-            frr.init_from_rect (fr, radius);
-            s.push_rounded_clip (frr);
-            s.append_color (fill_col, fr);
-            s.pop ();
-        }
+        if (kx > 0) Utils.fill_rounded (s, 0, ty, kx, TH, radius, fill_col);
 
         // knob
         var kb = new Gsk.PathBuilder ();

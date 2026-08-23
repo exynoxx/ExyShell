@@ -40,7 +40,7 @@ public class PanelWindow : Gtk.ApplicationWindow {
         this.tray = tray;
 
         add_css_class("lumen-panel");
-        set_default_size(-1, 60);
+        set_default_size(-1, App.ICON_ROW_HEIGHT);
 
         mode = parse_mode(PanelConfig.behavior_mode, PanelConfig.behavior_auto_hide);
         at_top = PanelConfig.at_top;
@@ -64,7 +64,7 @@ public class PanelWindow : Gtk.ApplicationWindow {
             GtkLayerShell.set_margin(this, slide_edge, App.HIDDEN_MARGIN);
             add_css_class("auto-hide");
         } else {
-            GtkLayerShell.set_exclusive_zone(this, 60);
+            GtkLayerShell.set_exclusive_zone(this, App.ICON_ROW_HEIGHT);
         }
 
         root = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0) {

@@ -43,7 +43,7 @@ public class BlurredWallpaper : GLib.Object {
         var cfg = Environment.get_user_config_dir();
         string? p;
 
-        p = read_ini_key(cfg + "/lumen-shell/wallpaper.ini", "wallpaper", "image");
+        p = read_ini_key(LumenCommon.Paths.wallpaper_ini(), "wallpaper", "image");
         if (usable(p)) return (!) p;
 
         p = read_ini_key(cfg + "/wf-shell.ini", "background", "image");
@@ -57,28 +57,16 @@ public class BlurredWallpaper : GLib.Object {
         return path != null && path != "" && FileUtils.test(path, FileTest.EXISTS);
     }
 
-    // Minimal section-aware reader for `[section] key = <value>` — avoids
-    // pulling a full INI parser into the lockscreen.
+    // A missing file, a missing group/key or a syntax error all mean "not
+    // configured here" — fall through to the next source.
     private static string? read_ini_key(string path, string section, string key) {
-        string contents;
+        var kf = new KeyFile();
         try {
-            if (!FileUtils.get_contents(path, out contents)) return null;
-        } catch (Error e) { return null; }
-
-        bool in_section = false;
-        foreach (string raw in contents.split("\n")) {
-            string line = raw.strip();
-            if (line.has_prefix("[") && line.has_suffix("]")) {
-                in_section = (line.substring(1, line.length - 2).strip() == section);
-                continue;
-            }
-            if (!in_section) continue;
-            int eq = line.index_of("=");
-            if (eq < 0) continue;
-            if (line.substring(0, eq).strip() == key)
-                return line.substring(eq + 1).strip();
+            kf.load_from_file(path, KeyFileFlags.NONE);
+            return kf.get_string(section, key);
+        } catch (Error e) {
+            return null;
         }
-        return null;
     }
 
     // Render the image through a GSK blur into a texture. We crop a blur-radius

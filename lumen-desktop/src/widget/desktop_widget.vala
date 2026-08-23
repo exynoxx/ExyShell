@@ -171,8 +171,6 @@ namespace LumenDesktop {
             content.set_parent(this);
         }
 
-        protected Gtk.Widget? get_content() { return content; }
-
         public override void dispose() {
             if (content != null) {
                 content.unparent();

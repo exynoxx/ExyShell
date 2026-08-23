@@ -1,3 +1,4 @@
+using LumenCommon;
 using Gtk;
 
 namespace LumenSettings {
@@ -7,10 +8,10 @@ namespace LumenSettings {
         public string title     { owned get { return "Notifications"; } }
         public string icon_name { owned get { return "preferences-system-notifications-symbolic"; } }
 
-        JsonStore store;
+        JsonRows rows;
 
         public Gtk.Widget build() {
-            store = new JsonStore(Paths.notifications_json());
+            rows = new JsonRows(new JsonStore(Paths.notifications_json()));
 
             var box = new Gtk.Box(Gtk.Orientation.VERTICAL, 18) {
                 margin_top = 18, margin_bottom = 18,
@@ -20,15 +21,15 @@ namespace LumenSettings {
             // Keys match the lumen-notifications theme schema (see Theme.load
             // in lumen-notifications) so edits here take effect directly.
             var placement = new BoxedList("Placement");
-            placement.add_row(int_row("banner.margin.top",   "Margin top",   0, 200, 16, "px from the top edge of the screen"));
-            placement.add_row(int_row("banner.margin.right", "Margin right", 0, 200, 16, "px from the right edge of the screen"));
-            placement.add_row(int_row("banner.gap",          "Gap",          0, 40,  10, "px of vertical space between banners"));
+            placement.add_row(rows.int_row("banner.margin.top",   "Margin top",   0, 200, 1, 16, "px from the top edge of the screen"));
+            placement.add_row(rows.int_row("banner.margin.right", "Margin right", 0, 200, 1, 16, "px from the right edge of the screen"));
+            placement.add_row(rows.int_row("banner.gap",          "Gap",          0, 40,  1, 10, "px of vertical space between banners"));
             box.append(placement);
 
             var behavior = new BoxedList("Behavior");
-            behavior.add_row(int_row("clear-all.threshold",
-                                     "Clear-all threshold", 1, 50, 3,
-                                     "show the Clear All button once the stack reaches this size"));
+            behavior.add_row(rows.int_row("clear-all.threshold",
+                                          "Clear-all threshold", 1, 50, 1, 3,
+                                          "show the Clear All button once the stack reaches this size"));
             box.append(behavior);
 
             var test = new BoxedList("Test");
@@ -82,17 +83,6 @@ namespace LumenSettings {
             } catch (Error e) {
                 warning("lumen-settings: test notification failed: %s", e.message);
             }
-        }
-
-        SpinRow int_row(string key, string label, double min, double max,
-                        int64 fallback, string subtitle = "") {
-            var initial = (double) store.get_int(key, fallback);
-            var row = new SpinRow(label, min, max, 1, initial, 0, subtitle);
-            row.value_changed.connect((v) => {
-                store.set_int(key, (int64) v);
-                store.save();
-            });
-            return row;
         }
     }
 }

@@ -20,7 +20,8 @@ public class SoundService : GLib.Object {
 
     private const uint POLL_MS = 1500;
 
-    private PactlClient pactl = new PactlClient();
+    private PactlClient pactl          = new PactlClient();
+    private bool        poll_in_flight = false;
 
     // ---- Input level meter (parec) state ----
     private GLib.Subprocess? meter_proc = null;
@@ -35,25 +36,50 @@ public class SoundService : GLib.Object {
         });
     }
 
+    /**
+     * Re-read the whole PulseAudio state. One pass is ~11 blocking pactl
+     * spawns, so it runs on a worker thread (same shape as WifiService /
+     * BluetoothService) and the properties are assigned back on the main loop;
+     * state_changed fires there. Overlapping calls are dropped, not queued.
+     */
     public void refresh() {
-        string old_source = default_source;
+        if (poll_in_flight) return;
+        poll_in_flight = true;
 
-        default_sink   = pactl.query_default_sink();
-        sinks          = pactl.query_sinks();
-        volume_percent = pactl.query_volume_percent();
-        muted          = pactl.query_muted();
+        new GLib.Thread<void>("sound-poll", () => {
+            var new_sink        = pactl.query_default_sink();
+            var new_sinks       = pactl.query_sinks();
+            var new_volume      = pactl.query_volume_percent();
+            var new_muted       = pactl.query_muted();
+            var new_source      = pactl.query_default_source();
+            var new_sources     = pactl.query_sources();
+            var new_in_volume   = pactl.query_input_volume_percent();
+            var new_in_muted    = pactl.query_input_muted();
+            var new_sink_inputs = pactl.query_sink_inputs();
 
-        default_source       = pactl.query_default_source();
-        sources              = pactl.query_sources();
-        input_volume_percent = pactl.query_input_volume_percent();
-        input_muted          = pactl.query_input_muted();
-        sink_inputs          = pactl.query_sink_inputs();
+            GLib.Idle.add(() => {
+                poll_in_flight = false;
+                string old_source = default_source;
 
-        // Follow a default-source change (e.g. hotplug) with the live meter.
-        if (meter_running && default_source != old_source)
-            respawn_meter();
+                default_sink   = new_sink;
+                sinks          = new_sinks;
+                volume_percent = new_volume;
+                muted          = new_muted;
 
-        state_changed();
+                default_source       = new_source;
+                sources              = new_sources;
+                input_volume_percent = new_in_volume;
+                input_muted          = new_in_muted;
+                sink_inputs          = new_sink_inputs;
+
+                // Follow a default-source change (e.g. hotplug) with the live meter.
+                if (meter_running && default_source != old_source)
+                    respawn_meter();
+
+                state_changed();
+                return Source.REMOVE;
+            });
+        });
     }
 
     public void change_volume(int pct) {

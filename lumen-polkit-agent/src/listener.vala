@@ -26,12 +26,12 @@ public class LumenAgentListener : PolkitAgent.Listener {
             GLib.List<Polkit.Identity> identities,
             GLib.Cancellable? cancellable) throws GLib.Error {
 
-        lpa_dbg("listener: initiate_authentication action=%s msg='%s' cookie=%s n_ids=%u",
+        GLib.debug("listener: initiate_authentication action=%s msg='%s' cookie=%s n_ids=%u",
                 action_id, message, cookie, identities.length());
         var flow = new AuthFlow(app, message, icon_name, cookie,
                                 identities, cancellable);
         var ok = yield flow.run();
-        lpa_dbg("listener: initiate_authentication returning %s", ok.to_string());
+        GLib.debug("listener: initiate_authentication returning %s", ok.to_string());
         return ok;
     }
 }

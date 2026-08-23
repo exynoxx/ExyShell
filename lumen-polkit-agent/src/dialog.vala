@@ -134,18 +134,18 @@ public class AuthDialog : Gtk.Window {
         entry = new Gtk.PasswordEntry() {
             show_peek_icon = true, valign = Gtk.Align.CENTER, width_request = 240,
         };
-        entry.activate.connect(() => { lpa_dbg("dialog: entry.activate (Enter)"); submit(entry.get_text()); });
+        entry.activate.connect(() => { GLib.debug("dialog: entry.activate (Enter)"); submit(entry.get_text()); });
         bar.append(entry);
 
         var cancel_btn = new Gtk.Button.with_label("Cancel") {
             valign = Gtk.Align.CENTER,
         };
-        cancel_btn.clicked.connect(() => { lpa_dbg("dialog: Cancel button clicked"); cancel(); });
+        cancel_btn.clicked.connect(() => { GLib.debug("dialog: Cancel button clicked"); cancel(); });
         auth_button = new Gtk.Button.with_label("Authenticate") {
             valign = Gtk.Align.CENTER,
         };
         auth_button.add_css_class("suggested-action");
-        auth_button.clicked.connect(() => { lpa_dbg("dialog: Authenticate button clicked"); submit(entry.get_text()); });
+        auth_button.clicked.connect(() => { GLib.debug("dialog: Authenticate button clicked"); submit(entry.get_text()); });
         bar.append(cancel_btn);
         bar.append(auth_button);
 
@@ -155,7 +155,7 @@ public class AuthDialog : Gtk.Window {
         var key = new Gtk.EventControllerKey();
         key.set_propagation_phase(Gtk.PropagationPhase.CAPTURE);
         key.key_pressed.connect((kv, kc, st) => {
-            lpa_dbg("dialog: key_pressed keyval=%u", kv);
+            GLib.debug("dialog: key_pressed keyval=%u", kv);
             if (kv == Gdk.Key.Escape) { cancel(); return true; }
             return false;
         });
@@ -164,7 +164,7 @@ public class AuthDialog : Gtk.Window {
         // be destroyed, by us or the user. Always return false (allow close);
         // emit cancel only for a genuine user close, not our own dismiss().
         close_request.connect(() => {
-            lpa_dbg("dialog: close_request (closing=%s)", closing.to_string());
+            GLib.debug("dialog: close_request (closing=%s)", closing.to_string());
             if (!closing) cancel();
             return false;
         });

@@ -34,9 +34,13 @@ public class StateWatcher : Object {
         discover(out screen_path, out screen_max, "/sys/class/backlight", null,              true);
         int _unused;
         discover(out caps_path,   out _unused,    "/sys/class/leds",      "::capslock",      false);
-        // sysfs writes don't reliably emit inotify, so a short periodic
-        // read is the most portable trigger. 200ms feels instant.
-        tick_source = Timeout.add(200, this.tick);
+
+        // sysfs writes don't reliably emit inotify, so a short periodic read is
+        // the most portable trigger. 200ms feels instant. On a machine with no
+        // backlight and no capslock LED there is nothing to read, so don't arm
+        // the timer at all rather than wake 5x/s forever.
+        if (kbd_path != null || screen_path != null || caps_path != null)
+            tick_source = Timeout.add(200, this.tick);
     }
 
     ~StateWatcher() {

@@ -14,12 +14,13 @@ public class BluetoothService : GLib.Object {
 
     public bool connected { get { return connected_name != ""; } }
 
-    private const uint POLL_INTERVAL_SEC = 4;
-    private const uint SCAN_SECS         = 8;
+    private const uint SCAN_SECS    = 8;
+    private const uint COALESCE_MS  = 300;
 
-    private BtctlClient btctl          = new BtctlClient();
-    private bool        poll_in_flight = false;
-    private bool        scan_in_flight = false;
+    private BtctlClient btctl           = new BtctlClient();
+    private bool        poll_in_flight  = false;
+    private bool        scan_in_flight  = false;
+    private bool        refresh_pending = false;
 
     public BluetoothService() {
         // Re-apply the remembered power state before the first poll, so a panel
@@ -28,10 +29,7 @@ public class BluetoothService : GLib.Object {
         var saved = RadioState.get_bluetooth();
         if (saved != null) apply_power(saved);
         else               poll_state();
-        GLib.Timeout.add_seconds(POLL_INTERVAL_SEC, () => {
-            poll_state();
-            return Source.CONTINUE;
-        });
+        watch_bluez();
     }
 
     // Same as the default ctor but WITHOUT re-applying the saved power state, so
@@ -39,9 +37,21 @@ public class BluetoothService : GLib.Object {
     // launch) never toggles the user's Bluetooth. Use in read/observe contexts.
     public BluetoothService.passive() {
         poll_state();
-        GLib.Timeout.add_seconds(POLL_INTERVAL_SEC, () => {
-            poll_state();
-            return Source.CONTINUE;
+        watch_bluez();
+    }
+
+    // BlueZ pushes adapter/device changes over DBus, so there is no poll timer.
+    // A discovery scan reports devices one at a time, so bursts are coalesced
+    // into a single refresh.
+    private void watch_bluez() {
+        btctl.changed.connect(() => {
+            if (refresh_pending) return;
+            refresh_pending = true;
+            GLib.Timeout.add(COALESCE_MS, () => {
+                refresh_pending = false;
+                poll_state();
+                return Source.REMOVE;
+            });
         });
     }
 

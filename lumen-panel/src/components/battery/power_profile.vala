@@ -77,7 +77,9 @@ public class PowerProfileClient : GLib.Object {
         if (backend == PowerBackend.TLP) {
             // tlp-stat -s prints a "Mode = AC | battery" line. Some of its output
             // needs root, but the Mode line is usually readable as the user.
-            var out_str = run_cmd_sync("env LC_ALL=C tlp-stat -s").down();
+            var out_str = (LumenCommon.Proc.run_capture(
+                new string[] { "tlp-stat", "-s" },
+                new string[] { "LC_ALL=C" }) ?? "").down();
             foreach (var line in out_str.split("\n")) {
                 var l = line.strip();
                 if (!l.has_prefix("mode")) continue;
@@ -189,15 +191,5 @@ public class PowerProfileClient : GLib.Object {
             case PowerProfile.POWER_SAVER: return "power-saver";
             default:                       return "";
         }
-    }
-
-    private string run_cmd_sync(string cmd) {
-        string out_str = "";
-        try {
-            Process.spawn_command_line_sync(cmd, out out_str, null, null);
-        } catch (SpawnError e) {
-            return "";
-        }
-        return out_str;
     }
 }

@@ -2,6 +2,9 @@
 //
 // Snapshot-drawn rather than composed from stock widgets, matching the house
 // style for dense list rows (lumen-panel/src/components/wifi/wifirow.vala).
+//
+// FileColumn's Gtk.ListView recycles these, so `entry` is settable and every
+// derived resource (icon, text layout) is invalidated when it changes.
 
 namespace LumenDesktop {
 
@@ -13,7 +16,18 @@ namespace LumenDesktop {
         private const int GAP       = 8;
         private const int CHEVRON_W = 10;
 
-        public FsEntry entry { get; construct; }
+        private FsEntry? _entry = null;
+        public FsEntry? entry {
+            get { return _entry; }
+            set {
+                if (_entry == value) return;
+                _entry = value;
+                icon_paintable = null;
+                invalidate_layout();
+                if (_entry != null) load_icon();
+                queue_resize();
+            }
+        }
 
         private bool _selected = false;
         public bool selected {
@@ -23,19 +37,52 @@ namespace LumenDesktop {
 
         private Gdk.Paintable? icon_paintable = null;
 
-        public FileRow(FsEntry entry) {
-            Object(entry: entry);
+        // measure() and snapshot() both need the name laid out, and snapshot()
+        // runs per frame for every visible row — so the layout is built once
+        // and only re-wrapped when the width it must fit into changes.
+        private Pango.Layout? layout = null;
+        private int layout_width = int.MIN;
+        private int natural_text_w = -1;
+
+        public FileRow(FsEntry? entry = null) {
             hexpand = true;
-            load_icon();
+            this.entry = entry;
+        }
+
+        private void invalidate_layout() {
+            layout = null;
+            layout_width = int.MIN;
+            natural_text_w = -1;
+        }
+
+        // A font change (theme reload, scale change) invalidates the metrics.
+        public override void css_changed(Gtk.CssStyleChange change) {
+            base.css_changed(change);
+            invalidate_layout();
+        }
+
+        // `width` is the pixel width the text must fit into, or -1 for the
+        // unconstrained natural width.
+        private unowned Pango.Layout text_layout(int width) {
+            if (layout == null) {
+                layout = create_pango_layout(_entry == null ? "" : _entry.display_name);
+                layout.set_ellipsize(Pango.EllipsizeMode.MIDDLE);
+                layout_width = int.MIN;
+            }
+            if (layout_width != width) {
+                layout_width = width;
+                layout.set_width(width < 0 ? -1 : width * Pango.SCALE);
+            }
+            return layout;
         }
 
         private void load_icon() {
-            if (entry.icon == null) return;
+            if (_entry == null || _entry.icon == null) return;
             var display = Gdk.Display.get_default();
             if (display == null) return;
             var theme = Gtk.IconTheme.get_for_display(display);
             icon_paintable = theme.lookup_by_gicon(
-                entry.icon, ICON_SIZE, scale_factor,
+                _entry.icon, ICON_SIZE, scale_factor,
                 Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC);
         }
 
@@ -53,10 +100,12 @@ namespace LumenDesktop {
                 natural = ROW_HEIGHT;
                 return;
             }
-            var layout = create_pango_layout(entry.display_name);
-            int tw, th;
-            layout.get_pixel_size(out tw, out th);
-            int want = PAD_X * 2 + ICON_SIZE + GAP + tw + GAP + CHEVRON_W;
+            if (natural_text_w < 0) {
+                int tw, th;
+                text_layout(-1).get_pixel_size(out tw, out th);
+                natural_text_w = tw;
+            }
+            int want = PAD_X * 2 + ICON_SIZE + GAP + natural_text_w + GAP + CHEVRON_W;
             // The column, not the row, decides the final width; ask for a
             // modest minimum so a long file name doesn't blow the layout up.
             minimum = int.min(want, 120);
@@ -66,7 +115,7 @@ namespace LumenDesktop {
         public override void snapshot(Gtk.Snapshot s) {
             int w = get_width();
             int h = get_height();
-            if (w <= 0 || h <= 0) return;
+            if (w <= 0 || h <= 0 || _entry == null) return;
 
             if (_selected) {
                 var r = Graphene.Rect();
@@ -90,22 +139,20 @@ namespace LumenDesktop {
             }
             x += ICON_SIZE + GAP;
 
-            int text_w = int.max(0, w - x - PAD_X - (entry.is_dir ? CHEVRON_W + GAP : 0));
-            var layout = create_pango_layout(entry.display_name);
-            layout.set_ellipsize(Pango.EllipsizeMode.MIDDLE);
-            layout.set_width(text_w * Pango.SCALE);
+            int text_w = int.max(0, w - x - PAD_X - (_entry.is_dir ? CHEVRON_W + GAP : 0));
+            unowned var l = text_layout(text_w);
             int tw, th;
-            layout.get_pixel_size(out tw, out th);
+            l.get_pixel_size(out tw, out th);
 
             var fg = Gdk.RGBA() { red = 1.0f, green = 1.0f, blue = 1.0f, alpha = 0.92f };
             s.save();
             var tp = Graphene.Point();
             tp.init(x, (h - th) / 2);
             s.translate(tp);
-            s.append_layout(layout, fg);
+            s.append_layout(l, fg);
             s.restore();
 
-            if (entry.is_dir) draw_chevron(s, w - PAD_X - CHEVRON_W, h);
+            if (_entry.is_dir) draw_chevron(s, w - PAD_X - CHEVRON_W, h);
         }
 
         // A small right-pointing "›" telling the user this row expands into

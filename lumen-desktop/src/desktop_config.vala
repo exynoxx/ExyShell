@@ -98,8 +98,7 @@ namespace LumenDesktop {
         public static WidgetSpec[] widgets = {};
 
         public static string config_path() {
-            return GLib.Path.build_filename(
-                GLib.Environment.get_user_config_dir(), "lumen-shell", "desktop.json");
+            return LumenCommon.Paths.desktop_json();
         }
 
         public static void load() {

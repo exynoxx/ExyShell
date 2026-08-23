@@ -1,4 +1,5 @@
 using Gtk;
+using LumenCommon;
 
 // LockApp — long-running, invisible-until-locked daemon. Owns org.lumenshell.Lock
 // and the LockManager. Realize-hidden idiom from lumen-osd: no window exists
@@ -9,7 +10,6 @@ public class LockApp : Gtk.Application {
     private LockService service;
     private uint owner_id = 0;
     private bool activated = false;
-    public  bool test_mode = false;
 
     public LockApp() {
         Object(
@@ -22,17 +22,11 @@ public class LockApp : Gtk.Application {
         if (activated) return;
         activated = true;
 
-        DiagLog.log("activate: test_mode=%s session-lock-supported=%s",
-            test_mode.to_string(), GtkSessionLock.is_supported().to_string());
+        DiagLog.log("activate: session-lock-supported=%s",
+            GtkSessionLock.is_supported().to_string());
 
         Theme.load();
         install_root_css();
-
-        if (test_mode) {
-            new LockSelfTest(this).run();
-            hold();
-            return;
-        }
 
         manager = new LockManager(this);
         service = new LockService(manager);
@@ -86,23 +80,9 @@ public class LockApp : Gtk.Application {
 }
 
 public static int main(string[] args) {
-    // First thing, before any GTK/GLib work: persistent diagnostics + a fatal
-    // signal handler. DiagLog.install() must precede the crash handler so the
-    // log file exists for the backtrace to append to.
-    DiagLog.install();
-    CrashHandler.install(DiagLog.PATH);
+    // Before any GTK/GLib work: the daemon is invisible until it locks, so the
+    // breadcrumb trail is the only evidence of a startup failure.
+    DiagLog.install("lumen-lockscreen");
 
-    var app = new LockApp();
-    if (Environment.get_variable("LUMEN_LOCKSCREEN_SELF_TEST") == "1")
-        app.test_mode = true;
-
-    string[] gtk_args = { args[0] };
-    for (int i = 1; i < args.length; i++) {
-        if (args[i] == "--test") {
-            app.test_mode = true;
-        } else {
-            gtk_args += args[i];
-        }
-    }
-    return app.run(gtk_args);
+    return new LockApp().run(args);
 }

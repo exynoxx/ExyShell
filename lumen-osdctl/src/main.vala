@@ -12,19 +12,8 @@ Actions:
   --custom <text>   [--value 0.5] [--icon NAME]
   --display-mode    cycle | internal | extend | external
   --display-picker                                   (open the Windows-style Win+P picker)
-  --display-selector internal | extend | external   (show Win+P selector, highlight one)
-  --display-selector-cancel                          (dismiss the Win+P selector)
   --display-current                                  (print the live mode: internal|extend|external)
 """;
-
-// Fixed left-to-right order of the Win+P selector tiles. Shared by the
-// --display-selector renderer and the wayfire-display-switch plugin, which
-// cycles over the same {internal, extend, external} sequence.
-private const DisplayCtl.Mode[] SELECTOR_MODES = {
-    DisplayCtl.Mode.INTERNAL_ONLY,
-    DisplayCtl.Mode.EXTEND,
-    DisplayCtl.Mode.EXTERNAL_ONLY,
-};
 
 private static string mode_key(DisplayCtl.Mode m) {
     switch (m) {
@@ -69,26 +58,6 @@ private static void send_show(string kind, double value, string text,
     if (proxy == null) return;
     try {
         ((!) proxy).show(kind, value, text, opts);
-    } catch (Error e) {
-        stderr.printf("lumen-osdctl: D-Bus call failed: %s\n", e.message);
-    }
-}
-
-private static void send_show_selector(string[] icons, string[] labels, int selected) {
-    OsdProxy? proxy = connect_proxy();
-    if (proxy == null) return;
-    try {
-        ((!) proxy).show_selector(icons, labels, selected, opts_new());
-    } catch (Error e) {
-        stderr.printf("lumen-osdctl: D-Bus call failed: %s\n", e.message);
-    }
-}
-
-private static void send_hide() {
-    OsdProxy? proxy = connect_proxy();
-    if (proxy == null) return;
-    try {
-        ((!) proxy).hide();
     } catch (Error e) {
         stderr.printf("lumen-osdctl: D-Bus call failed: %s\n", e.message);
     }
@@ -201,25 +170,6 @@ private static int handle_display_mode(string[] args) {
     return 0;
 }
 
-// Render (or update) the Win+P selector, highlighting `args[2]`. Does NOT touch
-// the live layout — that happens only on --display-mode when the keys release.
-private static int handle_display_selector(string[] args) {
-    if (args.length < 3) { stderr.printf(USAGE); return 1; }
-    DisplayCtl.Mode? requested = DisplayCtl.Mode.parse(args[2]);
-    if (requested == null) { stderr.printf(USAGE); return 1; }
-
-    string[] icons  = {};
-    string[] labels = {};
-    int selected = 0;
-    for (int i = 0; i < SELECTOR_MODES.length; i++) {
-        icons  += SELECTOR_MODES[i].icon();
-        labels += SELECTOR_MODES[i].label();
-        if (SELECTOR_MODES[i] == (DisplayCtl.Mode) requested) selected = i;
-    }
-    send_show_selector(icons, labels, selected);
-    return 0;
-}
-
 private static int handle_display_current() {
     DisplayCtl.Mode? cur = DisplayCtl.current();
     if (cur == null) {
@@ -232,6 +182,12 @@ private static int handle_display_current() {
 
 public static int main(string[] args) {
     if (args.length < 2) { stderr.printf(USAGE); return 1; }
+
+    // pactl/brightnessctl output is machine-parsed ("yes"/"no", "45%"), so pin
+    // the locale for every child we spawn. Setting it on our own environment is
+    // enough — spawned processes inherit it — and avoids an `env LC_ALL=C`
+    // wrapper process per query. Nothing we print is localised.
+    Environment.set_variable("LC_ALL", "C", true);
 
     switch (args[1]) {
         case "--output-volume":
@@ -268,13 +224,6 @@ public static int main(string[] args) {
 
         case "--display-picker":
             send_begin_picker();
-            return 0;
-
-        case "--display-selector":
-            return handle_display_selector(args);
-
-        case "--display-selector-cancel":
-            send_hide();
             return 0;
 
         case "--display-current":

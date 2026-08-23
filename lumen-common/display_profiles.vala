@@ -30,26 +30,19 @@ public class DisplayProfile : GLib.Object {
     public HashTable<string, DisplayOutputState> states =
         new HashTable<string, DisplayOutputState>(str_hash, str_equal);
 
-    // Canonical key for the connected SET (order-independent). Insertion sort —
-    // the array is the number of connected monitors, always tiny.
+    // Canonical key for the connected SET (order-independent).
     public string set_key() {
-        int n = outputs.length;
-        var copy = new string[n];
-        for (int i = 0; i < n; i++) copy[i] = outputs.get(i);
-        for (int i = 1; i < n; i++) {
-            string key = copy[i];
-            int j = i - 1;
-            while (j >= 0 && strcmp(copy[j], key) > 0) { copy[j + 1] = copy[j]; j--; }
-            copy[j + 1] = key;
-        }
-        return string.joinv("|", copy);
+        var copy = new GenericArray<string>();
+        for (int i = 0; i < outputs.length; i++) copy.add(outputs.get(i));
+        copy.sort(strcmp);
+        return string.joinv("|", copy.data);
     }
 }
 
 public class DisplayProfileStore {
 
     public static string path() {
-        return Environment.get_user_config_dir() + "/lumen-shell/display-profiles.json";
+        return LumenCommon.Paths.display_profiles_json();
     }
 
     // Stable per-output identity. Prefer EDID (make/model/serial); fall back to
@@ -164,7 +157,7 @@ public class DisplayProfileStore {
 
         var p = path();
         try {
-            DirUtils.create_with_parents(Environment.get_user_config_dir() + "/lumen-shell", 0755);
+            LumenCommon.Paths.ensure_dir();
             gen.to_file(p);
         } catch (Error e) {
             warning("display-profiles: write %s: %s", p, e.message);

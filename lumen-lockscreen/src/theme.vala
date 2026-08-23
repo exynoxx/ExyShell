@@ -7,7 +7,6 @@ using Json;
 public class Theme {
     // See lumen-osd note: Theme is never instantiated, so non-const field
     // initializers never run; load() sets every field imperatively.
-    public static Gdk.RGBA background;        // page fill behind everything
     public static Gdk.RGBA text;              // primary text (clock, name)
     public static Gdk.RGBA muted_text;        // date, hints
     public static Gdk.RGBA entry_background;
@@ -20,14 +19,12 @@ public class Theme {
     public static int    clock_font_size   = 96;
     public static int    date_font_size    = 18;
     public static int    avatar_size       = 256;
-    public static int    corner_radius     = 16;
     public static int    blur_radius       = 12;       // light GSK frost over the wallpaper
     public static int    idle_timeout_ms   = 300000;   // ext-idle-notify-v1; 0 disables auto-lock
     public static int    failure_backoff_ms = 3000;
     public static bool   show_power_menu   = true;
 
     public static void load() {
-        background       = rgba(0.06f, 0.07f, 0.09f, 1.00f);
         text             = rgba(1.00f, 1.00f, 1.00f, 1.00f);
         muted_text       = rgba(0.90f, 0.90f, 0.94f, 0.75f);
         // Apple-style translucent-white password pill on a blurred backdrop.
@@ -69,17 +66,12 @@ public class Theme {
             background_image = val;
             return;
         }
-        if (!val.has_prefix("#")) {
-            warning("lumen-lockscreen: unknown theme key: %s", key);
-            return;
-        }
         var c = Gdk.RGBA();
         if (!c.parse(val)) {
             warning("lumen-lockscreen: invalid color for %s: %s", key, val);
             return;
         }
         switch (key) {
-            case "lockscreen.background":       background       = c; break;
             case "lockscreen.text":             text             = c; break;
             case "lockscreen.muted-text":       muted_text       = c; break;
             case "lockscreen.entry-background": entry_background = c; break;
@@ -98,7 +90,6 @@ public class Theme {
             case "lockscreen.clock-font-size":    clock_font_size    = v; break;
             case "lockscreen.date-font-size":     date_font_size     = v; break;
             case "lockscreen.avatar-size":        avatar_size        = v; break;
-            case "lockscreen.corner-radius":      corner_radius      = v; break;
             case "lockscreen.blur-radius":        blur_radius        = v; break;
             case "lockscreen.idle-timeout-ms":    idle_timeout_ms    = v; break;
             case "lockscreen.failure-backoff-ms": failure_backoff_ms = v; break;

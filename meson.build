@@ -21,10 +21,63 @@ wlhooks_dep = wlhooks_sub.get_variable('wlhooks_dep')
 
 vapi_dir = meson.project_source_root() / 'vapi'
 
+# Bake the resolved install datadir into every binary that resolves a packaged
+# default (LumenCommon.Paths.theme_file), so the file is found whatever the
+# prefix (/usr vs /usr/local vs a $HOME/.local user install).
+lumen_datadir_c_args = [
+  '-DLUMEN_DATADIR="' + (get_option('prefix') / get_option('datadir')) + '"',
+]
+
+# Shared path resolver (LumenCommon.Paths): the ONE place a config filename or
+# the theme-file precedence is written down. Compiled into every binary that
+# touches ~/.config/lumen-shell/ — which is all of them. Requires
+# lumen_datadir_c_args on the target.
+paths_source = files(
+  'lumen-common/paths.vala',
+)
+
+# Persistent diagnostic log (LumenCommon.DiagLog). Needs --pkg=posix on the
+# consuming target.
+diaglog_source = files(
+  'lumen-common/diaglog.vala',
+)
+
+# .desktop Exec field-code stripping — shared by lumen-panel (pinned-app launch)
+# and lumen-drawer (run-as-root), which must agree on what argv an Exec line
+# turns into.
+desktop_exec_source = files(
+  'lumen-common/desktop_exec.vala',
+)
+
+# Shared GLib.Subprocess spawn helper (run_capture / spawn_detached). Defined
+# before the first target that consumes it (lumen-osd).
+proc_source = files(
+  'lumen-common/proc.vala',
+)
+
+# Remembered display layouts, keyed by the EDID identity set of the connected
+# outputs. Written by lumen-settings and by DisplayCtl's extend snapshot; read
+# by lumen-session on hotplug. Separate from lumen_common_sources so consumers
+# don't drag in logind/gio-unix just to read profiles.
+display_profiles_source = files(
+  'lumen-common/display_profiles.vala',
+)
+
+# Win+P display-mode switching over wlr-output-management-v1. Shared by
+# lumen-osdctl (the --display-mode CLI) and lumen-osd (the picker reads the
+# live mode and owns the tile labels/icons). Requires wayland + wlhooks +
+# display_profiles_source on the consuming target.
+display_ctl_source = files(
+  'lumen-common/display_ctl.vala',
+)
+
 # --- lumen-osd ---
 # Independent dep set: no drawkit, no wlhooks, no GLES.
 gtk4_dep             = dependency('gtk4')
 gtk4_layer_shell_dep = dependency('gtk4-layer-shell-0')
+# Hoisted to the top level so lumen-drawer can use Adw.Carousel; lumen-settings
+# resolves its own copy in its subdir fragment.
+adwaita_dep          = dependency('libadwaita-1')
 
 osd_deps = [
   glib_dep,
@@ -32,6 +85,8 @@ osd_deps = [
   json_dep,
   gtk4_dep,
   gtk4_layer_shell_dep,
+  wayland_dep,
+  wlhooks_dep,
   m_dep,
 ]
 
@@ -40,6 +95,8 @@ osd_vala_args = [
   '--pkg=gtk4',
   '--pkg=gtk4-layer-shell-0',
   '--pkg=json-glib-1.0',
+  '--pkg=wayland-client',
+  '--pkg=libwlhooks',
 ]
 
 osd_sources = files(
@@ -54,12 +111,12 @@ osd_sources = files(
   'lumen-osd/src/presenter.vala',
   'lumen-osd/src/dbus.vala',
   'lumen-osd/src/state_watcher.vala',
-  'lumen-osd/src/self_test.vala',
 )
 
 executable('lumen-osd',
-  osd_sources,
+  osd_sources + paths_source + proc_source + display_ctl_source + display_profiles_source,
   vala_args: osd_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: osd_deps,
   install: true,
 )
@@ -124,12 +181,6 @@ lumen_common_sources = files(
   'lumen-common/logind.vala',
 )
 
-# Remembered display layouts (written by lumen-settings, read by the upcoming
-# lumen-session daemon). Separate from lumen_common_sources so consumers don't
-# drag in logind/gio-unix just to read profiles.
-display_profiles_source = files(
-  'lumen-common/display_profiles.vala',
-)
 
 # AccountsService client (avatar/real-name read + last-session write). Shared by
 # lumen-lockscreen (reads) and lumen-session (writes). Kept separate from
@@ -139,11 +190,6 @@ accounts_source = files(
   'lumen-common/accounts.vala',
 )
 
-# Shared GLib.Subprocess spawn helper (run_capture / spawn_detached). Used by
-# lumen-panel and lumen-osdctl. Kept separate so consumers pull only what they need.
-proc_source = files(
-  'lumen-common/proc.vala',
-)
 
 # Networking backends (nmcli/bluetoothctl shell-out: WiFi + Bluetooth + Ethernet).
 # Global namespace, UI-free. Compiled into lumen-panel (tray) and lumen-settings
@@ -204,7 +250,6 @@ panel_sources = files(
   'lumen-panel/src/widgets/cc_slider.vala',
   'lumen-panel/src/widgets/progress_bar.vala',
   'lumen-panel/src/widgets/text_field.vala',
-  'lumen-panel/src/widgets/chip.vala',
   'lumen-panel/src/widgets/segmented_control.vala',
   'lumen-panel/src/components/control_center/control_module.vala',
   'lumen-panel/src/components/control_center/control_center.vala',
@@ -238,8 +283,9 @@ panel_sources = files(
 )
 
 executable('lumen-panel',
-  panel_sources + panel_peek_sources + panel_resources + lumen_common_sources + proc_source + tray_catalog_source + network_backend_source + sound_source,
+  panel_sources + panel_peek_sources + panel_resources + lumen_common_sources + proc_source + tray_catalog_source + network_backend_source + sound_source + paths_source + desktop_exec_source + dbus_cli_source,
   vala_args: panel_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: panel_deps,
   link_args: ['-Wl,--no-as-needed'],
   install: true,
@@ -279,12 +325,12 @@ notif_sources = files(
   'lumen-notifications/src/banner.vala',
   'lumen-notifications/src/stack.vala',
   'lumen-notifications/src/layer_window.vala',
-  'lumen-notifications/src/self_test.vala',
 )
 
 executable('lumen-notifications',
-  notif_sources,
+  notif_sources + paths_source,
   vala_args: notif_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: notif_deps,
   install: true,
 )
@@ -307,9 +353,9 @@ drawer_deps = [
   gtk4_wayland_dep,
   wayland_dep,
   wlhooks_dep,
+  adwaita_dep,
   glib_dep,
   gio_dep,
-  gee_dep,
   gio_unix_dep,
   m_dep,
 ]
@@ -319,7 +365,7 @@ drawer_vala_args = [
   '--pkg=gtk4',
   '--pkg=gtk4-layer-shell-0',
   '--pkg=gtk4-wayland',
-  '--pkg=gee-0.8',
+  '--pkg=libadwaita-1',
   '--pkg=glib-2.0',
   '--pkg=gio-2.0',
   '--pkg=gio-unix-2.0',
@@ -339,12 +385,12 @@ drawer_sources = files(
   'lumen-drawer/src/components/pagedgrid.vala',
   'lumen-drawer/src/components/searchresults.vala',
   'lumen-drawer/src/components/pagedots.vala',
-  'lumen-drawer/src/utils/aliasarray.vala',
 )
 
 executable('lumen-drawer',
-  drawer_sources,
+  drawer_sources + paths_source + desktop_exec_source,
   vala_args: drawer_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: drawer_deps,
   link_args: ['-Wl,--no-as-needed'],
   install: true,
@@ -394,8 +440,9 @@ desktopwidgets_sources = files(
 )
 
 executable('lumen-desktop',
-  desktopwidgets_sources,
+  desktopwidgets_sources + paths_source,
   vala_args: desktopwidgets_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: desktopwidgets_deps,
   link_args: ['-Wl,--no-as-needed'],
   install: true,
@@ -405,23 +452,27 @@ install_data('lumen-desktop/default-desktop.json',
   install_dir: get_option('datadir') / 'lumen-desktop')
 
 # --- lumen-osdctl ---
-osdctl_deps = [glib_dep, gio_dep, m_dep]
+osdctl_deps = [glib_dep, gio_dep, json_dep, wayland_dep, wlhooks_dep, m_dep]
 
 osdctl_vala_args = [
+  '--vapidir=' + vapi_dir,
   '--pkg=gio-2.0',
   '--pkg=glib-2.0',
+  '--pkg=json-glib-1.0',
+  '--pkg=wayland-client',
+  '--pkg=libwlhooks',
 ]
 
 osdctl_sources = files(
   'lumen-osdctl/src/main.vala',
   'lumen-osdctl/src/backends.vala',
-  'lumen-osdctl/src/display.vala',
   'lumen-osdctl/src/dbus_proxy.vala',
 )
 
 executable('lumen-osdctl',
-  osdctl_sources + proc_source + dbus_cli_source,
+  osdctl_sources + proc_source + dbus_cli_source + paths_source + display_profiles_source + display_ctl_source,
   vala_args: osdctl_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: osdctl_deps,
   install: true,
 )
@@ -453,8 +504,9 @@ session_sources = files(
 )
 
 executable('lumen-session',
-  session_sources + display_profiles_source + accounts_source,
+  session_sources + display_profiles_source + accounts_source + paths_source + proc_source,
   vala_args: session_vala_args,
+  c_args: lumen_datadir_c_args,
   dependencies: session_deps,
   install: true,
 )
@@ -480,7 +532,6 @@ if get_option('with_polkit_agent').allowed() and polkit_agent_dep.found() and po
       'lumen-polkit-agent/src/listener.vala',
       'lumen-polkit-agent/src/auth_flow.vala',
       'lumen-polkit-agent/src/dialog.vala',
-      'lumen-polkit-agent/src/dbg.vala',
     ),
     vala_args: [
       '--vapidir=' + vapi_dir,
@@ -569,21 +620,11 @@ if get_option('with_lockscreen').allowed() and gtk4_session_lock_dep.found() and
     '--pkg=gio-unix-2.0',
     '--pkg=posix',
     '--pkg=pam_auth',
-    '--pkg=lockscreen_crash',
-  ]
-
-  # Bake the resolved install datadir into the binary so the packaged default
-  # theme is found regardless of prefix (e.g. /usr vs /usr/local). Utils reads
-  # LUMEN_DATADIR; see lumen-lockscreen/src/utils.vala.
-  lockscreen_c_args = [
-    '-DLUMEN_DATADIR="' + (get_option('prefix') / get_option('datadir')) + '"',
   ]
 
   lockscreen_sources = files(
     'lumen-common/wayfire_ipc.vala',
     'lumen-lockscreen/src/main.vala',
-    'lumen-lockscreen/src/diaglog.vala',
-    'lumen-lockscreen/src/crash_handler.c',
     'lumen-lockscreen/src/manager.vala',
     'lumen-lockscreen/src/window.vala',
     'lumen-lockscreen/src/theme.vala',
@@ -591,7 +632,6 @@ if get_option('with_lockscreen').allowed() and gtk4_session_lock_dep.found() and
     'lumen-lockscreen/src/dbus.vala',
     'lumen-lockscreen/src/auth.vala',
     'lumen-lockscreen/src/idle.vala',
-    'lumen-lockscreen/src/self_test.vala',
     'lumen-lockscreen/src/widgets/background.vala',
     'lumen-lockscreen/src/widgets/blurred_wallpaper.vala',
     'lumen-lockscreen/src/widgets/clock.vala',
@@ -602,14 +642,12 @@ if get_option('with_lockscreen').allowed() and gtk4_session_lock_dep.found() and
   )
 
   executable('lumen-lockscreen',
-    lockscreen_sources + lockscreen_resources + lumen_common_sources + accounts_source,
+    lockscreen_sources + lockscreen_resources + lumen_common_sources + accounts_source + paths_source + diaglog_source,
     vala_args: lockscreen_vala_args,
-    c_args: lockscreen_c_args,
+    c_args: lumen_datadir_c_args,
     dependencies: lockscreen_deps,
     include_directories: include_directories('lumen-lockscreen/src'),
-    # -rdynamic exports the dynamic symbol table so backtrace_symbols_fd() in
-    # crash_handler.c prints function names, not bare addresses.
-    link_args: ['-Wl,--no-as-needed', '-rdynamic'],
+    link_args: ['-Wl,--no-as-needed'],
     install: true,
   )
 

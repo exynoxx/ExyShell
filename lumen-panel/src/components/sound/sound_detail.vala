@@ -13,7 +13,7 @@ public class SoundDetail : CcDetail {
     public SoundDetail (SoundService service) {
         base ();
         this.service = service;
-        add_css_class ("wifi-detail");
+        add_css_class ("cc-sound-detail");
 
         append (make_header ("Output", null));
 

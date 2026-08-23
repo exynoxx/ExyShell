@@ -1,9 +1,8 @@
 using Gtk;
 
 /* Win+P-style display-mode picker: a centered panel of icon+label tiles laid
- * out side by side, with a rounded highlight behind the selected one. Driven
- * entirely from outside (the wayfire-display-switch plugin advances the
- * selection on each Super+P tap); this widget only renders state. */
+ * out side by side, with a rounded highlight behind the selected one. This
+ * widget only renders state; Picker owns the selection and the key handling. */
 public class Selector : Gtk.Box {
 
     // Fixed metrics so the selection highlight can be placed by arithmetic in

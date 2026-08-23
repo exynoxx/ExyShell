@@ -82,10 +82,6 @@ public class LumenTextField : Gtk.Widget {
         if (root != null) ((Gtk.Window) root).set_focus(null);
     }
 
-    public bool has_focus_within () {
-        return entry.has_focus;
-    }
-
     public override void dispose () {
         if (entry != null) {
             entry.unparent();

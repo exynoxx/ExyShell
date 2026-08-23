@@ -68,18 +68,11 @@ public class BatteryModule : GLib.Object {
     public Gtk.Widget tile () { return root; }
 
     void refresh () {
-        var raw = service.raw_status;
-        string icon;
-        if      (service.ac_online)              icon = "wired";
-        else if (raw == "charging")              icon = "charging";
-        else if (raw == "discharging" || raw.contains ("full")) {
-            var p = service.percent;
-            icon = p >= 70 ? "high" : p >= 30 ? "mid" : "low";
-        } else                                   icon = "nobattery";
-        icon_img.set_from_resource (CcStyle.icon (icon));
+        icon_img.set_from_resource (CcStyle.icon (service.icon_name ()));
 
         pct_lbl.label = "%d%%".printf (service.percent);
 
+        var raw = service.raw_status;
         int pct = service.percent;
         bar.set_progress (pct);
         bar.fill_color = pct >= 30

@@ -1,3 +1,4 @@
+using LumenCommon;
 using Gee;
 using GLib;
 
@@ -31,9 +32,6 @@ namespace LumenSettings {
         public int refresh_mhz() { return (int) Math.round(refresh * 1000); }
         public string res_key() { return "%dx%d".printf(width, height); }
         public string refresh_label() { return "%.2f Hz".printf(refresh); }
-        public string label() {
-            return "%d × %d  @ %.2f Hz".printf(width, height, refresh);
-        }
     }
 
     public enum OutputTransform {

@@ -1,24 +1,26 @@
-using Gee;
 using GLib;
 
 namespace LumenSettings {
 
-    /* Section-aware INI store that preserves comments, blank lines, and the
-     * relative order of lines that were already in the file. New keys are
-     * appended to their section (creating the section if needed) just before
-     * the next section header or at end of file. */
+    /* Section-aware INI store over GLib.KeyFile.
+     *
+     * KEEP_COMMENTS makes KeyFile preserve comments, blank lines, group order
+     * and key order across a load/save cycle; new keys land at the end of their
+     * group and new groups at EOF. The only difference from the file as written
+     * by hand is that KeyFile emits `key=value` where a human writes
+     * `key = value` — Wayfire's parser accepts both. */
     public class IniStore : GLib.Object {
         public string path { get; construct; }
 
-        class Line : GLib.Object {
-            public string kind;       // "section" | "kv" | "raw"
-            public string section;
-            public string key;
-            public string value;
-            public string raw;        // verbatim raw for "raw"; rebuilt for kv/section
-        }
+        const KeyFileFlags FLAGS =
+            KeyFileFlags.KEEP_COMMENTS | KeyFileFlags.KEEP_TRANSLATIONS;
 
-        Gee.ArrayList<Line> lines = new Gee.ArrayList<Line>();
+        KeyFile kf = new KeyFile();
+
+        // False when the file exists but could not be parsed even after
+        // normalisation. save() then refuses to write: KeyFile would emit only
+        // the fragment it managed to read, truncating the user's wayfire.ini.
+        bool writable = true;
 
         public IniStore(string path) {
             Object(path: path);
@@ -35,152 +37,107 @@ namespace LumenSettings {
         }
 
         public string? get_value(string section, string key) {
-            foreach (var l in lines) {
-                if (l.kind == "kv" && l.section == section && l.key == key) return l.value;
+            try {
+                return kf.get_value(section, key);
+            } catch (KeyFileError e) {
+                return null;
             }
-            return null;
         }
 
         public Gee.ArrayList<string> sections() {
-            var seen = new Gee.HashSet<string>();
-            var ordered = new Gee.ArrayList<string>();
-            foreach (var l in lines) {
-                if (l.kind == "section" && !seen.contains(l.section)) {
-                    seen.add(l.section);
-                    ordered.add(l.section);
-                }
-            }
-            return ordered;
+            var result = new Gee.ArrayList<string>();
+            foreach (var g in kf.get_groups()) result.add(g);
+            return result;
         }
 
         public Gee.ArrayList<string> keys_in(string section) {
-            var ks = new Gee.ArrayList<string>();
-            foreach (var l in lines) {
-                if (l.kind == "kv" && l.section == section) ks.add(l.key);
+            var result = new Gee.ArrayList<string>();
+            try {
+                foreach (var k in kf.get_keys(section)) result.add(k);
+            } catch (KeyFileError e) {
+                // Missing section — no keys.
             }
-            return ks;
+            return result;
         }
 
         public void set_value(string section, string key, string value) {
-            for (int i = 0; i < lines.size; i++) {
-                var l = lines.get(i);
-                if (l.kind == "kv" && l.section == section && l.key == key) {
-                    l.value = value;
-                    l.raw   = "%s = %s".printf(key, value);
-                    return;
-                }
-            }
-
-            // Find insertion point: last line that still belongs to <section>
-            // (kv or raw inside section). If section header doesn't exist,
-            // append a new one at EOF first.
-            int section_start = -1;
-            int insert_after  = -1;
-            for (int i = 0; i < lines.size; i++) {
-                var l = lines.get(i);
-                if (l.kind == "section" && l.section == section) {
-                    section_start = i;
-                    insert_after = i;
-                    continue;
-                }
-                if (section_start >= 0 && l.kind == "section" && l.section != section) {
-                    break;
-                }
-                if (section_start >= 0) insert_after = i;
-            }
-
-            if (section_start < 0) {
-                if (lines.size > 0 && lines.get(lines.size - 1).raw != "") {
-                    lines.add(make_raw(""));
-                }
-                lines.add(make_section(section));
-                lines.add(make_kv(section, key, value));
-            } else {
-                lines.insert(insert_after + 1, make_kv(section, key, value));
-            }
+            kf.set_value(section, key, value);
         }
 
         public void remove_key(string section, string key) {
-            for (int i = 0; i < lines.size; i++) {
-                var l = lines.get(i);
-                if (l.kind == "kv" && l.section == section && l.key == key) {
-                    lines.remove_at(i);
-                    return;
-                }
+            try {
+                kf.remove_key(section, key);
+            } catch (KeyFileError e) {
+                // Already absent.
             }
         }
 
         public void save() {
-            var parent = Path.get_dirname(path);
-            try { DirUtils.create_with_parents(parent, 0755); }
-            catch (Error e) { stderr.printf("IniStore: mkdir: %s\n", e.message); return; }
-
-            var sb = new StringBuilder();
-            foreach (var l in lines) {
-                sb.append(l.raw);
-                sb.append("\n");
+            if (!writable) {
+                warning("IniStore: refusing to overwrite unparseable %s", path);
+                return;
+            }
+            if (DirUtils.create_with_parents(Path.get_dirname(path), 0755) != 0) {
+                warning("IniStore: cannot create directory for %s", path);
+                return;
             }
             try {
-                FileUtils.set_contents(path, sb.str);
-            } catch (Error e) {
-                stderr.printf("IniStore: write %s: %s\n", path, e.message);
+                kf.save_to_file(path);
+            } catch (FileError e) {
+                warning("IniStore: write %s: %s", path, e.message);
             }
         }
 
         void load() {
-            lines.clear();
+            kf = new KeyFile();
+            writable = true;
             if (!FileUtils.test(path, FileTest.EXISTS)) return;
+
+            try {
+                kf.load_from_file(path, FLAGS);
+                return;
+            } catch (Error e) {
+                // Fall through: retry on a normalised copy.
+            }
 
             string content;
             try {
                 FileUtils.get_contents(path, out content);
-            } catch (Error e) {
-                stderr.printf("IniStore: read %s: %s\n", path, e.message);
+            } catch (FileError e) {
+                warning("IniStore: read %s: %s", path, e.message);
+                writable = false;
                 return;
             }
 
-            string section = "";
-            foreach (var raw in content.split("\n")) {
-                var stripped = raw.strip();
-                if (stripped == "" || stripped.has_prefix("#") || stripped.has_prefix(";")) {
-                    lines.add(make_raw(raw));
-                    continue;
-                }
-                if (stripped.has_prefix("[") && stripped.has_suffix("]")) {
-                    section = stripped.substring(1, stripped.length - 2).strip();
-                    var line = new Line();
-                    line.kind = "section"; line.section = section; line.raw = raw;
-                    line.key = ""; line.value = "";
-                    lines.add(line);
-                    continue;
-                }
-                int eq = stripped.index_of_char('=');
-                if (eq < 0) {
-                    lines.add(make_raw(raw));
-                    continue;
-                }
-                string k = stripped.substring(0, eq).strip();
-                string v = stripped.substring(eq + 1).strip();
-                var kv = new Line();
-                kv.kind = "kv"; kv.section = section; kv.key = k; kv.value = v; kv.raw = raw;
-                lines.add(kv);
+            try {
+                kf = new KeyFile();
+                kf.load_from_data(normalize(content), -1, FLAGS);
+            } catch (KeyFileError e) {
+                warning("IniStore: %s is not parseable (%s); it will be read as "
+                        + "empty and left untouched", path, e.message);
+                kf = new KeyFile();
+                writable = false;
             }
         }
 
-        Line make_section(string s) {
-            var l = new Line();
-            l.kind = "section"; l.section = s; l.key = ""; l.value = ""; l.raw = "[" + s + "]";
-            return l;
-        }
-        Line make_kv(string s, string k, string v) {
-            var l = new Line();
-            l.kind = "kv"; l.section = s; l.key = k; l.value = v; l.raw = "%s = %s".printf(k, v);
-            return l;
-        }
-        Line make_raw(string r) {
-            var l = new Line();
-            l.kind = "raw"; l.section = ""; l.key = ""; l.value = ""; l.raw = r;
-            return l;
+        // KeyFile rejects three shapes the old hand-rolled parser tolerated:
+        // ';' comments, lines that are neither comment nor `key=value`, and
+        // keys appearing before the first group. Turn each into a '#' comment
+        // so the rest of the file still loads and the text survives a save.
+        static string normalize(string content) {
+            var sb = new StringBuilder();
+            bool in_group = false;
+            foreach (var line in content.split("\n")) {
+                var t = line.strip();
+                bool ok = t == ""
+                    || t.has_prefix("#")
+                    || (t.has_prefix("[") && t.has_suffix("]"))
+                    || (in_group && t.index_of_char('=') > 0);
+                sb.append(ok ? line : "#" + line);
+                sb.append_c('\n');
+                if (t.has_prefix("[")) in_group = true;
+            }
+            return sb.str;
         }
     }
 }

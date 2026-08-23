@@ -61,8 +61,6 @@ namespace LumenSettings {
             queue_draw();
         }
 
-        public int selected_index() { return selected; }
-
         public void refresh() { queue_draw(); }
 
         public override Gtk.SizeRequestMode get_request_mode() {

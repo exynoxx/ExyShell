@@ -22,10 +22,6 @@ public class TrayRegistry : GLib.Object {
         factories.insert(id, new Entry((owned) factory));
     }
 
-    public bool has (string id) {
-        return factories.contains(id);
-    }
-
     // null when the id is unknown — make_tray() simply skips it.
     public ITrayApplet? create (string id) {
         unowned Entry? e = factories.lookup(id);

@@ -1,168 +1,13 @@
-/* lumen-settings: GNOME-Settings-shaped, Lumen-colored.
-   @define-color values come from Theme.generate_root_css(). */
+/* lumen-settings. @define-color values come from Theme.generate_root_css().
+
+   Rows, groups and the sidebar are styled by libadwaita (Adw.PreferencesGroup,
+   Adw.ActionRow, the `navigation-sidebar` class); only what libadwaita does not
+   cover belongs here. */
 
 window.lumen-settings,
 window.lumen-settings decoration {
     background: @settings_window_background;
     color: @settings_text;
-}
-
-.lumen-settings-sidebar {
-    background: alpha(black, 0.18);
-}
-
-.lumen-settings-sidebar .navigation-sidebar,
-.lumen-settings-sidebar listview,
-.lumen-settings-sidebar listbox {
-    background: transparent;
-    padding: 6px 0 4px 0;
-}
-
-/* GNOME navigation-sidebar metrics: 36px min-height, 9px corners,
-   6px lateral inset, 2px gap between rows, neutral overlays for
-   hover/selected (not accent-tinted). */
-.lumen-settings-sidebar row {
-    background: transparent;
-    color: @settings_text;
-    border-radius: 9px;
-    margin: 0 6px 2px 6px;
-    padding: 0 8px;
-    min-height: 36px;
-}
-
-.lumen-settings-sidebar row:hover {
-    background: alpha(currentColor, 0.07);
-}
-
-.lumen-settings-sidebar row:selected,
-.lumen-settings-sidebar row:selected:focus {
-    background: alpha(currentColor, 0.10);
-    color: @settings_text;
-}
-.lumen-settings-sidebar row:selected:hover {
-    background: alpha(currentColor, 0.13);
-}
-.lumen-settings-sidebar row:selected:active {
-    background: alpha(currentColor, 0.19);
-}
-
-/* Symbolic icon inherits the row's currentColor — no colored tile. */
-.lumen-settings-sidebar .lumen-sidebar-icon {
-    color: @settings_text;
-    opacity: 0.85;
-}
-.lumen-settings-sidebar row:selected .lumen-sidebar-icon {
-    opacity: 1.0;
-}
-
-.lumen-sidebar-row-label {
-    font-size: 1.0em;
-    font-weight: normal;
-}
-
-.lumen-sidebar-group-sep {
-    background: alpha(currentColor, 0.10);
-    min-height: 1px;
-}
-
-separator {
-    background: @settings_border;
-    min-width: 1px;
-}
-
-.lumen-settings-header label.title-1 {
-    font-weight: 800;
-    font-size: 22px;
-    color: @settings_text;
-}
-
-/* Boxed list — a vertical listbox with rounded corners, visible
-   separators between rows, no outer chrome. Mirrors adw.boxed-list. */
-.lumen-boxed-list {
-    background: @settings_row_background;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    margin-top: 4px;
-    margin-bottom: 14px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-}
-
-.lumen-boxed-list > row {
-    background: transparent;
-    color: @settings_text;
-    padding: 8px 14px;
-    min-height: 40px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-    transition: background 120ms ease;
-}
-
-.lumen-boxed-list > row:last-child {
-    border-bottom: none;
-}
-
-.lumen-boxed-list > row:hover {
-    background: rgba(255, 255, 255, 0.04);
-}
-
-.lumen-boxed-list-group-title {
-    font-weight: bold;
-    color: @settings_subtitle;
-    font-size: 0.78em;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    margin-top: 14px;
-    margin-bottom: 4px;
-    margin-left: 4px;
-}
-
-/* Section header: centered title flanked by horizontal rules.
-   Used by BoxedList when a group_title is provided. */
-.lumen-section-header {
-    margin-top: 14px;
-    margin-bottom: 4px;
-    padding: 0 4px;
-}
-.lumen-section-header label.lumen-section-title {
-    color: @settings_subtitle;
-    font-size: 0.85em;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 0 8px;
-}
-.lumen-section-header separator.lumen-section-rule {
-    background: rgba(255, 255, 255, 0.10);
-    min-height: 1px;
-    min-width: 12px;
-    margin: 0;
-}
-
-label.lumen-action-row-title {
-    color: @settings_text;
-    font-weight: bold;
-    font-size: 1.0em;
-}
-label.lumen-action-row-subtitle {
-    color: @settings_subtitle;
-    font-size: 0.82em;
-    font-style: italic;
-    font-weight: normal;
-    margin-top: 1px;
-    opacity: 0.85;
-}
-
-/* Trailing slot — sized to its content so the control sits visually
-   close to its row rather than floating in a wide empty column. */
-.lumen-row-suffix {
-    min-width: 0;
-}
-
-button.lumen-color-swatch {
-    min-width: 26px;
-    min-height: 26px;
-    border-radius: 13px;
-    border: 1px solid alpha(white, 0.15);
-    padding: 0;
-    box-shadow: inset 0 0 0 1px alpha(black, 0.25);
 }
 
 scrolledwindow,
@@ -174,47 +19,13 @@ scrollbar {
     background: transparent;
 }
 
-.lumen-boxed-list spinbutton,
-.lumen-boxed-list entry,
-.lumen-boxed-list combobox,
-.lumen-boxed-list dropdown,
-.lumen-boxed-list > row button {
-    background: alpha(black, 0.22);
+.lumen-about-title {
+    font-size: 1.6em;
+    font-weight: bold;
     color: @settings_text;
-    border-radius: 6px;
-    border: 1px solid alpha(white, 0.06);
-    min-height: 26px;
-    padding: 2px 8px;
 }
 
-.lumen-boxed-list spinbutton:focus-within,
-.lumen-boxed-list entry:focus-within,
-.lumen-boxed-list dropdown:focus-within {
-    border-color: @settings_accent;
-}
-
-.lumen-boxed-list spinbutton button,
-.lumen-boxed-list entry image {
-    background: transparent;
-    border: none;
-    box-shadow: none;
-    min-height: 0;
-    padding: 0 4px;
-}
-
-.lumen-boxed-list switch {
-    background: alpha(black, 0.30);
-    border-radius: 14px;
-    min-width: 44px;
-    min-height: 24px;
-}
-.lumen-boxed-list switch:checked {
-    background: @settings_accent;
-}
-.lumen-boxed-list switch slider {
-    background: @settings_text;
-    border-radius: 12px;
-    min-width: 18px;
-    min-height: 18px;
-    margin: 2px;
+.lumen-about-subtitle,
+.lumen-about-value {
+    color: @settings_subtitle;
 }

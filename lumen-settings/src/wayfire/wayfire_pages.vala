@@ -1,7 +1,52 @@
+using LumenCommon;
 using Gtk;
 using Gee;
 
 namespace LumenSettings.Wayfire {
+
+    /* The `[core] plugins` list in wayfire.ini, as edited by the Wayfire
+     * Plugins page, the Panel page (wayfire-panel-push) and the Drawer page
+     * (curtain vs slide reveal). */
+    public class PluginList {
+
+        public static bool is_enabled(IniStore store, string name) {
+            var raw = store.get_value("core", "plugins") ?? "";
+            foreach (var tok in raw.split(" ")) {
+                if (tok.strip() == name) return true;
+            }
+            return false;
+        }
+
+        // Order is preserved and duplicates dropped: Wayfire loads plugins in
+        // list order, so reshuffling would silently change plugin precedence.
+        public static void set_enabled(IniStore store, string name, bool on) {
+            // Three pages hold their own IniStore, all built from the same
+            // startup snapshot. Without this reload a toggle here writes back a
+            // stale list and drops whatever a sibling page enabled since.
+            store.reload();
+
+            var seen = new Gee.HashSet<string>();
+            var ordered = new Gee.ArrayList<string>();
+            foreach (var tok in (store.get_value("core", "plugins") ?? "").split(" ")) {
+                var t = tok.strip();
+                if (t != "" && seen.add(t)) ordered.add(t);
+            }
+
+            if (on) {
+                if (!seen.contains(name)) ordered.add(name);
+            } else {
+                ordered.remove(name);
+            }
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < ordered.size; i++) {
+                if (i > 0) sb.append_c(' ');
+                sb.append(ordered.get(i));
+            }
+            store.set_value("core", "plugins", sb.str);
+            store.save();
+        }
+    }
 
     public class WayfirePages {
         const string METADATA_DIR = "/usr/share/wayfire/metadata";
@@ -286,35 +331,11 @@ namespace LumenSettings.Wayfire {
         }
 
         bool is_enabled(string name) {
-            var raw = store.get_value("core", "plugins") ?? "";
-            foreach (var tok in raw.split(" ")) {
-                if (tok.strip() == name) return true;
-            }
-            return false;
+            return PluginList.is_enabled(store, name);
         }
 
         void set_enabled(string name, bool on) {
-            store.reload();   // fresh list so we don't clobber the Panel page's push toggle
-            var raw = store.get_value("core", "plugins") ?? "";
-            var seen = new Gee.HashSet<string>();
-            var ordered = new Gee.ArrayList<string>();
-            foreach (var tok in raw.split(" ")) {
-                var t = tok.strip();
-                if (t == "") continue;
-                if (!seen.contains(t)) { seen.add(t); ordered.add(t); }
-            }
-            if (on) {
-                if (!seen.contains(name)) ordered.add(name);
-            } else {
-                ordered.remove(name);
-            }
-            var sb = new StringBuilder();
-            for (int i = 0; i < ordered.size; i++) {
-                if (i > 0) sb.append(" ");
-                sb.append(ordered.get(i));
-            }
-            store.set_value("core", "plugins", sb.str);
-            store.save();
+            PluginList.set_enabled(store, name, on);
         }
     }
 }

@@ -20,7 +20,7 @@ namespace LumenSettings {
         public string title     { owned get { return "Sound"; } }
         public string icon_name { owned get { return "audio-volume-high-symbolic"; } }
 
-        public string? restart_target() { return null; }
+        public override string? restart_target() { return null; }
 
         // Sets a captured bool field; used to wire scale drag tracking.
         private delegate void SetBool(bool v);

@@ -1,27 +1,35 @@
 using GLib;
 
-namespace LumenSettings {
+namespace LumenCommon {
 
-    /* Persistent diagnostic log for debugging after the process has closed or
-     * crashed. Appends timestamped lines to /tmp/lumen-settings.log (mirrors the
-     * wayfire-plugins `/tmp/wayfire-<name>.log` convention). Also installs a GLib
-     * log writer so warning()/message()/critical()/GTK diagnostics land in the
-     * same file — the things that survive a crash are exactly what you want when
-     * a multi-monitor apply takes the app down.
+    /* Persistent diagnostic log for debugging a component after it has exited or
+     * crashed. Appends timestamped lines to $XDG_RUNTIME_DIR/<name>.log — the
+     * runtime dir is per-user and mode 0700, so a lock daemon's breadcrumbs are
+     * not world-readable the way a fixed /tmp path would be. Two things land
+     * there:
      *
-     * Tail it live while reproducing:   tail -f /tmp/lumen-settings.log
+     *   * lifecycle breadcrumbs — written directly via DiagLog.log() at state
+     *     transitions, the trail that is missing when a daemon vanishes with no
+     *     journal line.
+     *   * GLib warning()/critical()/error() + GTK/GDK diagnostics — routed in by
+     *     the installed log writer so they survive the process.
+     *
+     * Tail it live while reproducing:   tail -f "$XDG_RUNTIME_DIR"/<name>.log
+     *
+     * SECURITY: never pass a password (or any auth secret) to these — log auth
+     * *outcomes* only.
      */
     public class DiagLog {
-        public const string PATH = "/tmp/lumen-settings.log";
-        static bool installed = false;
+        static string? path = null;
 
-        // Raw append — never throws, never recurses into GLib logging.
+        // Raw append — never throws, never recurses into GLib logging. A no-op
+        // until install() has named the file.
         public static void raw(string line) {
-            var f = FileStream.open(PATH, "a");
+            if (path == null) return;
+            var f = FileStream.open((!) path, "a");
             if (f == null) return;
-            string ts;
             var now = new DateTime.now_local();
-            ts = now.format("%H:%M:%S") + ".%03d".printf(now.get_microsecond() / 1000);
+            string ts = now.format("%H:%M:%S") + ".%03d".printf(now.get_microsecond() / 1000);
             f.printf("%s  %s\n", ts, line);
             f.flush();
         }
@@ -32,21 +40,13 @@ namespace LumenSettings {
             raw(fmt.vprintf(args));
         }
 
-        // Multi-line block with an indented header, so dumps stay readable.
-        public static void block(string header, string body) {
-            raw(header);
-            foreach (var l in body.split("\n")) {
-                if (l.strip() == "") continue;
-                raw("    " + l);
-            }
-        }
+        // Route GLib structured logs (warning/critical/error + GTK/GDK's own)
+        // into the file, while still printing to stderr via the default writer.
+        // Call once at startup, as early as possible.
+        public static void install(string name) {
+            if (path != null) return;
+            path = Environment.get_user_runtime_dir() + "/" + name + ".log";
 
-        // Route GLib structured logs (warning/message/critical/info + GTK's own)
-        // into the same file, while still printing to stderr via the default
-        // writer. Call once at startup.
-        public static void install() {
-            if (installed) return;
-            installed = true;
             raw("──────── session start ────────");
             raw("pid=%d  display=%s  desktop=%s".printf(
                 (int) Posix.getpid(),
@@ -55,9 +55,8 @@ namespace LumenSettings {
 
             Log.set_writer_func((level, fields) => {
                 // Only persist WARNING and above — INFO/DEBUG/MESSAGE from GTK,
-                // GDK (Vulkan loader), etc. would otherwise flood the file and
-                // bury the display diagnostics. Our own lifecycle/apply lines
-                // are written directly via DiagLog.log(), not through here.
+                // GDK (Vulkan loader etc.) would bury the lifecycle trail. Our
+                // own lines are written directly via DiagLog.log(), not here.
                 var sev = level & LogLevelFlags.LEVEL_MASK;
                 if (sev == LogLevelFlags.LEVEL_INFO
                     || sev == LogLevelFlags.LEVEL_DEBUG

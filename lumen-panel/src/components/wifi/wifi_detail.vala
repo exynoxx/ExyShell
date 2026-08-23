@@ -1,26 +1,19 @@
 using Gtk;
 
-// Inline Wi-Fi detail the Control Center slides to. macOS-faithful: a back
-// header with a green power switch + scan spinner, the connected network pinned
-// in its own card with a blue check, an "OTHER NETWORKS" group below, and an
-// inline pill password card with a circular go-arrow. The selection / sticky-
-// error logic is the proven flow carried over from the old WifiPage.
-public class WifiDetail : CcDetail {
+// Inline Wi-Fi detail the Control Center slides to. macOS-faithful: the shared
+// CcListDetail chrome (back header, green radio switch, scan spinner, scrolled
+// list, empty state), the connected network pinned in its own card with a blue
+// check, an "OTHER NETWORKS" group below, and an inline pill password card with
+// a circular go-arrow.
+public class WifiDetail : CcListDetail {
 
     WifiService service;
 
-    Gtk.Switch  power_switch;
-    Gtk.Button  refresh_btn;
-    Gtk.Spinner spinner;
-    bool        syncing_power = false;
-
-    Gtk.Box            conn_card;
-    Gtk.ScrolledWindow lists_scroll;
-    Gtk.Label          saved_caption;
-    Gtk.Box            saved_card;
-    Gtk.Label          others_caption;
-    Gtk.Box            others_card;
-    Gtk.Label          empty_label;
+    Gtk.Box   conn_card;
+    Gtk.Label saved_caption;
+    Gtk.Box   saved_card;
+    Gtk.Label others_caption;
+    Gtk.Box   others_card;
 
     Gtk.Box          pass_card;
     LumenTextField   password_field;
@@ -30,59 +23,28 @@ public class WifiDetail : CcDetail {
     Gtk.Button       forget_btn;
     Gtk.Label        status_label;
 
-    Gee.ArrayList<WifiRow> rows = new Gee.ArrayList<WifiRow> ();
     WifiNet[] sorted_nets = {};
 
-    // Tracked by SSID so it survives the row rebuilds from background scans.
-    string selected_ssid = "";
+    // Sticky per-SSID failure, so a background rescan doesn't wipe the message.
     string error_ssid = "";
     string error_msg  = "";
 
     public WifiDetail (WifiService service) {
-        base ();
+        base ("Wi-Fi", "cc-wifi-detail");
         this.service = service;
-        add_css_class ("wifi-detail");
 
-        build_header ();
         build_content ();
-        update_header ();
+        update_view ();
 
         service.state_changed.connect (on_service_changed);
         service.connect_result.connect (on_connect_result);
         service.refresh_scan (false);
     }
 
-    void build_header () {
-        var trailing = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
-            valign = Gtk.Align.CENTER,
-        };
-
-        spinner = new Gtk.Spinner () { valign = Gtk.Align.CENTER, visible = false };
-        trailing.append (spinner);
-
-        refresh_btn = new Gtk.Button () { valign = Gtk.Align.CENTER };
-        refresh_btn.add_css_class ("cc-icon-btn");
-        var rlbl = new Gtk.Label ("⟲");
-        refresh_btn.set_child (rlbl);
-        refresh_btn.clicked.connect (() => service.refresh_scan (true));
-        trailing.append (refresh_btn);
-
-        power_switch = new Gtk.Switch () { valign = Gtk.Align.CENTER };
-        power_switch.add_css_class ("lumen-switch");
-        power_switch.notify["active"].connect (() => {
-            if (syncing_power) return;
-            service.set_radio (power_switch.active);
-        });
-        trailing.append (power_switch);
-
-        append (make_header ("Wi-Fi", trailing));
-    }
+    protected override void power_requested (bool on) { service.set_radio (on); }
+    protected override void refresh_requested ()      { service.refresh_scan (true); }
 
     void build_content () {
-        var content = new Gtk.Box (Gtk.Orientation.VERTICAL, 8) {
-            margin_start = 14, margin_end = 14, margin_bottom = 14, vexpand = true,
-        };
-
         conn_card = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) { visible = false };
         conn_card.add_css_class ("cc-card");
         content.append (conn_card);
@@ -111,29 +73,11 @@ public class WifiDetail : CcDetail {
         others_card.add_css_class ("cc-card");
         lists_box.append (others_card);
 
-        lists_scroll = new Gtk.ScrolledWindow () {
-            child = lists_box,
-            hscrollbar_policy = Gtk.PolicyType.NEVER,
-            vscrollbar_policy = Gtk.PolicyType.AUTOMATIC,
-            vexpand = true,
-            min_content_height = 240,
-            max_content_height = 380,
-            propagate_natural_height = true,
-        };
-        lists_scroll.add_css_class ("cc-scroll");
-        content.append (lists_scroll);
-
-        empty_label = new Gtk.Label ("") {
-            halign = Gtk.Align.CENTER, valign = Gtk.Align.CENTER,
-            vexpand = true, can_target = false, visible = false,
-        };
-        empty_label.add_css_class ("cc-empty");
+        content.append (make_list_scroll (lists_box));
         content.append (empty_label);
 
         build_pass_card ();
         content.append (pass_card);
-
-        append (content);
     }
 
     void build_pass_card () {
@@ -202,7 +146,7 @@ public class WifiDetail : CcDetail {
     }
 
     bool selected_is_connected () {
-        return selected_ssid != "" && selected_ssid == service.connected_ssid;
+        return selected_key != "" && selected_key == service.connected_ssid;
     }
 
     void set_status (string msg, bool is_error) {
@@ -215,7 +159,7 @@ public class WifiDetail : CcDetail {
     }
 
     void do_connect () {
-        int idx = index_of (selected_ssid);
+        int idx = index_of (selected_key);
         if (idx < 0) return;
         var net = sorted_nets[idx];
 
@@ -232,16 +176,15 @@ public class WifiDetail : CcDetail {
     }
 
     void do_forget () {
-        int idx = index_of (selected_ssid);
+        int idx = index_of (selected_key);
         if (idx < 0) return;
         service.forget (sorted_nets[idx].ssid);
         close_password_panel ();
     }
 
     void close_password_panel () {
-        selected_ssid = "";
+        clear_selection ();
         error_ssid = ""; error_msg = "";
-        foreach (var r in rows) r.selected = false;
         password_field.text = "";
         reveal_btn.active = false;
         password_field.obscure_text = true;
@@ -251,8 +194,7 @@ public class WifiDetail : CcDetail {
     }
 
     void select_ssid (string ssid, bool reset_input) {
-        selected_ssid = ssid;
-        foreach (var r in rows) r.selected = (r.ssid == ssid);
+        select_key (ssid);
         if (reset_input) {
             password_field.text = "";
             reveal_btn.active = false;
@@ -267,7 +209,7 @@ public class WifiDetail : CcDetail {
     // Recompute the password card from the selected network + live service state.
     // Idempotent — safe to call after every rebuild.
     void update_password_panel () {
-        int idx = index_of (selected_ssid);
+        int idx = index_of (selected_key);
         if (idx < 0) { pass_card.visible = false; return; }
         var net = sorted_nets[idx];
         bool connected  = net.ssid == service.connected_ssid;
@@ -305,7 +247,7 @@ public class WifiDetail : CcDetail {
     }
 
     void on_connect_result (string ssid, WifiConnectResult res) {
-        if (ssid != selected_ssid) return;
+        if (ssid != selected_key) return;
 
         if (res == WifiConnectResult.SUCCESS) {
             close_password_panel ();
@@ -324,16 +266,17 @@ public class WifiDetail : CcDetail {
     }
 
     void on_service_changed () {
+        string previous = selected_key;
         rebuild_rows ();
 
-        if (selected_ssid != "" && index_of (selected_ssid) < 0
-            && selected_ssid != service.connecting_ssid) {
+        if (previous != "" && index_of (previous) < 0
+            && previous != service.connecting_ssid) {
             close_password_panel ();
-        } else if (selected_ssid != "") {
-            select_ssid (selected_ssid, false);
+        } else if (previous != "") {
+            select_ssid (previous, false);
         }
 
-        update_header ();
+        update_view ();
     }
 
     void rebuild_rows () {
@@ -380,27 +323,19 @@ public class WifiDetail : CcDetail {
         row.show_separator = separator;
         string captured_ssid = net.ssid;
         row.activated.connect (() => {
-            if (selected_ssid == captured_ssid) close_password_panel ();
-            else                                select_ssid (captured_ssid, true);
+            if (selected_key == captured_ssid) close_password_panel ();
+            else                               select_ssid (captured_ssid, true);
         });
         rows.add (row);
         card.append (row);
     }
 
-    void update_header () {
-        if (power_switch.active != service.enabled) {
-            syncing_power = true;
-            power_switch.active = service.enabled;
-            syncing_power = false;
-        }
-        refresh_btn.sensitive = service.enabled;
-        refresh_btn.visible   = !service.scanning;
-        spinner.visible       = service.scanning;
-        spinner.spinning      = service.scanning;
+    void update_view () {
+        sync_header (service.enabled, service.scanning);
 
-        bool has_conn   = service.connected_ssid != "" && service.connected_ssid != "--";
-        int  saved_n    = 0;
-        int  others_n   = 0;
+        bool has_conn = service.connected_ssid != "" && service.connected_ssid != "--";
+        int  saved_n  = 0;
+        int  others_n = 0;
         foreach (var net in sorted_nets) {
             if (net.ssid == service.connected_ssid) continue;
             if (net.is_saved) saved_n++;
@@ -415,19 +350,17 @@ public class WifiDetail : CcDetail {
         saved_caption.visible  = saved_n > 0 && (has_conn || others_n > 0);
         others_card.visible    = others_n > 0;
         others_caption.visible = others_n > 0 && (has_conn || saved_n > 0);
-        lists_scroll.visible   = saved_n > 0 || others_n > 0;
+        list_scroll.visible    = saved_n > 0 || others_n > 0;
 
         if (!service.enabled) {
-            empty_label.label = "Wi-Fi is off";
-            empty_label.visible = true;
-            lists_scroll.visible = false;
+            set_empty ("Wi-Fi is off");
+            list_scroll.visible = false;
             saved_caption.visible = false;
             others_caption.visible = false;
         } else if (rows.size == 0) {
-            empty_label.label = service.scanning ? "Scanning…" : "No networks found";
-            empty_label.visible = true;
+            set_empty (service.scanning ? "Scanning…" : "No networks found");
         } else {
-            empty_label.visible = false;
+            set_empty ("");
         }
     }
 }

@@ -259,12 +259,7 @@ public class AppBar : Gtk.Box {
         foreach (var line in content.split("\n")) {
             var app_id = line.strip();
             if (app_id == "" || app_id == "--") continue;
-            if (entries_by_app_id.has_key(app_id)) continue;
-            var entry = new AppEntry(app_id, Utils.load_app_metadata(app_id));
-            entry.is_pinned = true;
-            wire_entry(entry);
-            entries_by_app_id[app_id] = entry;
-            append(entry);
+            get_or_create(app_id).is_pinned = true;
         }
     }
 

@@ -164,7 +164,5 @@ namespace LumenDesktop {
             }
             return rects;
         }
-
-        public bool is_empty() { return placements.length == 0; }
     }
 }

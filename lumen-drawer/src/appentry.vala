@@ -41,7 +41,7 @@ public class AppEntry {
 
         try {
             string[] argv;
-            Shell.parse_argv(strip_field_codes(cmd), out argv);
+            Shell.parse_argv(LumenCommon.strip_field_codes(cmd), out argv);
 
             string[] spawn = { "pkexec", "env" };
             foreach (var v in new string[] {
@@ -58,26 +58,5 @@ public class AppEntry {
             stderr.printf("Failed to run %s as root: %s\n", display_name, e.message);
         }
         launched();
-    }
-
-    // Strip .desktop Exec field codes (%f %F %u %U %i %c %k %d %D %n %N %v %m).
-    // AppInfo.launch() expands them; a raw argv must not carry them. "%%" → "%".
-    private static string strip_field_codes(string exec) {
-        var sb = new StringBuilder();
-        int i = 0;
-        unichar c;
-        bool pct = false;
-        while (exec.get_next_char(ref i, out c)) {
-            if (pct) {
-                if (c == '%') sb.append_c('%');   // literal %% — keep one
-                // otherwise drop the field-code letter entirely
-                pct = false;
-            } else if (c == '%') {
-                pct = true;
-            } else {
-                sb.append_unichar(c);
-            }
-        }
-        return sb.str.strip();
     }
 }

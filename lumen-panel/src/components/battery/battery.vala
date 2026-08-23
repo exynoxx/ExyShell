@@ -2,13 +2,11 @@ using Gtk;
 
 public class BatteryTray : GLib.Object, ITrayApplet, IControlModule {
     BatteryService service;
-    PowerProfileService power_profiles;
     TrayButton icon;
     BatteryModule module_tile;
 
-    public BatteryTray () {
-        service = new BatteryService ();
-        power_profiles = new PowerProfileService ();
+    public BatteryTray (BatteryService service, PowerProfileService power_profiles) {
+        this.service = service;
         icon = new TrayButton ("nobattery");
         module_tile = new BatteryModule (service, power_profiles);
 
@@ -17,15 +15,7 @@ public class BatteryTray : GLib.Object, ITrayApplet, IControlModule {
     }
 
     void update_icon () {
-        string name;
-        var raw = service.raw_status;
-        if (service.ac_online)                   name = "wired";
-        else if (raw == "charging")              name = "charging";
-        else if (raw == "discharging" || raw.contains ("full")) {
-            var p = service.percent;
-            name = p >= 70 ? "high" : p >= 30 ? "mid" : "low";
-        } else                                    name = "nobattery";
-        icon.set_icon_from_resource (name);
+        icon.set_icon_from_resource (service.icon_name ());
     }
 
     public Gtk.Widget tray_widget () { return icon; }

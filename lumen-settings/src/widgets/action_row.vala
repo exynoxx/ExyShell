@@ -1,21 +1,9 @@
 namespace LumenSettings {
 
-    // Thin wrapper over Adw.ActionRow. Keeps the historical `row_title` /
-    // `row_subtitle` / `set_suffix()` API so the page code (and the
-    // Switch/Spin/Entry/Color/File/Binding rows that subclass this) is
-    // unchanged, while the actual rendering, spacing and theming come from
-    // libadwaita.
+    // Adw.ActionRow plus a single-slot `set_suffix()`, which the
+    // Switch/Spin/Entry/Color/File/Binding rows all build on.
     public class ActionRow : Adw.ActionRow {
         Gtk.Widget? current_suffix = null;
-
-        public string row_title {
-            owned get { return title; }
-            set { title = value; }
-        }
-        public string row_subtitle {
-            owned get { return subtitle; }
-            set { subtitle = value ?? ""; }
-        }
 
         public ActionRow(string title, string subtitle = "") {
             // Plain labels, not markup: avoids an `&`/`<` in a title being

@@ -36,8 +36,10 @@ public class SniItem : Gtk.Button {
 
     async void init () {
         try {
+            // DO_NOT_LOAD_PROPERTIES: skip the construction-time GetAll, which
+            // refresh() duplicates immediately below.
             proxy = yield new DBusProxy.for_bus(
-                BusType.SESSION, DBusProxyFlags.NONE, null,
+                BusType.SESSION, DBusProxyFlags.DO_NOT_LOAD_PROPERTIES, null,
                 bus, path, IFACE, null);
         } catch (Error e) {
             warning("lumen-panel systray: proxy %s%s failed: %s", bus, path, e.message);

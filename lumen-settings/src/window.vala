@@ -2,10 +2,11 @@ using Gtk;
 
 namespace LumenSettings {
 
-    public class SettingsWindow : Gtk.ApplicationWindow {
+    public class SettingsWindow : Adw.ApplicationWindow {
         Sidebar sidebar;
         Gtk.Stack stack;
-        Gtk.Label title_label;
+        Adw.NavigationSplitView split;
+        Adw.NavigationPage content_page;
         Gtk.Button restart_btn;
         string? restart_target;
         PageRegistry registry;
@@ -18,30 +19,14 @@ namespace LumenSettings {
             set_default_size(980, 680);
             add_css_class("lumen-settings");
 
-            var root = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 0) {
-                hexpand = true, vexpand = true,
-            };
-
             sidebar = new Sidebar(registry);
-            root.append(sidebar);
+            var sidebar_view = new Adw.ToolbarView() { content = sidebar };
+            sidebar_view.add_top_bar(new Adw.HeaderBar());
 
-            var separator = new Gtk.Separator(Gtk.Orientation.VERTICAL);
-            root.append(separator);
-
-            var right = new Gtk.Box(Gtk.Orientation.VERTICAL, 0) {
+            stack = new Gtk.Stack() {
+                transition_type = Gtk.StackTransitionType.CROSSFADE,
                 hexpand = true, vexpand = true,
             };
-
-            var header = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12) {
-                margin_start = 24, margin_end = 24,
-                margin_top = 18, margin_bottom = 6,
-            };
-            header.add_css_class("lumen-settings-header");
-            title_label = new Gtk.Label("") {
-                xalign = 0, hexpand = true,
-            };
-            title_label.add_css_class("title-1");
-            header.append(title_label);
 
             restart_btn = new Gtk.Button.with_label("Restart") {
                 valign = Gtk.Align.CENTER,
@@ -49,33 +34,39 @@ namespace LumenSettings {
             };
             restart_btn.add_css_class("suggested-action");
             restart_btn.clicked.connect(restart_current_page);
-            header.append(restart_btn);
 
-            right.append(header);
+            var content_header = new Adw.HeaderBar();
+            content_header.pack_end(restart_btn);
+            var content_view = new Adw.ToolbarView() { content = stack };
+            content_view.add_top_bar(content_header);
+            content_page = new Adw.NavigationPage(content_view, "Settings");
 
-            stack = new Gtk.Stack() {
-                transition_type = Gtk.StackTransitionType.CROSSFADE,
-                hexpand = true, vexpand = true,
+            split = new Adw.NavigationSplitView() {
+                sidebar = new Adw.NavigationPage(sidebar_view, "Lumen Settings"),
+                content = content_page,
+                min_sidebar_width = 220,
+                max_sidebar_width = 300,
             };
-            right.append(stack);
-
-            root.append(right);
-            set_child(root);
+            set_content(split);
 
             registry.changed.connect(rebuild_stack);
             rebuild_stack();
 
-            sidebar.page_selected.connect((id) => {
-                stack.set_visible_child_name(id);
-                var page = registry.lookup(id);
-                if (page != null) {
-                    title_label.label = page.title;
-                    restart_target = page.restart_target();
-                    restart_btn.visible = restart_target != null;
-                }
-            });
-
+            sidebar.page_selected.connect(show_page);
             sidebar.select_first();
+        }
+
+        void show_page(string id) {
+            stack.set_visible_child_name(id);
+            var page = registry.lookup(id);
+            if (page == null) return;
+
+            content_page.title = page.title;
+            restart_target = page.restart_target();
+            restart_btn.visible = restart_target != null;
+            // Matters only while collapsed (narrow window), where the sidebar
+            // and the content share one pane.
+            split.show_content = true;
         }
 
         void restart_current_page() {

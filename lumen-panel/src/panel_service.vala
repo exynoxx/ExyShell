@@ -38,12 +38,6 @@ public class PanelService : GLib.Object {
         if (tray != null) tray.toggle ();
     }
 
-    // True while the Control Center is open. Lets a caller branch (e.g. a status
-    // line) without a separate signal.
-    public bool tray_expanded {
-        get { return tray != null && tray.is_expanded (); }
-    }
-
     [DBus (visible = false)]
     public void start () {
         owner_id = Bus.own_name(

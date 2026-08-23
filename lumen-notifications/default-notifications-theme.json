@@ -14,19 +14,13 @@
     "action.background":       "#ffffff14",
     "action.background-hover": "#ffffff2a",
     "action.text":             "#ffffffff",
-    "action.radius":           8,
     "clear-all.radius":        6,
 
     "animation.fade-out-ms": 800,
-    "animation.slide-px":    24,
 
     "dismiss.style":         "slide-right",
     "dismiss.cascade-ms":    80,
     "clear-all.threshold":   3,
 
-    "expire.default-ms":     5000,
-
-    "urgency.low.accent":      "#5b8defff",
-    "urgency.normal.accent":   "#faa833ff",
-    "urgency.critical.accent": "#e0584cff"
+    "expire.default-ms":     5000
 }

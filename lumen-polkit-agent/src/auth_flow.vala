@@ -43,16 +43,16 @@ public class AuthFlow : GLib.Object {
         // cancel emitted as a side effect of tearing the window down after a
         // SUCCESSFUL auth must not flip the result to "dismissed".
         dialog.cancel.connect(() => {
-            lpa_dbg("flow: dialog.cancel signal (done=%s)", done.to_string());
+            GLib.debug("flow: dialog.cancel signal (done=%s)", done.to_string());
             if (done) return;
             user_cancelled = true;
             finish(false);
         });
-        dialog.identity_changed.connect((id) => { lpa_dbg("flow: identity_changed"); chosen = id; restart_session(); });
+        dialog.identity_changed.connect((id) => { GLib.debug("flow: identity_changed"); chosen = id; restart_session(); });
 
         // polkitd's CancelAuthentication arrives as a cancel on this token.
         if (cancellable != null)
-            cancellable.cancelled.connect(() => { lpa_dbg("flow: cancellable.cancelled (polkitd CancelAuthentication)"); finish(false); });
+            cancellable.cancelled.connect(() => { GLib.debug("flow: cancellable.cancelled (polkitd CancelAuthentication)"); finish(false); });
     }
 
     // Prefer authenticating as the current user when polkit offers that
@@ -72,13 +72,13 @@ public class AuthFlow : GLib.Object {
     }
 
     public async bool run() throws GLib.Error {
-        lpa_dbg("flow: run() begin");
+        GLib.debug("flow: run() begin");
         resume = run.callback;
         dialog.present();
-        lpa_dbg("flow: dialog.present() done");
+        GLib.debug("flow: dialog.present() done");
         start_session();
-        if (!done) { lpa_dbg("flow: suspending (await user)"); yield; }
-        lpa_dbg("flow: resumed (done=%s gained=%s user_cancelled=%s)",
+        if (!done) { GLib.debug("flow: suspending (await user)"); yield; }
+        GLib.debug("flow: resumed (done=%s gained=%s user_cancelled=%s)",
                 done.to_string(), gained.to_string(), user_cancelled.to_string());
 
         // Decide the verdict BEFORE tearing the window down — dismiss() must not
@@ -94,14 +94,14 @@ public class AuthFlow : GLib.Object {
     }
 
     private void start_session() {
-        lpa_dbg("flow: start_session()");
+        GLib.debug("flow: start_session()");
         session = new PolkitAgent.Session(chosen, cookie);
-        session.request.connect((req, echo) => { lpa_dbg("session: request '%s' echo=%s", req, echo.to_string()); dialog.show_prompt(req, echo); });
-        session.show_error.connect((t) => { lpa_dbg("session: show_error '%s'", t); dialog.show_error_text(t); });
-        session.show_info.connect((t) => { lpa_dbg("session: show_info '%s'", t); dialog.show_info_text(t); });
+        session.request.connect((req, echo) => { GLib.debug("session: request '%s' echo=%s", req, echo.to_string()); dialog.show_prompt(req, echo); });
+        session.show_error.connect((t) => { GLib.debug("session: show_error '%s'", t); dialog.show_error_text(t); });
+        session.show_info.connect((t) => { GLib.debug("session: show_info '%s'", t); dialog.show_info_text(t); });
         session.completed.connect(on_completed);
         session.initiate();
-        lpa_dbg("flow: session.initiate() returned");
+        GLib.debug("flow: session.initiate() returned");
     }
 
     private void restart_session() {
@@ -111,14 +111,13 @@ public class AuthFlow : GLib.Object {
     }
 
     private void on_submit(string pw) {
-        lpa_dbg("flow: on_submit (len=%d, session=%s, done=%s)", pw.length, (session != null).to_string(), done.to_string());
         if (session == null || done) return;
         dialog.set_busy(true);
         session.response(pw);
     }
 
     private void on_completed(bool authorized) {
-        lpa_dbg("flow: on_completed authorized=%s done=%s", authorized.to_string(), done.to_string());
+        GLib.debug("flow: on_completed authorized=%s done=%s", authorized.to_string(), done.to_string());
         if (done) return;
         if (authorized) { finish(true); return; }
 

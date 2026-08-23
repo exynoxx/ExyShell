@@ -1,4 +1,5 @@
 using GLib;
+using LumenCommon;
 
 // LockService — org.lumenshell.Lock1, the DBus face of LockManager. Mirrors the
 // lumen-osd OsdService pattern (bus-owning done in main.vala). Third parties
