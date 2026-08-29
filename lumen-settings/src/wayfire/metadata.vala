@@ -32,7 +32,6 @@ namespace LumenSettings.Wayfire {
         public string hint;
         public Gee.ArrayList<EnumChoice> choices = new Gee.ArrayList<EnumChoice>();
         public Gee.ArrayList<DynamicEntry> entries = new Gee.ArrayList<DynamicEntry>();
-        public string type_hint;
         public string group_label;
     }
 
@@ -176,7 +175,6 @@ namespace LumenSettings.Wayfire {
             var o = new OptionDef();
             o.name = node->get_prop("name") ?? "";
             o.type = parse_type(node->get_prop("type") ?? "");
-            o.type_hint = node->get_prop("type-hint") ?? "";
             o.group_label = group_label;
             o.short_label = "";
             o.long_label = "";

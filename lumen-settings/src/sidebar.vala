@@ -44,17 +44,6 @@ namespace LumenSettings {
             if (first != null) list.select_row(first);
         }
 
-        public void select_id(string id) {
-            for (int i = 0; ; i++) {
-                var row = list.get_row_at_index(i);
-                if (row == null) return;
-                if (row.get_data<string>("page-id") == id) {
-                    list.select_row(row);
-                    return;
-                }
-            }
-        }
-
         void rebuild() {
             Gtk.Widget? child = list.get_first_child();
             while (child != null) {

@@ -15,14 +15,6 @@ Actions:
   --display-current                                  (print the live mode: internal|extend|external)
 """;
 
-private static string mode_key(DisplayCtl.Mode m) {
-    switch (m) {
-        case DisplayCtl.Mode.INTERNAL_ONLY: return "internal";
-        case DisplayCtl.Mode.EXTERNAL_ONLY: return "external";
-        default:                            return "extend";
-    }
-}
-
 private static OsdProxy? connect_proxy() {
     DBusConnection conn;
     try {
@@ -176,7 +168,7 @@ private static int handle_display_current() {
         stderr.printf("lumen-osdctl: no outputs (not running under Wayfire?)\n");
         return 1;
     }
-    stdout.printf("%s\n", mode_key((DisplayCtl.Mode) cur));
+    stdout.printf("%s\n", ((DisplayCtl.Mode) cur).key());
     return 0;
 }
 

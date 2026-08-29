@@ -12,7 +12,6 @@ public class Theme : GLib.Object {
         palette.insert("tray_background",       "rgba(17,20,31,0.97)");
         palette.insert("tray_icon_hover",       "rgba(41,46,66,1)");
         palette.insert("app_hover",             "rgba(255,255,255,0.20)");
-        palette.insert("app_launching",         "rgba(250,168,51,1)");
         palette.insert("app_active_underline",  "rgba(0,44,230,1)");
         // Auto-hide backdrop: same color as the panel by default, but its own
         // alpha (settings keeps the RGB synced to panel.background).

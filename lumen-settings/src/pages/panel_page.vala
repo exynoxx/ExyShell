@@ -106,7 +106,6 @@ namespace LumenSettings {
             colors.add_row(theme_rows.color_row("tray.background",    "Tray background", "#222633ff", "tray icon background when not hovered"));
             colors.add_row(theme_rows.color_row("tray.icon-hover",    "Tray icon hover", "#2c3140ff", "tray icon background while the pointer is over it"));
             colors.add_row(theme_rows.color_row("app.hover",          "App hover",       "#2c3140ff", "taskbar app background while the pointer is over it"));
-            colors.add_row(theme_rows.color_row("app.launching",      "App launching",   "#3d7affff", "taskbar app background while the app is starting up"));
             colors.add_row(theme_rows.color_row("app.open-indicator-color", "Open app indicator", "#3d7affff", "color of the open-app dot, brackets, or shade"));
 
             var clock_group = new BoxedList("Clock");

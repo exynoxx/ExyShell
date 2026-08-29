@@ -25,13 +25,6 @@ namespace LumenSettings {
             foreach (var l in labels) sl.append(l);
             model = sl;
 
-            if (searchable) {
-                enable_search = true;
-                // Tell the search box how to stringify each item (a
-                // Gtk.StringObject) so type-to-filter works.
-                expression = new Gtk.PropertyExpression(
-                    typeof(Gtk.StringObject), null, "string");
-            }
 
             selected = index_of(initial_value);
 

@@ -58,7 +58,6 @@ public class ToplevelStore : GLib.Object {
 
     public void activate (uint id) { WLHooks.toplevel_activate_by_id(id); }
     public void close    (uint id) { WLHooks.toplevel_close_by_id(id);    }
-    public void minimize (uint id) { WLHooks.toplevel_minimize_by_id(id); }
 
     public Toplevel? find (uint id)        { return by_id.lookup(id); }
     public List<unowned Toplevel> all ()   { return by_id.get_values(); }

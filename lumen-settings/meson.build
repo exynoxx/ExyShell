@@ -22,8 +22,6 @@ settings_resources = settings_gnome.compile_resources(
   c_name: 'lumen_settings',
 )
 
-adwaita_dep = dependency('libadwaita-1')
-
 settings_deps = [
   glib_dep,
   gio_dep,

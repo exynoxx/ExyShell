@@ -10,9 +10,7 @@
     <file alias="bluetooth-off.svg">res/bluetooth-off.svg</file>
     <file alias="brightness.svg">res/brightness.svg</file>
     <file alias="charging.svg">res/charging.svg</file>
-    <file alias="close.svg">res/close.svg</file>
     <file alias="ethernet.svg">res/ethernet.svg</file>
-    <file alias="hibernate.svg">res/hibernate.svg</file>
     <file alias="high.svg">res/high.svg</file>
     <file alias="leaving.svg">res/leaving.svg</file>
     <file alias="lock.svg">res/lock.svg</file>
@@ -28,7 +26,6 @@
     <file alias="sound-mute.svg">res/sound-mute.svg</file>
     <file alias="suspend.svg">res/suspend.svg</file>
     <file alias="wifi.svg">res/wifi.svg</file>
-    <file alias="wifi-unknown.svg">res/wifi-unknown.svg</file>
     <file alias="wired.svg">res/wired.svg</file>
   </gresource>
 </gresources>

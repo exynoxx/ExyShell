@@ -37,7 +37,6 @@ public class NetDetails : GLib.Object {
     public string   ip4      = "";
     public string   gateway  = "";
     public string[] dns      = {};
-    public string   ip6      = "";
     public string   mac      = "";
     public string   security = "";
     public string   band     = "";
@@ -188,7 +187,6 @@ public class NmcliClient : GLib.Object {
             if (bare == "IP4.ADDRESS" && d.ip4 == "") d.ip4 = val;
             else if (bare == "IP4.GATEWAY")           d.gateway = val;
             else if (bare == "IP4.DNS")               dns += val;
-            else if (bare == "IP6.ADDRESS" && d.ip6 == "") d.ip6 = val;
             else if (bare == "GENERAL.HWADDR")        d.mac = val;
         }
         d.dns = dns;

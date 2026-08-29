@@ -24,13 +24,11 @@ public class BtDeviceDetails : GLib.Object {
     public string mac          = "";
     public string name         = "";
     public string dev_icon     = "";
-    public string address_type = "";
     public bool   paired       = false;
     public bool   bonded       = false;
     public bool   trusted      = false;
     public bool   connected    = false;
     public int    battery      = -1;   // -1 when absent
-    public string rssi         = "";
 }
 
 /**
@@ -119,14 +117,10 @@ public class BtctlClient : GLib.Object {
         d.mac          = str_prop(props, "Address");
         d.name         = str_prop(props, "Name");
         d.dev_icon     = str_prop(props, "Icon");
-        d.address_type = str_prop(props, "AddressType");
         d.paired       = bool_prop(props, "Paired");
         d.bonded       = bool_prop(props, "Bonded");
         d.trusted      = bool_prop(props, "Trusted");
         d.connected    = bool_prop(props, "Connected");
-
-        var rssi = props.lookup_value("RSSI", VariantType.INT16);
-        if (rssi != null) d.rssi = "%d".printf(rssi.get_int16());
 
         // Battery level lives on a sibling interface of the same object.
         var batt = ifaces.lookup_value(BATTERY_IFACE, new VariantType("a{sv}"));

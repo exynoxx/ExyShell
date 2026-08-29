@@ -20,7 +20,6 @@ public class AccountsClient : GLib.Object {
     public struct UserInfo {
         public string real_name;   // "" when unknown
         public string icon_path;   // "" when none resolvable
-        public string xsession;    // "" when unset
     }
 
     const string SERVICE   = "org.freedesktop.Accounts";
@@ -62,7 +61,6 @@ public class AccountsClient : GLib.Object {
         var info = UserInfo() {
             real_name = "",
             icon_path = "",
-            xsession  = "",
         };
 
         var path = current_user_path();
@@ -77,9 +75,6 @@ public class AccountsClient : GLib.Object {
                 var ic = usr.get_cached_property("IconFile");
                 if (ic != null && ic.is_of_type(VariantType.STRING))
                     info.icon_path = ic.get_string();
-                var xs = usr.get_cached_property("XSession");
-                if (xs != null && xs.is_of_type(VariantType.STRING))
-                    info.xsession = xs.get_string();
             } catch (Error e) {
                 warning("accounts: read user record: %s", e.message);
             }

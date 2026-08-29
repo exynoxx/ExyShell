@@ -1,33 +1,20 @@
-#ifndef LIB_LAYER_SHELL_H
-#define LIB_LAYER_SHELL_H
+#ifndef WLHOOKS_H
+#define WLHOOKS_H
 
-#include <EGL/egl.h>
 #include <wayland-client.h>
 
-#include "egl.h"
-#include "protocols/compositor.h"
-#include "protocols/layershell.h"
 #include "protocols/seat.h"
 #include "protocols/toplevel.h"
-#include "protocols/screencopy.h"
 #include "protocols/output.h"
 #include "protocols/output_management.h"
-#include "protocols/activation.h"
 #include "protocols/idle_notify.h"   // idle_notify_cb, used in the prototypes below
 
 extern struct wl_display *wl_display;
 
-int  wlhooks_init(void);
-void wlhooks_destroy(void); // call layer_shell_destroy for layer shell only
-struct wl_display *get_wl_display(void);
-int  display_dispatch_blocking(void);
-
-// Alternate init for clients that already own a wl_display (e.g. a GTK app
-// using gdk_wayland_display_get_wl_display()). Binds only the foreign-
-// toplevel + xdg-activation slice; skips layer-shell, EGL, output, pointer,
-// keyboard, and screencopy. The caller keeps ownership of the wl_display
-// and is responsible for dispatch — typically GDK's internal GSource pumps
-// events automatically.
+// Init for clients that already own a wl_display (e.g. a GTK app using
+// gdk_wayland_display_get_wl_display()). Binds only the foreign-toplevel
+// slice. The caller keeps ownership of the wl_display and is responsible for
+// dispatch — typically GDK's internal GSource pumps events automatically.
 int  wlhooks_init_toplevel_with_display(struct wl_display *external);
 
 // Tear down what wlhooks_init_toplevel_with_display() bound. Does NOT
@@ -45,11 +32,4 @@ int  wlhooks_idle_notify_register(uint32_t timeout_ms,
 void wlhooks_idle_notify_unregister(void);
 bool wlhooks_idle_notify_available(void);
 
-// Combined init for a lock-screen client: idle + screencopy + wl_output bound
-// in a single registry pass on a caller-owned wl_display. See main.c. Pair
-// with screencopy_capture() (declared in protocols/screencopy.h) for the
-// desktop snapshot and wlhooks_idle_notify_register() for auto-lock.
-int  wlhooks_lockscreen_init(struct wl_display *external);
-void wlhooks_lockscreen_destroy(void);
-
-#endif // LIB_LAYER_SHELL_H
+#endif // WLHOOKS_H

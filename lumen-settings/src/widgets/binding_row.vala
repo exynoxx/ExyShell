@@ -16,7 +16,6 @@ namespace LumenSettings {
             current = initial;
 
             button = new Gtk.Button.with_label(display_for(current));
-            button.add_css_class("lumen-binding-button");
             button.clicked.connect(start_grab);
             set_suffix(button);
 
@@ -31,11 +30,6 @@ namespace LumenSettings {
                 value_changed(current);
             });
             button.add_controller(rclick);
-        }
-
-        public void set_binding(string s) {
-            current = s;
-            button.label = display_for(current);
         }
 
         void start_grab() {

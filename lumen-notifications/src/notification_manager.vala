@@ -4,7 +4,6 @@ using GLib;
 public const uint32 REASON_EXPIRED   = 1;
 public const uint32 REASON_DISMISSED = 2;
 public const uint32 REASON_CLOSED    = 3;
-public const uint32 REASON_UNDEFINED = 4;
 
 public class NotificationManager : Object {
     private uint32 next_id = 1;
@@ -24,7 +23,7 @@ public class NotificationManager : Object {
                          string app_name, string? app_icon,
                          string summary, string body,
                          string[] actions,
-                         Urgency urgency, string? image_path,
+                         string? image_path,
                          int expire_timeout) {
         Notification n;
         bool is_replace = false;
@@ -41,7 +40,6 @@ public class NotificationManager : Object {
         n.summary = summary;
         n.body = body;
         n.actions = actions;
-        n.urgency = urgency;
         n.image_path = image_path;
         n.expire_timeout = expire_timeout;
 

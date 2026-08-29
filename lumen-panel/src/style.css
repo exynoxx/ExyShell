@@ -3,7 +3,6 @@
 @define-color tray_background           rgba(17, 20, 31, 0.97);
 @define-color tray_icon_hover           rgba(41, 46, 66, 1);
 @define-color app_hover                 rgba(255, 255, 255, 0.20);
-@define-color app_launching             rgba(250, 168, 51, 1);
 @define-color app_active_underline      rgba(0, 44, 230, 1);
 @define-color panel_autohide_background rgba(17, 20, 31, 0.5);
 
@@ -154,9 +153,6 @@ button.app-entry {
 }
 button.app-entry:hover {
     background: @app_hover;
-}
-button.app-entry.launching {
-    background: @app_launching;
 }
 button.app-entry.dragging {
     background: @app_hover;

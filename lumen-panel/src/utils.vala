@@ -9,10 +9,6 @@ public struct AppMetadata {
 
 public class Utils {
 
-    public static string RES_DIR {
-        get { return Environment.get_variable("LUMEN_RES_DIR") ?? "/usr/share/lumen-panel/res/"; }
-    }
-
     public static string THEME_FILE {
         owned get {
             return LumenCommon.Paths.theme_file(
@@ -46,8 +42,7 @@ public class Utils {
 
     // Build a laid-out line of text at an absolute point size. Callers that need
     // to centre or right-align measure it with get_pixel_size() and hand the
-    // result to draw_layout(); draw_text() is the shortcut when the origin is
-    // already known.
+    // result to draw_layout().
     public static Pango.Layout text_layout (Gtk.Widget w, string text, double size_pt,
                                             Pango.Weight weight = Pango.Weight.NORMAL) {
         var layout = w.create_pango_layout(text);
@@ -68,10 +63,6 @@ public class Utils {
         s.restore();
     }
 
-    public static void draw_text (Gtk.Snapshot s, Gtk.Widget w, string text, double size_pt,
-                                  Pango.Weight weight, float x, float y, Gdk.RGBA color) {
-        draw_layout(s, text_layout(w, text, size_pt, weight), x, y, color);
-    }
 
     // Case-insensitive prefix match over the registered applications, for
     // app_ids whose case doesn't match the .desktop filename.

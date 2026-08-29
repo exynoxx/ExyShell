@@ -17,14 +17,6 @@ public class NotificationsService : Object {
                           string summary, string body, string[] actions,
                           HashTable<string, Variant> hints,
                           int32 expire_timeout) throws DBusError, IOError {
-        Urgency urgency = Urgency.NORMAL;
-        var u = hints.lookup("urgency");
-        if (u != null) {
-            if (u.is_of_type(VariantType.BYTE)) {
-                urgency = (Urgency) u.get_byte();
-            }
-        }
-
         string? image_path = null;
         var ip = hints.lookup("image-path");
         if (ip != null && ip.is_of_type(VariantType.STRING)) {
@@ -38,7 +30,7 @@ public class NotificationsService : Object {
 
         string? icon = (app_icon != "") ? app_icon : null;
         return manager.submit(replaces_id, app_name, icon, summary, body,
-                              actions, urgency, image_path, expire_timeout);
+                              actions, image_path, expire_timeout);
     }
 
     public void close_notification(uint32 id) throws DBusError, IOError {

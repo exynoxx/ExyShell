@@ -45,10 +45,6 @@
     border: none;
     box-shadow: none;
 }
-.lockscreen-avatar-fallback {
-    color: @lockscreen_text;
-}
-
 /* The password pill: translucent frosted white, rounded, with the masked text
  * and the trailing circular go button living inside it. */
 .lockscreen-pill {

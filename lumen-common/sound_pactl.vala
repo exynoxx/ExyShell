@@ -214,28 +214,6 @@ public class PactlClient : GLib.Object {
         });
     }
 
-    public void set_sink_muted_by_id(string id, bool muted) {
-        if (id == "") return;
-        LumenCommon.Proc.spawn_detached(new string[] {
-            "pactl", "set-sink-mute", id, muted ? "1" : "0"
-        });
-    }
-
-    public void set_source_volume_by_id(string id, int pct, int max = 100) {
-        if (id == "") return;
-        pct = int.max(0, int.min(max, pct));
-        LumenCommon.Proc.spawn_detached(new string[] {
-            "pactl", "set-source-volume", id, "%d%%".printf(pct)
-        });
-    }
-
-    public void set_source_muted_by_id(string id, bool muted) {
-        if (id == "") return;
-        LumenCommon.Proc.spawn_detached(new string[] {
-            "pactl", "set-source-mute", id, muted ? "1" : "0"
-        });
-    }
-
     // ---- Per-application playback streams (sink-inputs) ----
 
     public StreamInfo[] query_sink_inputs() {

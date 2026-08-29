@@ -10,9 +10,7 @@ public class Theme {
     public static Gdk.RGBA text;              // primary text (clock, name)
     public static Gdk.RGBA muted_text;        // date, hints
     public static Gdk.RGBA entry_background;
-    public static Gdk.RGBA entry_border;
     public static Gdk.RGBA entry_error;
-    public static Gdk.RGBA accent;
     public static Gdk.RGBA scrim;             // tint over the blurred desktop snapshot
 
     public static string background_image;    // fallback when no snapshot ("" = solid)
@@ -29,9 +27,7 @@ public class Theme {
         muted_text       = rgba(0.90f, 0.90f, 0.94f, 0.75f);
         // Apple-style translucent-white password pill on a blurred backdrop.
         entry_background = rgba(1.00f, 1.00f, 1.00f, 0.18f);
-        entry_border     = rgba(1.00f, 1.00f, 1.00f, 0.28f);
         entry_error      = rgba(0.95f, 0.42f, 0.42f, 1.00f);
-        accent           = rgba(1.00f, 1.00f, 1.00f, 0.92f);
         scrim            = rgba(0.00f, 0.00f, 0.00f, 0.35f);
         background_image = "";
 
@@ -75,9 +71,7 @@ public class Theme {
             case "lockscreen.text":             text             = c; break;
             case "lockscreen.muted-text":       muted_text       = c; break;
             case "lockscreen.entry-background": entry_background = c; break;
-            case "lockscreen.entry-border":     entry_border     = c; break;
             case "lockscreen.entry-error":      entry_error      = c; break;
-            case "lockscreen.accent":           accent           = c; break;
             case "lockscreen.scrim":            scrim            = c; break;
             default:
                 warning("lumen-lockscreen: unknown theme key: %s", key);
@@ -112,13 +106,10 @@ public class Theme {
     public static string generate_root_css() {
         return ("@define-color lockscreen_text %s;\n"             +
                 "@define-color lockscreen_muted_text %s;\n"       +
-                "@define-color lockscreen_accent %s;\n"           +
                 "@define-color lockscreen_entry_background %s;\n" +
-                "@define-color lockscreen_entry_border %s;\n"     +
                 "@define-color lockscreen_entry_error %s;\n").printf(
-                    text.to_string(), muted_text.to_string(), accent.to_string(),
-                    entry_background.to_string(), entry_border.to_string(),
-                    entry_error.to_string());
+                    text.to_string(), muted_text.to_string(),
+                    entry_background.to_string(), entry_error.to_string());
     }
 
     private static Gdk.RGBA rgba(float r, float g, float b, float a) {

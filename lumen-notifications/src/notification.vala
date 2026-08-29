@@ -1,11 +1,5 @@
 using GLib;
 
-public enum Urgency {
-    LOW = 0,
-    NORMAL = 1,
-    CRITICAL = 2
-}
-
 public class Notification : Object {
     public uint32   id;
     public string   app_name;
@@ -13,7 +7,6 @@ public class Notification : Object {
     public string   summary;
     public string   body;
     public string[] actions;       // raw [key1, label1, key2, label2, ...]
-    public Urgency  urgency = Urgency.NORMAL;
     public string?  image_path = null;
     public int      expire_timeout = -1;
 

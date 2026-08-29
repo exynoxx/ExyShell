@@ -15,11 +15,6 @@ namespace LumenSettings {
             set_suffix(button);
         }
 
-        public void set_path(string p) {
-            current_path = p;
-            button.set_label(display_label(p));
-        }
-
         static string display_label(string p) {
             if (p == "") return "(none)";
             var basename = Path.get_basename(p);

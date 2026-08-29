@@ -283,7 +283,7 @@ panel_sources = files(
 )
 
 executable('lumen-panel',
-  panel_sources + panel_peek_sources + panel_resources + lumen_common_sources + proc_source + tray_catalog_source + network_backend_source + sound_source + paths_source + desktop_exec_source + dbus_cli_source,
+  panel_sources + panel_peek_sources + panel_resources + lumen_common_sources + proc_source + tray_catalog_source + network_backend_source + sound_source + paths_source + dbus_cli_source,
   vala_args: panel_vala_args,
   c_args: lumen_datadir_c_args,
   dependencies: panel_deps,
@@ -343,8 +343,6 @@ install_data(
 # --- lumen-drawer ---
 # Independent dep set: no drawkit, no wlhooks, no GLES.
 # Reuses gtk4_dep and gtk4_layer_shell_dep from lumen-osd block above.
-# UnixSocketAddress for the Wayfire IPC client lives in gio-unix-2.0.
-gio_unix_dep = dependency('gio-unix-2.0')
 drawer_deps = [
   # Same link-order rule as lumen-panel: gtk4-layer-shell must come before
   # gtk4/wayland-client/wlhooks for layer-shell init to actually take effect.
@@ -504,7 +502,7 @@ session_sources = files(
 )
 
 executable('lumen-session',
-  session_sources + display_profiles_source + accounts_source + paths_source + proc_source,
+  session_sources + display_profiles_source + accounts_source + paths_source,
   vala_args: session_vala_args,
   c_args: lumen_datadir_c_args,
   dependencies: session_deps,
@@ -623,7 +621,6 @@ if get_option('with_lockscreen').allowed() and gtk4_session_lock_dep.found() and
   ]
 
   lockscreen_sources = files(
-    'lumen-common/wayfire_ipc.vala',
     'lumen-lockscreen/src/main.vala',
     'lumen-lockscreen/src/manager.vala',
     'lumen-lockscreen/src/window.vala',
@@ -761,7 +758,6 @@ endif
 # binaries read (see lumen-panel/src/utils.vala and each theme.vala). The
 # GSK_RENDERER pin mirrors start-lumenshell so dev runs match the real session.
 devenv = environment()
-devenv.set('LUMEN_RES_DIR', meson.project_source_root() / 'lumen-panel' / 'src' / 'res' + '/')
 devenv.set('LUMEN_THEME_FILE', meson.project_source_root() / 'default-theme.json')
 devenv.set('LUMEN_OSD_THEME_FILE', meson.project_source_root() / 'lumen-osd' / 'default-theme.json')
 devenv.set('LUMEN_NOTIFICATIONS_THEME_FILE', meson.project_source_root() / 'lumen-notifications' / 'default-notifications-theme.json')
