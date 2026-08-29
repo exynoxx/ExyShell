@@ -18,4 +18,6 @@ override_dh_auto_configure:
 		-Dwith_slide_peek=false \
 		-Dwith_panel_push=false \
 		-Dwith_startup_zoom=false \
-		-Dwith_lockscreen=disabled
+		-Dwith_night_light=false \
+		-Dwith_lockscreen=disabled \
+		-Dwith_polkit_agent=disabled

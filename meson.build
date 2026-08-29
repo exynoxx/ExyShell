@@ -712,6 +712,13 @@ install_data(
   install_dir: get_option('bindir'),
   install_mode: 'rwxr-xr-x',
 )
+# The Wayfire autostart snippet. Its own header tells users to
+# `cat /usr/share/lumenshell/wayfire.ini.d/autostart.ini >> ~/.config/wayfire.ini`,
+# so it has to actually land there.
+install_data(
+  'lumen-lockscreen/data/wayfire/lumenshell.ini.d/autostart.ini',
+  install_dir: get_option('datadir') / 'lumenshell' / 'wayfire.ini.d',
+)
 
 # --- wayfire-plugins/* (C++ Wayfire plugins) ---
 # All Wayfire plugins live under wayfire-plugins/ and are standalone

@@ -71,6 +71,21 @@ public class OsdWindow : Gtk.Window {
                 GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.TOP, true);
                 GtkLayerShell.set_margin(this, GtkLayerShell.Edge.TOP, Theme.margin);
                 break;
+            case "top-left":
+                GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.TOP,  true);
+                GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.LEFT, true);
+                GtkLayerShell.set_margin(this, GtkLayerShell.Edge.TOP,  Theme.margin);
+                GtkLayerShell.set_margin(this, GtkLayerShell.Edge.LEFT, Theme.margin);
+                break;
+            case "top-right":
+                GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.TOP,   true);
+                GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.RIGHT, true);
+                GtkLayerShell.set_margin(this, GtkLayerShell.Edge.TOP,   Theme.margin);
+                GtkLayerShell.set_margin(this, GtkLayerShell.Edge.RIGHT, Theme.margin);
+                break;
+            // No anchor on any edge: layer-shell centres the surface on both axes.
+            case "center":
+                break;
             case "bottom-right":
                 GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.BOTTOM, true);
                 GtkLayerShell.set_anchor(this, GtkLayerShell.Edge.RIGHT,  true);

@@ -1,7 +1,8 @@
 %global srcname lumenshell
 
 # C++ Wayfire plugins (desktop-peek, curtain-peek, slide-peek, panel-push,
-# startup-zoom) need Wayfire >= 0.10 + wlroots dev headers, which are not always
+# startup-zoom, night-light) need Wayfire >= 0.10 + wlroots dev headers, which
+# are not always
 # packaged. They are OFF by default; build with `--with wayfire_plugins`:
 #   rpmbuild -ba packaging/rpm/lumenshell.spec --with wayfire_plugins
 %bcond_with wayfire_plugins
@@ -11,6 +12,11 @@
 # OFF by default; build with `--with lockscreen` once gtk4-session-lock-0 is
 # available as a pkg-config dependency.
 %bcond_with lockscreen
+
+# lumen-polkit-agent needs polkit-agent-1 + polkit-gobject-1 devel. The meson
+# option is `auto`, and %%meson injects --auto-features=enabled, so it MUST be
+# passed explicitly or rpmbuild builds a binary that %%files does not package.
+%bcond_with polkit_agent
 
 # Resolve the boolean meson value for the (default-off) plugin options once.
 %if %{with wayfire_plugins}
@@ -47,12 +53,7 @@ BuildRequires:  pkgconfig(gtk4-wayland)
 BuildRequires:  pkgconfig(gtk4-layer-shell-0)
 BuildRequires:  pkgconfig(libadwaita-1)
 BuildRequires:  pkgconfig(wayland-client)
-BuildRequires:  pkgconfig(wayland-egl)
-BuildRequires:  pkgconfig(egl)
-BuildRequires:  pkgconfig(glesv2)
-BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  pkgconfig(libxml-2.0)
-BuildRequires:  freetype-devel
 %if %{with wayfire_plugins}
 BuildRequires:  pkgconfig(wayfire)
 BuildRequires:  pkgconfig(wlroots-0.19)
@@ -60,6 +61,10 @@ BuildRequires:  pkgconfig(wlroots-0.19)
 %if %{with lockscreen}
 BuildRequires:  pkgconfig(gtk4-session-lock-0)
 BuildRequires:  pam-devel
+%endif
+%if %{with polkit_agent}
+BuildRequires:  pkgconfig(polkit-agent-1)
+BuildRequires:  pkgconfig(polkit-gobject-1)
 %endif
 
 # Runtime compositor + layer-shell stack. The lumen-* binaries are useless
@@ -87,7 +92,9 @@ package adds a "LumenShell" entry to the display manager's session menu.
     -Dwith_slide_peek=%{plugins} \
     -Dwith_panel_push=%{plugins} \
     -Dwith_startup_zoom=%{plugins} \
-    -Dwith_lockscreen=%{?with_lockscreen:enabled}%{!?with_lockscreen:disabled}
+    -Dwith_night_light=%{plugins} \
+    -Dwith_lockscreen=%{?with_lockscreen:enabled}%{!?with_lockscreen:disabled} \
+    -Dwith_polkit_agent=%{?with_polkit_agent:enabled}%{!?with_polkit_agent:disabled}
 %meson_build
 
 %install
@@ -107,6 +114,8 @@ package adds a "LumenShell" entry to the display manager's session menu.
 %{_bindir}/start-lumenshell
 %{_datadir}/lumen-osd/
 %{_datadir}/lumen-panel/
+%{_datadir}/lumen-desktop/
+%{_datadir}/lumenshell/
 %{_datadir}/lumen-notifications/
 %{_datadir}/lumen-settings/
 %{_datadir}/applications/org.lumenshell.Settings.desktop
@@ -118,6 +127,9 @@ package adds a "LumenShell" entry to the display manager's session menu.
 %{_bindir}/lumen-lockctl
 %{_datadir}/lumen-lockscreen/
 %config(noreplace) %{_sysconfdir}/pam.d/lumen-lockscreen
+%endif
+%if %{with polkit_agent}
+%{_bindir}/lumen-polkit-agent
 %endif
 %if %{with wayfire_plugins}
 %{_libdir}/wayfire/libwayfire-*.so

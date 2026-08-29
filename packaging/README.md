@@ -65,7 +65,9 @@ release, bump it there and add a matching entry to both `rpm/lumenshell.spec`
 
 ## Not yet packaged
 
-`lumen-greeter` and `lumen-dock` are planning-stage (no buildable source yet)
-and are intentionally excluded. `lumen-lockscreen`/`lumen-lockctl` build but are
-gated behind `--with lockscreen` (see above) because their `gtk4-session-lock-0`
-dependency is not packaged on stock Fedora.
+`lumen-lockscreen`/`lumen-lockctl` build but are gated behind
+`--with lockscreen` (see above) because their `gtk4-session-lock-0` dependency
+is not packaged on stock Fedora. `lumen-polkit-agent` is likewise gated behind
+`--with polkit_agent`: its meson option is `auto`, and `%meson` injects
+`--auto-features=enabled`, so leaving it unset would build a binary that
+`%files` does not package and fail the rpmbuild.
