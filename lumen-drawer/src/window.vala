@@ -38,6 +38,24 @@ private const string DRAWER_CSS = """
     .drawer-search > text {
         color: black;
     }
+    /* GtkSearchEntry ships the leading magnifier and a trailing clear (x)
+       icon; the stock grey is nearly invisible on our white pill. */
+    .drawer-search > image {
+        color: alpha(black, 0.55);
+    }
+    /* breathing room between the magnifier and the query text */
+    .drawer-search > image:first-child {
+        margin-right: 6px;
+    }
+    .drawer-search > image:last-child {
+        color: alpha(black, 0.45);
+        border-radius: 11px;
+        padding: 3px;
+    }
+    .drawer-search > image:last-child:hover {
+        color: black;
+        background: alpha(black, 0.10);
+    }
     .drawer-search > text > placeholder {
         color: alpha(black, 0.55);
     }
@@ -154,6 +172,10 @@ public class DrawerWindow : Gtk.ApplicationWindow {
         });
 
         DrawerToplevels.instance.focus_changed.connect((any) => {
+            // A toplevel took the foreground, so the grid is now hidden behind
+            // it (curtain/slide stop refocuses the previous window). Drop the
+            // query and page so the drawer never reopens mid-search.
+            if (any) reset_view();
             sync_keyboard_mode();
         });
     }
@@ -232,6 +254,11 @@ public class DrawerWindow : Gtk.ApplicationWindow {
         search_entry = new Gtk.SearchEntry();
         search_entry.add_css_class("drawer-search");
         search_entry.set_placeholder_text("Search");
+        // GtkSearchEntry's stock clear glyph is edit-clear-symbolic: a filled
+        // blob with the x knocked *out* of it, so on our white pill the x reads
+        // as white-on-white. Swap the internal image for the plain stroked x.
+        var clear_icon = search_entry.get_last_child() as Gtk.Image;
+        if (clear_icon != null) clear_icon.set_from_icon_name("window-close-symbolic");
         search_entry.set_size_request(320, -1);
         search_entry.set_hexpand(false);
         search_entry.set_halign(Gtk.Align.CENTER);
@@ -309,6 +336,7 @@ public class DrawerWindow : Gtk.ApplicationWindow {
 
         switch (keyval) {
             case Gdk.Key.Escape:
+                reset_view();
                 LumenDrawer.CurtainIpc.close();
                 return true;
             case Gdk.Key.Left:
