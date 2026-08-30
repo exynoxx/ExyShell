@@ -9,35 +9,45 @@ public class Pill : Gtk.Box {
     private Gtk.Box inner;
 
     public Pill() {
-        Object(orientation: Gtk.Orientation.HORIZONTAL, spacing: 0);
+        Object(orientation: Theme.vertical() ? Gtk.Orientation.VERTICAL
+                                             : Gtk.Orientation.HORIZONTAL,
+               spacing: 0);
+
+        bool vert = Theme.vertical();
 
         // The Pill itself spans the full background (with rounded corners).
         // Content lives inside `inner`, whose margins act as internal padding
-        // so the icon/bar/label never touch the curved edge.
-        inner = new Gtk.Box(Gtk.Orientation.HORIZONTAL, Theme.content_spacing);
-        inner.margin_start  = Theme.padding_x;
-        inner.margin_end    = Theme.padding_x;
-        inner.margin_top    = Theme.padding_y;
-        inner.margin_bottom = Theme.padding_y;
+        // so the icon/bar/label never touch the curved edge. padding_x is the
+        // pad along the long axis, padding_y across it — so they swap when the
+        // pill stands up.
+        inner = new Gtk.Box(orientation, Theme.content_spacing);
+        inner.margin_start  = inner.margin_end    = vert ? Theme.padding_y : Theme.padding_x;
+        inner.margin_top    = inner.margin_bottom = vert ? Theme.padding_x : Theme.padding_y;
         inner.set_hexpand(true);
         inner.set_vexpand(true);
 
         icon.pixel_size = 22;
         icon.set_from_icon_name("audio-volume-medium-symbolic");
+        icon.set_halign(Gtk.Align.CENTER);
         icon.set_valign(Gtk.Align.CENTER);
         inner.append(icon);
 
-        progress.set_hexpand(true);
+        progress.set_hexpand(!vert);
+        progress.set_vexpand(vert);
+        progress.set_halign(Gtk.Align.CENTER);
         progress.set_valign(Gtk.Align.CENTER);
         inner.append(progress);
 
+        label.set_halign(Gtk.Align.CENTER);
         label.set_valign(Gtk.Align.CENTER);
         label.set_visible(false);
         inner.append(label);
 
         append(inner);
 
-        set_size_request(Theme.width, Theme.height);
+        // width/height are long-axis/thickness; a vertical pill swaps them.
+        set_size_request(vert ? Theme.height : Theme.width,
+                         vert ? Theme.width  : Theme.height);
     }
 
     public void show_slider(string icon_name, double fraction, string text) {
@@ -59,7 +69,7 @@ public class Pill : Gtk.Box {
         int   w      = get_width();
         int   h      = get_height();
         float radius = Theme.corner_radius < 0
-                       ? h * 0.5f
+                       ? (float) int.min(w, h) * 0.5f
                        : (float) Theme.corner_radius;
 
         var bg_rect = Graphene.Rect();
@@ -96,7 +106,9 @@ public class ProgressTrack : Gtk.Widget {
                                  out int         natural,
                                  out int         minimum_baseline,
                                  out int         natural_baseline) {
-        if (orientation == Gtk.Orientation.HORIZONTAL) {
+        var long_axis = Theme.vertical() ? Gtk.Orientation.VERTICAL
+                                         : Gtk.Orientation.HORIZONTAL;
+        if (orientation == long_axis) {
             minimum = 80;
             natural = 200;
         } else {
@@ -107,28 +119,32 @@ public class ProgressTrack : Gtk.Widget {
     }
 
     public override void snapshot(Gtk.Snapshot s) {
-        int   w       = get_width();
-        int   h       = get_height();
-        float track_h = (float) h;
-        float track_y = 0f;
+        int   w    = get_width();
+        int   h    = get_height();
+        bool  vert = Theme.vertical();
+        float thickness = vert ? (float) w : (float) h;
 
         var track_rect = Graphene.Rect();
-        track_rect.init(0f, track_y, (float) w, track_h);
+        track_rect.init(0f, 0f, (float) w, (float) h);
         var trr = Gsk.RoundedRect();
-        trr.init_from_rect(track_rect, track_h * 0.5f);
+        trr.init_from_rect(track_rect, thickness * 0.5f);
         s.push_rounded_clip(trr);
         s.append_color(Theme.progress_track, track_rect);
         s.pop();
 
-        float fill_w = (float) (w * _fraction);
-        if (fill_w <= 0f) return;
+        float fill = (float) ((vert ? h : w) * _fraction);
+        if (fill <= 0f) return;
         // Ensure the rounded fill cap is visible even at tiny fractions.
-        if (fill_w < track_h) fill_w = track_h;
+        if (fill < thickness) fill = thickness;
 
         var fill_rect = Graphene.Rect();
-        fill_rect.init(0f, track_y, fill_w, track_h);
+        if (vert)
+            fill_rect.init(0f, (float) h - fill, (float) w, fill);  // grows upward
+        else
+            fill_rect.init(0f, 0f, fill, (float) h);
+
         var frr = Gsk.RoundedRect();
-        frr.init_from_rect(fill_rect, track_h * 0.5f);
+        frr.init_from_rect(fill_rect, thickness * 0.5f);
         s.push_rounded_clip(frr);
         s.append_color(Theme.progress_fill, fill_rect);
         s.pop();

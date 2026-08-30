@@ -35,8 +35,8 @@ namespace LumenSettings {
             box.append(placement);
 
             var size = new BoxedList("Size");
-            size.add_row(rows.int_row("osd.width",  "Width",  100, 800, 1, 360, "OSD popup width in px"));
-            size.add_row(rows.int_row("osd.height", "Height", 24,  200, 1, 56,  "OSD popup height in px"));
+            size.add_row(rows.int_row("osd.width",  "Width",  100, 800, 1, 360, "long axis in px (the height on left/right positions)"));
+            size.add_row(rows.int_row("osd.height", "Height", 24,  200, 1, 56,  "thickness in px (the width on left/right positions)"));
             box.append(size);
 
             var behavior = new BoxedList("Behavior");

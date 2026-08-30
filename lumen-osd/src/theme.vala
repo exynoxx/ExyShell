@@ -22,6 +22,12 @@ public class Theme {
     public static int     padding_y        = 10;       // pill internal vertical padding
     public static int     content_spacing  = 14;       // gap between icon / bar / label
 
+    // Side anchors (…-left / …-right) stack the pill vertically; the top/bottom
+    // centred anchors and dead centre stay horizontal.
+    public static bool vertical() {
+        return position.has_suffix("-left") || position.has_suffix("-right");
+    }
+
     public static void load() {
         position       = "bottom-center";
         background     = rgba(0.00f, 0.00f, 0.00f, 0.75f);
