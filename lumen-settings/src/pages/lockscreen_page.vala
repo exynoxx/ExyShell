@@ -34,8 +34,6 @@ namespace LumenSettings {
                 0, 64, 1, 12, "px of blur over the wallpaper backdrop"));
             look.add_row(rows.color_row("lockscreen.scrim", "Scrim tint",
                 "#00000059", "colour tinting the blurred backdrop"));
-            look.add_row(rows.color_row("lockscreen.accent", "Accent",
-                "#ffffffeb", "highlight colour for the password field"));
             box.append(look);
 
             return box;

@@ -10,8 +10,7 @@ namespace LumenSettings {
         public signal void value_changed(string val);
 
         public ComboRow(string title, string[] labels, string[] values,
-                        string? initial_value = null, string subtitle = "",
-                        bool searchable = false) {
+                        string? initial_value = null, string subtitle = "") {
             use_markup = false;
             this.title = title;
             this.subtitle = subtitle ?? "";

@@ -31,18 +31,6 @@ namespace LumenSettings {
             });
             session.add_row(lock_row);
 
-            string[] lid_labels = { "Suspend", "Lock only", "Do nothing" };
-            string[] lid_values = { "suspend", "lock-only", "nothing" };
-            var lid_init = store.get_value("power", "lid.action") ?? "suspend";
-            var lid_row = new ComboRow("When the lid closes", lid_labels, lid_values,
-                lid_init,
-                "What LumenShell does on lid close. Changing whether the system itself "
-                + "suspends requires editing /etc/systemd/logind.conf.");
-            lid_row.value_changed.connect((v) => {
-                store.set_value("power", "lid.action", v);
-                store.save();
-            });
-            session.add_row(lid_row);
             box.append(session);
 
             var idle = new BoxedList("Idle");

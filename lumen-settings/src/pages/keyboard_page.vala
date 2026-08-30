@@ -27,12 +27,12 @@ namespace LumenSettings {
             var cur_variant = input.get_str("xkb_variant") ?? "";
 
             var layout_row = new ComboRow("Layout", xkb.layout_names, xkb.layout_codes,
-                cur_layout, "keyboard layout", true);
+                cur_layout, "keyboard layout");
             layout_grp.add_row(layout_row);
 
             var vl = xkb.variants_for(cur_layout);
             variant_row = new ComboRow("Variant", vl.names, vl.codes,
-                cur_variant, "layout variant", true);
+                cur_variant, "layout variant");
             layout_grp.add_row(variant_row);
 
             layout_row.value_changed.connect((code) => {

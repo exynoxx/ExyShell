@@ -24,7 +24,6 @@ namespace LumenCommon {
         public static string notifications_json()    { return config_dir() + "/notifications.json"; }
         public static string wallpaper_ini()         { return config_dir() + "/wallpaper.ini"; }
         public static string lockscreen_json()       { return config_dir() + "/lockscreen.json"; }
-        public static string display_ini()           { return config_dir() + "/display.ini"; }
         public static string power_ini()             { return config_dir() + "/power.ini"; }
         public static string display_profiles_json() { return config_dir() + "/display-profiles.json"; }
         public static string radio_state_json()      { return config_dir() + "/radio-state.json"; }

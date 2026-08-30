@@ -12,7 +12,6 @@ namespace LumenSettings {
         OutputManager wlr = new OutputManager();
         Gee.ArrayList<OutputInfo> baseline = new Gee.ArrayList<OutputInfo>();
         Gee.ArrayList<OutputInfo> working  = new Gee.ArrayList<OutputInfo>();
-        string primary_name = "";
 
         int sel = 0;
         bool dirty = false;
@@ -47,8 +46,6 @@ namespace LumenSettings {
             DiagLog.log("page: build() — enumerating displays");
             baseline = wlr.enumerate();
             working = clone_list(baseline);
-            primary_name = read_primary();
-            DiagLog.log("page: primary=%s", primary_name != "" ? primary_name : "(none)");
             if (working.size > 0) sel = 0;
 
             arranger = new DisplayArranger();
@@ -136,7 +133,6 @@ namespace LumenSettings {
             if (confirm_revealer != null) confirm_revealer.reveal_child = false;
             baseline = wlr.enumerate();
             working  = clone_list(baseline);
-            primary_name = read_primary();
             sel = working.size > 0 ? 0 : -1;
             arranger.set_outputs(working);
             rebuild_controls();
@@ -235,16 +231,6 @@ namespace LumenSettings {
                 });
                 bl.add_row(or_row);
 
-                // Primary
-                var pr = new SwitchRow("Primary display",
-                    "Where the panel and app drawer anchor",
-                    primary_name == o.name);
-                pr.toggled.connect((v) => {
-                    if (building) return;
-                    if (v) { primary_name = o.name; mark_dirty(); }
-                    else if (primary_name == o.name) { primary_name = ""; mark_dirty(); }
-                });
-                bl.add_row(pr);
             }
 
             controls_holder.append(bl);
@@ -340,11 +326,6 @@ namespace LumenSettings {
             }
             wf.save();
             DiagLog.log("persist: wrote %s", Paths.wayfire_ini());
-
-            var disp = new IniStore(Paths.display_ini());
-            disp.set_value("display", "primary", primary_name);
-            disp.save();
-            DiagLog.log("persist: wrote %s (primary=%s)", Paths.display_ini(), primary_name);
         }
 
         // Remember this layout, keyed by the connected monitor set (EDID), so
@@ -381,17 +362,11 @@ namespace LumenSettings {
         void log_working(string why) {
             DiagLog.log("page: working layout (%s):", why);
             foreach (var o in working) {
-                DiagLog.log("    %s  enabled=%s  mode=%s  pos=%d,%d  transform=%s  primary=%s",
+                DiagLog.log("    %s  enabled=%s  mode=%s  pos=%d,%d  transform=%s",
                     o.name, o.enabled.to_string(),
                     (o.enabled && o.current_mode != null) ? o.current_mode.to_arg() : "(off)",
-                    o.pos_x, o.pos_y, o.transform.to_arg(),
-                    (primary_name == o.name).to_string());
+                    o.pos_x, o.pos_y, o.transform.to_arg());
             }
-        }
-
-        string read_primary() {
-            var disp = new IniStore(Paths.display_ini());
-            return disp.get_value("display", "primary") ?? "";
         }
 
         // ---- helpers --------------------------------------------------------

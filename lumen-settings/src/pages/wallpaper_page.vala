@@ -29,16 +29,6 @@ namespace LumenSettings {
             });
             group.add_row(file_row);
 
-            string[] labels = { "Fill", "Fit", "Center", "Stretch", "Tile" };
-            string[] values = { "fill", "fit", "center", "stretch", "tile" };
-            var initial_mode = store.get_value(SECTION, "mode") ?? "fill";
-            var mode_row = new ComboRow("Scaling mode", labels, values, initial_mode, "how the image fills the screen");
-            mode_row.value_changed.connect((v) => {
-                store.set_value(SECTION, "mode", v);
-                store.save();
-            });
-            group.add_row(mode_row);
-
             box.append(group);
             return box;
         }
